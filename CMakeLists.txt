@@ -25,3 +25,25 @@ target_compile_definitions(physkit
 set(PHYSKIT_LIBRARIES physkit)
 
 add_subdirectory(tests)
+
+# ----- Documentation (Doxygen) -----
+option(ENABLE_DOCS "Enable building API documentation" ON)
+if(ENABLE_DOCS)
+	find_package(Doxygen QUIET)
+	if(DOXYGEN_FOUND)
+		set(DOXYGEN_IN  ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
+		set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+		configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+
+		add_custom_target(docs
+			COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+			COMMENT "Generating API documentation with Doxygen"
+			VERBATIM)
+
+		message(STATUS "Docs: Run 'cmake --build . --target docs'")
+	else()
+		message(STATUS "Doxygen not found. `doc` target disabled.")
+	endif()
+endif()
