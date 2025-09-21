@@ -1,41 +1,46 @@
-# Prerequisites
-*.d
+# Build directories and binary files
+out/
+**/bin/
+**/build*/
+**/lib*/
+**/_build*/
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# CMake spesific settings
+CMakeUserPresets.json
+**/CMakeFiles/
+**/CMakeCache.txt
 
-# Precompiled Headers
-*.gch
-*.pch
+# IDE files
+.idea/
+.vs/
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*~
+_ReSharper*
+*.log
+.cache/
+compile_commands.json
 
-# Linker files
-*.ilk
+# Package Manager Files
+conan/
+conan-cache/
+conanbuildinfo.txt
+conaninfo.txt
+graph_info.json
 
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# debug information files
-*.dwo
+# OS Generated Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.Trash-*
+$RECYCLE.BIN/
+.TemporaryItems
+ehthumbs.db
+Thumbs.db
