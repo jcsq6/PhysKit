@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.23)
 
 project(PhysKit VERSION 0.1.0 LANGUAGES C CXX)
 
@@ -11,16 +11,24 @@ set(PHYSKIT_SOURCES
 )
 
 add_library(physkit ${PHYSKIT_SOURCES})
+
 target_include_directories(physkit
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-add_library(physkit::physkit ALIAS physkit)
-
 target_compile_definitions(physkit 
     PUBLIC PHYSKIT_VERSION="${PROJECT_VERSION}"
 )
+
+set(MP_UNITS_BUILD_CXX_MODULES ON)
+set(MP_UNITS_API_STD_FORMAT ON)
+find_package(mp-units REQUIRED)
+target_link_libraries(physkit
+    PUBLIC mp-units::mp-units
+)
+
+add_library(physkit::physkit ALIAS physkit)
 
 set(PHYSKIT_LIBRARIES physkit)
 
