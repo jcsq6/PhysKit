@@ -8,7 +8,7 @@ Depends on:
 # Build
 With Conan, run:  
 ```sh
-conan remote add conan-mpusz https://mpusz.jfrog.io/artifactory/api/conan/conan-oss`
+conan remote add conan-mpusz https://mpusz.jfrog.io/artifactory/api/conan/conan-oss
 ```
 
 Ensure you have a compliant C++26 conan profile, and then run:  
