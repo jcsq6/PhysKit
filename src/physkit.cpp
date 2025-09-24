@@ -1,10 +1,15 @@
 #include "physkit/physkit.h"
 
+// fix annoying deprecation from mp-units version 2.4.0. It should be fixed in 2.5.0, when that's released.
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <mp-units/format.h> // needed for std::println with mp-units
+#pragma GCC diagnostic pop
+
 #include <mp-units/systems/international.h> // for miles per hour
 #include <mp-units/systems/si.h> // for meters per second
 
-#include "eigen_format.h"
+#include "eigen_format.h" // IWYU pragma: keep
 
 #include <print>
 
