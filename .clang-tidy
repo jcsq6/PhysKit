@@ -6,6 +6,8 @@ Checks: |
   modernize-*,
   -modernize-use-trailing-return-type,
   readability-*,
+  -readability-identifier-length,
+  -readability-braces-around-statements,
   clang-analyzer-*,
 WarningsAsErrors: 'readability-identifier-naming'
 

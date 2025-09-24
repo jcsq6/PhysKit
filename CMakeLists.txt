@@ -24,8 +24,11 @@ target_compile_definitions(physkit
 set(MP_UNITS_BUILD_CXX_MODULES ON)
 set(MP_UNITS_API_STD_FORMAT ON)
 find_package(mp-units REQUIRED)
+
+find_package(Eigen3 REQUIRED)
+
 target_link_libraries(physkit
-    PUBLIC mp-units::mp-units
+    PUBLIC mp-units::mp-units Eigen3::Eigen
 )
 
 add_library(physkit::physkit ALIAS physkit)

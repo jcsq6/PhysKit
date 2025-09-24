@@ -21,6 +21,8 @@ class PhysKit(ConanFile):
                 # "freestanding": False,
             },
         )
+        
+        self.requires("eigen/3.4.0")
 
     def layout(self):
         cmake_layout(self)
