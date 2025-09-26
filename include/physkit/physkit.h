@@ -1,4 +1,6 @@
 #pragma once
+#include "integrator.h" // IWYU pragma: keep
+#include "detail/eigen_format.h" // IWYU pragma: keep
 
 namespace physkit
 {

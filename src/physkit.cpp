@@ -1,15 +1,4 @@
 #include "physkit/physkit.h"
-#include <mp-units/bits/hacks.h>
-
-// fix annoying deprecation from mp-units version 2.4.0. It should be fixed in 2.5.0, when that's released
-MP_UNITS_DIAGNOSTIC_IGNORE_DEPRECATED
-#include <mp-units/format.h> // needed for std::println with mp-units
-MP_UNITS_DIAGNOSTIC_POP
-
-#include <mp-units/systems/international.h> // for miles per hour
-#include <mp-units/systems/si.h> // for meters per second
-
-#include "eigen_format.h" // IWYU pragma: keep
 
 #include <print>
 
@@ -22,9 +11,8 @@ namespace physkit
 
     void units_demo()
     {
-        using namespace mp_units;
-        using namespace mp_units::si::unit_symbols;
-        using namespace mp_units::international::unit_symbols;
+        using namespace si::unit_symbols;
+        using namespace international::unit_symbols;
 
         constexpr auto c = 299'792'458.0 * m / s; 
         constexpr auto c_mph = c.force_in(mi / h);
