@@ -6,12 +6,6 @@
 
 #include "lin_alg.h"
 
-// fix annoying deprecation from mp-units version 2.4.0. It should be fixed in 2.5.0, when that's
-// released
-MP_UNITS_DIAGNOSTIC_IGNORE_DEPRECATED
-#include <mp-units/format.h> // needed for std::println with mp-units
-MP_UNITS_DIAGNOSTIC_POP
-
 template<typename Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
 class std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>> : public std::formatter<std::string>
 {

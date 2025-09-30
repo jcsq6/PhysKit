@@ -259,7 +259,7 @@ public:
     constexpr auto operator[](this auto &&self, Eigen::Index index) { return detail::to_reference<decltype(self)>(std::forward<decltype(self)>(self).base()[index]); }
     constexpr auto operator[](this auto &&self, Eigen::Index row, Eigen::Index col) { return detail::to_reference<decltype(self)>(std::forward<decltype(self)>(self).base()(row, col)); }
 
-    template <Quantity OtherQ, int R, int C>
+    template <Quantity OtherQ, int R, int C> requires(_cols == R)
     constexpr auto operator*(const unit_mat<OtherQ, R, C>& other) const
     {
         using result_quantity = quantity<ref * OtherQ::reference, rep_type>;

@@ -13,7 +13,7 @@ class PhysKit(ConanFile):
         self.requires(
             "mp-units/2.5.0@mpusz/testing",
             options={
-                "cxx_modules": True,
+                "cxx_modules": False,
                 "import_std": False,
                 "std_format": True,
                 # "no_crtp": True,
