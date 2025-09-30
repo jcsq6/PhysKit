@@ -11,7 +11,7 @@ class PhysKit(ConanFile):
 
     def requirements(self):
         self.requires(
-            "mp-units/2.4.0",
+            "mp-units/2.5.0@mpusz/testing",
             options={
                 "cxx_modules": True,
                 "import_std": False,
