@@ -2,6 +2,7 @@
 #include <Eigen/Dense>
 #include <format>
 #include <sstream>
+#include <type_traits>
 
 #include "lin_alg.h"
 
@@ -46,5 +47,16 @@ public:
             std::print(oss, " {}", Q::unit);
         }
         return std::formatter<std::string>::format(oss.str(), ctx);
+    }
+};
+
+template <mp_units::Quantity Q>
+class std::formatter<physkit::detail::quantity_ref<Q>> : public std::formatter<std::remove_cv_t<Q>>
+{
+public:
+    template <typename FormatContext>
+    auto format(const physkit::detail::quantity_ref<Q>& ref, FormatContext& ctx) const
+    {
+        return std::formatter<std::remove_cv_t<Q>>::format(static_cast<Q>(ref), ctx);
     }
 };
