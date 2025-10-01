@@ -21,8 +21,8 @@ int main()
     constexpr auto dt = 0.1 * s;
     std::println("Integrating with dt = {}", dt);
     physkit::forward_euler integrator;
-    for (int i = 0; i < 10; ++i)
-    { // NOLINT
+    for (int i = 0; i < 10; ++i) // NOLINT
+    {
         integrator.integrate(p, dt);
         std::println("t = {}, pos = {}, vel = {}", i * dt, p.pos, p.vel);
     }
@@ -43,6 +43,7 @@ int main()
     std::println("squared_norm(M) = {}", M.squared_norm());
     std::println("M.normalized() = \n{}", M.normalized());
     std::println("M * 2.0 = \n{}", M * 2);
+    std::println("2.0 * M = \n{}", 2 * M);
     std::println("M / 2.0 = \n{}", M / 2);
     std::println("M * 2.0 m = \n{}", M * (2.0 * m)); // NOLINT
     std::println("M / 2.0 m = \n{}", M / (2.0 * m)); // NOLINT

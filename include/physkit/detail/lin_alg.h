@@ -26,9 +26,6 @@ using namespace mp_units;
 namespace detail
 {
 
-template <typename Q>
-concept dimensionless_scalar = QuantityOf<Q, dimensionless> || std::is_arithmetic_v<Q>;
-
 template <Quantity Q>
     requires(!std::is_const_v<Q>)
 class quantity_ref // NOLINT
@@ -426,4 +423,11 @@ public:
 private:
     eigen_type data;
 };
+
+template <typename T, Quantity Q, int Rows, int Cols> requires(std::is_arithmetic_v<T> || Quantity<T>)
+auto operator*(T scalar, const unit_mat<Q, Rows, Cols> &matrix)
+{
+    return matrix * scalar;
+}
+
 } // namespace physkit
