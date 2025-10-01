@@ -16,6 +16,7 @@ SpaceAfterCStyleCast: true
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceInEmptyBlock: false
-PointerAlignment: Left
+PointerAlignment: Right
 ColumnLimit: 100
 SortIncludes: true
+AccessModifierOffset: -4

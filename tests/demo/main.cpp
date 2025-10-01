@@ -13,17 +13,16 @@ int main()
 
     constexpr auto g = -9.80 * m / s / s;
 
-    physkit::particle p {
-        .pos = {0.0 * m, 0.0 * m, 0.0 * m},
-        .vel = {1.0 * m / s, 0.0 * m / s, 0.0 * m / s},
-        .acc = {0.0 * m / s / s, 0.0 * m / s / s, g},
-        .mass = 1.0 * kg
-    };
+    physkit::particle p{.pos = {0.0 * m, 0.0 * m, 0.0 * m},
+                        .vel = {1.0 * m / s, 0.0 * m / s, 0.0 * m / s},
+                        .acc = {0.0 * m / s / s, 0.0 * m / s / s, g},
+                        .mass = 1.0 * kg};
 
     constexpr auto dt = 0.1 * s;
     std::println("Integrating with dt = {}", dt);
     physkit::forward_euler integrator;
-    for (int i = 0; i < 10; ++i) { // NOLINT
+    for (int i = 0; i < 10; ++i)
+    { // NOLINT
         integrator.integrate(p, dt);
         std::println("t = {}, pos = {}, vel = {}", i * dt, p.pos, p.vel);
     }
@@ -49,7 +48,7 @@ int main()
     std::println("M / 2.0 m = \n{}", M / (2.0 * m)); // NOLINT
     std::println("M + M = \n{}", M + M);
     std::println("M - M = \n{}", M - M);
-    std::println("M[1, 1] * 5 = {}", M[1, 1] * 5); // NOLINT
+    std::println("M[1, 1] * 5 = {}", M[1, 1] * 5);        // NOLINT
     std::println("M[1, 1] => 10 = {}", M[1, 1] = 10 * m); // NOLINT
 
     const auto const_M = M; // NOLINT
