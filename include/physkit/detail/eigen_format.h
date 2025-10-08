@@ -1,52 +1,83 @@
 #pragma once
 #include <Eigen/Dense>
+#include <Eigen/src/Core/IO.h>
+#include <Eigen/src/Core/Matrix.h>
 #include <format>
-#include <sstream>
+#include <ranges>
 #include <type_traits>
 
 #include "lin_alg.h"
 
-template <typename Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
-class std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
-    : public std::formatter<std::string>
+template <class Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
+struct std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
 {
-public:
-    template <typename FormatContext>
-    auto format(const Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols> &matrix,
+    std::formatter<Scalar> underlying;
+
+    constexpr auto parse(std::format_parse_context &pc)
+    {
+        return underlying.parse(pc);
+    }
+
+    template <class FormatContext>
+    constexpr auto format(const Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols> &m,
                 FormatContext &ctx) const
     {
-        std::ostringstream oss;
-        if constexpr (Cols == 1)
-            oss << matrix.format(
-                Eigen::IOFormat(Eigen::FullPrecision, 0, "", ",", "", "", "[", "]"));
+        ctx.advance_to(std::ranges::copy("[", ctx.out()).out);
+
+        auto on_row = [this, &ctx](std::ranges::range auto &&vec, bool terminate = false)
+        {
+            bool use_separator = false;
+            for (auto &&e : vec)
+            {
+                if (use_separator)
+                    ctx.advance_to(std::ranges::copy(", ", ctx.out()).out);
+                else
+                    use_separator = true;
+                ctx.advance_to(underlying.format(e, ctx));
+            }
+
+            if (terminate)
+                ctx.advance_to(std::ranges::copy("]", ctx.out()).out);
+        };
+
+        auto on_mat = [&on_row, &ctx](auto &&m)
+        {
+            auto rows = m.rowwise();
+            bool use_separator = false;
+            for (auto row : rows)
+            {
+                if (use_separator)
+                    ctx.advance_to(std::ranges::copy(",\n ", ctx.out()).out);
+                else
+                    use_separator = true;
+                on_row(row, false);
+            }
+
+            ctx.advance_to(std::ranges::copy("]", ctx.out()).out);
+        };
+
+        if constexpr (m.IsVectorAtCompileTime == 1)
+        {
+            if ((m.rows() == 1) || (m.cols() == 1))
+                on_row(m, true);
+            else
+                on_mat(m);
+        }
         else
-            oss << matrix.format(
-                Eigen::IOFormat(Eigen::FullPrecision, 0, ", ", "\n", "[", "]", "[", "]"));
-        return std::formatter<std::string>::format(oss.str(), ctx);
+            on_mat(m);
+        return ctx.out();
     }
 };
 
 template <mp_units::Quantity Q, int Rows, int Cols>
-class std::formatter<physkit::unit_mat<Q, Rows, Cols>> : public std::formatter<std::string>
+class std::formatter<physkit::unit_mat<Q, Rows, Cols>> : public std::formatter<typename physkit::unit_mat<Q, Rows, Cols>::eigen_type>
 {
 public:
     template <typename FormatContext>
     auto format(const physkit::unit_mat<Q, Rows, Cols> &matrix, FormatContext &ctx) const
     {
-        std::ostringstream oss;
-        if constexpr (Cols == 1)
-        {
-            oss << matrix.base().format(
-                Eigen::IOFormat(Eigen::FullPrecision, 0, "", ",", "", "", "[", "]"));
-            std::print(oss, "{}", Q::unit);
-        }
-        else
-        {
-            oss << matrix.base().format(
-                Eigen::IOFormat(Eigen::FullPrecision, 0, ", ", "\n", "[", "]", "[", "]"));
-            std::print(oss, " {}", Q::unit);
-        }
-        return std::formatter<std::string>::format(oss.str(), ctx);
+        auto it = std::formatter<typename physkit::unit_mat<Q, Rows, Cols>::eigen_type>::format(matrix.base(), ctx);
+        return std::ranges::copy(std::format(" {}", Q::unit), it).out;
     }
 };
 

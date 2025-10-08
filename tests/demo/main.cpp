@@ -24,38 +24,40 @@ int main()
     for (int i = 0; i < 10; ++i) // NOLINT
     {
         integrator.integrate(p, dt);
-        std::println("t = {}, pos = {}, vel = {}", i * dt, p.pos, p.vel);
+        std::println("t = {::N[.2f]}, pos = {:.2f}, vel = {:.2f}", i * dt, p.pos, p.vel);
     }
+
+    std::formatter<quantity<si::metre>> fmt;
 
     // demonstrate unit_mat
     std::println("\nunit_mat demo:");
-    std::println("pos.x = {}", p.pos.x());
-    std::println("cross(pos, vel) = {}", p.pos.cross(p.vel));
-    std::println("dot(pos, vel) = {}", p.pos.dot(p.vel));
-    std::println("norm(pos) = {}", p.pos.norm());
+    std::println("pos.x = {::N[.2f]}", p.pos.x());
+    std::println("cross(pos, vel) = {:.2f}", p.pos.cross(p.vel));
+    std::println("dot(pos, vel) = {::N[.2f]}", p.pos.dot(p.vel));
+    std::println("norm(pos) = {::N[.2f]}", p.pos.norm());
     physkit::mat3<si::metre> M = physkit::mat3<si::metre>::identity(); // NOLINT
-    std::println("M = \n{}", M);
-    std::println("M^T = \n{}", M.transpose());
-    std::println("det(M) = {}", M.determinant());
-    std::println("trace(M) = {}", M.trace());
-    std::println("M^-1 = \n{}", M.inverse());
-    std::println("norm(M) = {}", M.norm());
-    std::println("squared_norm(M) = {}", M.squared_norm());
-    std::println("M.normalized() = \n{}", M.normalized());
-    std::println("M * 2.0 = \n{}", M * 2);
-    std::println("2.0 * M = \n{}", 2 * M);
-    std::println("M / 2.0 = \n{}", M / 2);
-    std::println("M * 2.0 m = \n{}", M * (2.0 * m)); // NOLINT
-    std::println("M / 2.0 m = \n{}", M / (2.0 * m)); // NOLINT
-    std::println("M + M = \n{}", M + M);
-    std::println("M - M = \n{}", M - M);
-    std::println("M[1, 1] * 5 = {}", M[1, 1] * 5);        // NOLINT
-    std::println("M[1, 1] => 10 = {}", M[1, 1] = 10 * m); // NOLINT
+    std::println("M = \n{:.2f}", M);
+    std::println("M^T = \n{:.2f}", M.transpose());
+    std::println("det(M) = {::N[.2f]}", M.determinant());
+    std::println("trace(M) = {::N[.2f]}", M.trace());
+    std::println("M^-1 = \n{:.2f}", M.inverse());
+    std::println("norm(M) = {::N[.2f]}", M.norm());
+    std::println("squared_norm(M) = {::N[.2f]}", M.squared_norm());
+    std::println("M.normalized() = \n{:.2f}", M.normalized());
+    std::println("M * 2.0 = \n{:.2f}", M * 2);
+    std::println("2.0 * M = \n{:.2f}", 2 * M);
+    std::println("M / 2.0 = \n{:.2f}", M / 2);
+    std::println("M * 2.0 m = \n{:.2f}", M * (2.0 * m)); // NOLINT
+    std::println("M / 2.0 m = \n{:.2f}", M / (2.0 * m)); // NOLINT
+    std::println("M + M = \n{:.2f}", M + M);
+    std::println("M - M = \n{:.2f}", M - M);
+    std::println("M[1, 1] * 5 = {::N[.2f]}", M[1, 1] * 5);        // NOLINT
+    std::println("M[1, 1] => 10 = {::N[.2f]}", M[1, 1] = 10 * m); // NOLINT
 
     const auto const_M = M; // NOLINT
-    std::println("const M[1, 1] = {}", const_M[1, 1]);
-    std::println("const M[1, 1] * 5 = {}", const_M[1, 1] * 5); // NOLINT
-    // std::println("const M[1, 1] => 10 = {}", const_M[1, 1] = 10 * m); // should not compile
+    std::println("const M[1, 1] = {::N[.2f]}", const_M[1, 1]);
+    std::println("const M[1, 1] * 5 = {::N[.2f]}", const_M[1, 1] * 5); // NOLINT
+    // std::println("const M[1, 1] => 10 = {::N[.2f]}", const_M[1, 1] = 10 * m); // should not compile
     std::println("const M[1, 1] < 5 * M[1, 1] = {}", const_M[1, 1] < const_M[1, 1]);
 
     return 0;
