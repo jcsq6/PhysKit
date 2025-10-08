@@ -1,1 +1,11 @@
+if (PHYSKIT_BUILD_GRAPHICS OR NOT DEFINED PHYSKIT_BUILD_GRAPHICS)
+    message(STATUS "PhysKit: Including graphical tests.")
+    add_compile_definitions(PHYSKIT_BUILD_GRAPHICS)
+    include(${CMAKE_SOURCE_DIR}/cmake/FetchMagnum.cmake)
+else()
+    message(STATUS "PhysKit: Skipping graphical tests.")
+    set(MAGNUM_LIBRARIES "")
+endif()
+
 add_subdirectory(demo)
+add_subdirectory(graphics_demo)

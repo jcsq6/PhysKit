@@ -23,6 +23,8 @@ class PhysKit(ConanFile):
         )
         
         self.requires("eigen/3.4.0")
+        
+        self.requires("glfw/3.4")
 
     def layout(self):
         cmake_layout(self)

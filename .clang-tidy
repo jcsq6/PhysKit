@@ -9,6 +9,7 @@ Checks: |
   readability-*,
   -readability-identifier-length,
   -readability-braces-around-statements,
+  -readability-uppercase-literal-suffix,
   clang-analyzer-*,
 WarningsAsErrors: 'readability-identifier-naming'
 

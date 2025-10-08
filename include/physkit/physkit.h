@@ -4,6 +4,7 @@
 
 namespace physkit
 {
+constexpr std::string_view version_string() noexcept { return PHYSKIT_VERSION; }
 /// @brief A demo function that prints the PhysKit version.
 /// @note This is a placeholder. Remove in future versions.
 void print_demo();
