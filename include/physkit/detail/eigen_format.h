@@ -13,14 +13,11 @@ struct std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCol
 {
     std::formatter<Scalar> underlying;
 
-    constexpr auto parse(std::format_parse_context &pc)
-    {
-        return underlying.parse(pc);
-    }
+    constexpr auto parse(std::format_parse_context &pc) { return underlying.parse(pc); }
 
     template <class FormatContext>
     constexpr auto format(const Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols> &m,
-                FormatContext &ctx) const
+                          FormatContext &ctx) const
     {
         ctx.advance_to(std::ranges::copy("[", ctx.out()).out);
 
@@ -36,8 +33,7 @@ struct std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCol
                 ctx.advance_to(underlying.format(e, ctx));
             }
 
-            if (terminate)
-                ctx.advance_to(std::ranges::copy("]", ctx.out()).out);
+            if (terminate) ctx.advance_to(std::ranges::copy("]", ctx.out()).out);
         };
 
         auto on_mat = [&on_row, &ctx](auto &&m)
@@ -70,14 +66,16 @@ struct std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCol
 };
 
 template <mp_units::Quantity Q, int Rows, int Cols>
-class std::formatter<physkit::unit_mat<Q, Rows, Cols>> : public std::formatter<typename physkit::unit_mat<Q, Rows, Cols>::eigen_type>
+class std::formatter<physkit::unit_mat<Q, Rows, Cols>>
+    : public std::formatter<typename physkit::unit_mat<Q, Rows, Cols>::eigen_type>
 {
 public:
     template <typename FormatContext>
     auto format(const physkit::unit_mat<Q, Rows, Cols> &matrix, FormatContext &ctx) const
     {
-        auto it = std::formatter<typename physkit::unit_mat<Q, Rows, Cols>::eigen_type>::format(matrix.base(), ctx);
-        return std::ranges::copy(std::format(" {}", Q::unit), it).out;
+        auto it = std::formatter<typename physkit::unit_mat<Q, Rows, Cols>::eigen_type>::format(
+            matrix.base(), ctx);
+        return std::format_to(it, " {}", Q::unit);
     }
 };
 

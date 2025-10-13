@@ -57,7 +57,8 @@ int main()
     const auto const_M = M; // NOLINT
     std::println("const M[1, 1] = {::N[.2f]}", const_M[1, 1]);
     std::println("const M[1, 1] * 5 = {::N[.2f]}", const_M[1, 1] * 5); // NOLINT
-    // std::println("const M[1, 1] => 10 = {::N[.2f]}", const_M[1, 1] = 10 * m); // should not compile
+    // std::println("const M[1, 1] => 10 = {::N[.2f]}", const_M[1, 1] = 10 * m); // should not
+    // compile
     std::println("const M[1, 1] < 5 * M[1, 1] = {}", const_M[1, 1] < const_M[1, 1]);
 
     return 0;

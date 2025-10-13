@@ -424,7 +424,8 @@ private:
     eigen_type data;
 };
 
-template <typename T, Quantity Q, int Rows, int Cols> requires(std::is_arithmetic_v<T> || Quantity<T>)
+template <typename T, Quantity Q, int Rows, int Cols>
+    requires(std::is_arithmetic_v<T> || Quantity<T>)
 auto operator*(T scalar, const unit_mat<Q, Rows, Cols> &matrix)
 {
     return matrix * scalar;

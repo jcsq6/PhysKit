@@ -52,7 +52,7 @@ private:
 };
 
 int main(int argc, char **argv)
-{ 
+{
     std::print("PhysKit graphics demo: {}\n", physkit::version_string());
     triangle_app app{{argc, argv}};
     return app.exec();
