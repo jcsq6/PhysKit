@@ -23,8 +23,8 @@ class forward_euler : public integrator
 public:
     void integrate(particle &p, quantity<si::second> dt) override
     {
-        p.vel += p.acc * dt;
         p.pos += p.vel * dt;
+        p.vel += p.acc * dt;
     }
 };
 
