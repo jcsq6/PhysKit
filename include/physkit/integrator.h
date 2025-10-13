@@ -27,4 +27,15 @@ public:
         p.pos += p.vel * dt;
     }
 };
+
+class semi_implicit_euler : public integrator
+{
+public:
+    void integrate(particle &p, quantity<si::second> dt) override
+    {
+        p.vel += p.acc * dt;
+        p.pos += p.vel * dt;
+    }
+};
+
 } // namespace physkit
