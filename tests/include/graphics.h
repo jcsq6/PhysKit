@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Corrade/Tags.h"
+#include "Magnum/GL/Renderer.h"
 #include "camera.h"
 #include "convert.h"
 
@@ -45,18 +47,18 @@ public:
     object(const object &) = default;
     object &operator=(const object &) = default;
 
-    explicit object(const physkit::particle &p) : M_particle{p} {}
+    explicit object(const physkit::particle &p, std::shared_ptr<physkit::mesh> m) : M_particle{p}, M_mesh{std::move(m)} {}
 
     [[nodiscard]] const physkit::particle &particle() const { return M_particle; }
 
-    void mesh(const physkit::mesh &m) { M_mesh = &m; }
+    void mesh(std::shared_ptr<physkit::mesh> m) { M_mesh = std::move(m); }
     [[nodiscard]] const physkit::mesh &mesh() const { return *M_mesh; }
 
     virtual ~object() = default;
 
 private:
     physkit::particle M_particle;
-    const physkit::mesh *M_mesh{};
+    std::shared_ptr<const physkit::mesh> M_mesh;
 };
 } // namespace physkit
 
@@ -66,11 +68,29 @@ namespace graphics
 using namespace Magnum;
 using gfx_obj = SceneGraph::Object<SceneGraph::MatrixTransformation3D>;
 
-class physics_obj : public gfx_obj
+// class caching_object : public gfx_obj, SceneGraph::AbstractFeature3D
+// {
+// public:
+//     explicit caching_object(gfx_obj* parent): gfx_obj{parent}, SceneGraph::AbstractFeature3D{*this}
+//     {
+//         setCachedTransformations(SceneGraph::CachedTransformation::Absolute);
+//     }
+
+// protected:
+//     void clean(const Matrix4& transform) override
+//     {
+        
+//     }
+
+// private:
+//     Vector3 M_absolute_position;
+// };
+
+class physics_obj : public SceneGraph::Drawable3D, public gfx_obj
 {
 public:
-    explicit physics_obj(gfx_obj *parent, std::unique_ptr<physkit::object> obj = nullptr)
-        : gfx_obj{parent}, M_phys{std::move(obj)}
+    explicit physics_obj(gfx_obj &parent, std::unique_ptr<physkit::object> obj = nullptr)
+        : SceneGraph::Drawable3D{parent}, gfx_obj(&parent), M_phys{std::move(obj)}
     {
     }
 
@@ -79,6 +99,10 @@ public:
     decltype(auto) obj(this auto &&self) { return std::forward_like<decltype(self)>(*self.M_phys); }
 
 private:
+    void draw(const Matrix4 &transformation, SceneGraph::Camera3D & /*camera*/) override
+    {
+        resetTransformation().translate(to_magnum_vector<float>(M_phys->particle().pos));
+    }
     std::unique_ptr<physkit::object> M_phys; // TODO: use shared_ptr? plain ptr?
 };
 
@@ -91,8 +115,8 @@ public:
                                  std::shared_ptr<GL::Mesh> mesh, GL::AbstractShaderProgram &shader)
         : SceneGraph::Drawable3D{parent, group}, M_mesh{std::move(mesh)}, M_shader{&shader}
     {
-        M_mesh->addVertexBufferInstanced(M_buffer, 1, 0, Shaders::PhongGL::Position{},
-                                         Shaders::PhongGL::Normal{}, Shaders::PhongGL::Color3{});
+        M_mesh->addVertexBufferInstanced(M_buffer, 1, 0, Shaders::PhongGL::TransformationMatrix{},
+                                         Shaders::PhongGL::NormalMatrix{}, Shaders::PhongGL::Color3{});
     }
 
     struct instance_data
@@ -121,43 +145,49 @@ private:
     void draw(const Matrix4 &transformation, SceneGraph::Camera3D & /*camera*/) override;
 };
 
-class instanced_drawable : public gfx_obj
+class instanced_drawable : public SceneGraph::Drawable3D, public gfx_obj
 {
 public:
-    explicit instanced_drawable(gfx_obj &parent, instanced_drawables &group) : gfx_obj{&parent}
+    explicit instanced_drawable(gfx_obj &parent, instanced_drawables &group) : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}
     {
         group.add_object(*this);
     }
+
+    instanced_drawable(const instanced_drawable &) = delete;
+    instanced_drawable &operator=(const instanced_drawable &) = delete;
+    instanced_drawable(instanced_drawable &&) = delete;
+    instanced_drawable &operator=(instanced_drawable &&) = delete;
 
     [[nodiscard]] virtual Color3 color() const { return Color3{1.0f}; }
     [[nodiscard]] virtual const Matrix3x3 *normal_matrix() const { return nullptr; }
 
     friend instanced_drawables;
+
+    virtual ~instanced_drawable() = default;
+private:
+    void draw(const Matrix4 &transformation, SceneGraph::Camera3D &camera) override
+    {
+    }
 };
 
 inline void instanced_drawables::draw(const Matrix4 &transformation,
-                                      SceneGraph::Camera3D & /*camera*/)
+                                      SceneGraph::Camera3D &camera)
 {
     if (M_instances.isEmpty()) return;
 
     for (auto &&[instance, obj] : std::views::zip(M_instances, M_objects))
     {
-        if (obj->isDirty())
-        {
-            instance.transformation = transformation * (obj->transformation());
-            if (obj->normal_matrix() != nullptr) instance.normal_matrix = *obj->normal_matrix();
-            instance.color = obj->color();
-            obj->setClean();
-
-            if (!M_added) M_buffer.setSubData(&instance - M_instances.data(), {instance});
-        }
+        obj->draw(transformation, camera);
+        
+        instance.transformation = transformation * (obj->transformation());
+        instance.normal_matrix = instance.transformation.normalMatrix();
+        instance.color = obj->color();
+        obj->setClean();
     }
 
-    if (M_added)
-    {
-        M_buffer.setData(M_instances, GL::BufferUsage::DynamicDraw);
-        M_added = false;
-    }
+    // TODO: optimize: only update changed instances
+    M_buffer.setData(M_instances, GL::BufferUsage::DynamicDraw);
+    M_added = false;
 
     if (M_mesh->instanceCount() != (int) M_instances.size())
         M_mesh->setInstanceCount((int) M_instances.size());
@@ -186,8 +216,6 @@ private:
 
 class graphics_app : public Magnum::Platform::Application
 {
-    static constexpr auto m = mp_units::si::unit_symbols::m;
-
 public:
     graphics_app(const graphics_app &) = delete;
     graphics_app &operator=(const graphics_app &) = delete;
@@ -196,18 +224,24 @@ public:
 
     graphics_app(const Arguments &arguments, const Vector2i &window_size,
                  physkit::quantity<physkit::si::degree> fov,
-                 std::string_view title = "PhysKit Graphics Demo")
+                 std::string_view title = "PhysKit Graphics Demo", const Vector3 &initial_cam_pos = {0.0f, 0.0f, -5.0f},
+                 const Vector3 &initial_cam_dir = {0.0f, 0.0f, 1.0f})
         : Magnum::Platform::Application{arguments, Configuration{}.setTitle(Containers::StringView{
                                                        title.data(), title.size()})},
-          M_cam(M_scene, fov, {0.0f, 0.0f, 0.0f}, Magnum::Vector3::yAxis(),
-                Magnum::Vector3::xAxis(), window_size, window_size)
+          M_cam(M_scene, fov, initial_cam_pos, initial_cam_dir, Magnum::Vector3::yAxis(), window_size, window_size)
     {
         using namespace Math::Literals::ColorLiterals;
 
         M_shader = Shaders::PhongGL{
-            Shaders::PhongGL::Configuration{}.setFlags(Shaders::PhongGL::Flag::VertexColor)};
+            Shaders::PhongGL::Configuration{}.setFlags(Shaders::PhongGL::Flag::VertexColor | Shaders::PhongGL::Flag::InstancedTransformation)};
 
-        M_shader.setAmbientColor(0x111111_rgbf).setSpecularColor(0x330000_rgbf);
+        M_shader.setAmbientColor(0x222222_rgbf) // a touch brighter so objects are visible
+            .setSpecularColor(0x330000_rgbf)
+            .setLightPositions({{0.f, 5.f, 0.f, 0.f}});
+
+        GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+        GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+        GL::Renderer::setClearColor(0x202020_rgbf);
     }
 
     /// @brief Register and create, or fetch a previously registered shared mesh for this physkit::mesh instance. This mesh will be used across all methods with this physkit::mesh.
@@ -228,7 +262,7 @@ public:
     /// @return A pointer to the created physics_obj instance.
     auto add_object(std::unique_ptr<physkit::object> obj, Color3 color)
     {
-        auto *phys_obj = new physics_obj{&M_scene, std::move(obj)};
+        auto *phys_obj = new physics_obj{M_scene, std::move(obj)};
         std::shared_ptr<GL::Mesh> mesh;
         if (auto it = M_phys_mesh_map.find(&phys_obj->obj().mesh()); it == M_phys_mesh_map.end())
             mesh =
@@ -244,23 +278,18 @@ public:
         return phys_obj;
     }
 
-        /// @brief Add a physics object to the scene with the specified color. This method will create or fetch a shared GL::Mesh for the object's mesh, as if by calling get_mesh().
+    /// @brief Add a physics object to the scene with the specified color. This method will create or fetch a shared GL::Mesh for the object's mesh, as if by calling get_mesh().
     /// @param obj The physics object to add to the scene.
     /// @param color The color to use for rendering the object.
     /// @return A pointer to the created physics_obj instance.
     auto add_object(std::unique_ptr<physkit::object> obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
     {
         if (auto it = M_phys_mesh_map.find(&obj->mesh()); it == M_phys_mesh_map.end())
-        {
             M_phys_mesh_map.emplace(&obj->mesh(), mesh);
-        }
-        else
-        {
-            if (it->second != mesh)
-                throw std::runtime_error("graphics_app::add_object: provided mesh does not match physkit::object mesh");
-        }
+        else if (it->second != mesh)
+            throw std::runtime_error("graphics_app::add_object: provided mesh does not match physkit::object mesh"); // caller loses ownership of obj? TODO: fix.
 
-        auto *phys_obj = new physics_obj{&M_scene, std::move(obj)};
+        auto *phys_obj = new physics_obj{M_scene, std::move(obj)};
 
         internal_add_obj(phys_obj, std::move(mesh), color);
 
@@ -286,6 +315,8 @@ protected:
     virtual void key_press(KeyEvent &event) {}
     virtual void pointer_move(PointerMoveEvent &event) {}
 
+    auto &cam() { return M_cam; }
+
 private:
     void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
     {
@@ -300,20 +331,25 @@ private:
             instances = it->second;
         new colored_drawable{*obj, color, *instances};
     }
+
     void drawEvent() override
     {
         GL::defaultFramebuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
 
         update(M_dt);
 
+        M_shader.setProjectionMatrix(M_cam.projection_matrix());
         M_cam.draw(M_shaded);
 
         swapBuffers();
+        redraw();
     }
+
     void keyPressEvent(KeyEvent &event) override
     {
         M_cam.key_press(event, M_dt);
         key_press(event);
+        event.setAccepted();
     }
 
     void pointerMoveEvent(PointerMoveEvent &event) override
@@ -323,7 +359,7 @@ private:
     }
 
     SceneGraph::Scene<SceneGraph::MatrixTransformation3D> M_scene;
-    Shaders::PhongGL M_shader;
+    Shaders::PhongGL M_shader{NoCreate};
     SceneGraph::DrawableGroup3D M_shaded;
     camera M_cam;
     physkit::quantity<physkit::si::second> M_dt{0.1 * physkit::si::second}; // NOLINT

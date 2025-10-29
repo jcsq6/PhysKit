@@ -30,8 +30,9 @@ public:
     explicit camera(SceneGraph::Scene<Transform> &scene,
                     physkit::quantity<physkit::si::degree, float> fov, const Vector3 &position,
                     const Vector3 &dir, const Vector3 &up, const Vector2i &window_size,
-                    const Vector2i &viewport_size)
-        : M_fov{fov}, M_window_size{window_size}, M_pos{position}
+                    const Vector2i &viewport_size, 
+                    physkit::quantity<physkit::si::metre / physkit::si::second, float> speed = 1.0f * physkit::si::metre / physkit::si::second)
+        : M_fov{fov}, M_window_size{window_size}, M_pos{position}, M_speed{speed}
     {
         auto *obj = new SceneGraph::Object<Transform>{&scene};
         M_obj = obj;
@@ -141,7 +142,7 @@ public:
         constexpr float sy = 0.002f; // pitch per pixel
         const Vector2 dp = event.relativePosition();
         if (dp == Vector2{}) return;
-        rotate((dp.x() * sx) * physkit::si::radian, (-dp.y() * sy) * physkit::si::radian);
+        rotate((dp.x() * sx) * physkit::si::radian, (dp.y() * sy) * physkit::si::radian);
     }
 
     SceneGraph::Camera3D &cam() { return *M_cam; }
@@ -174,13 +175,14 @@ public:
         M_cam->draw(drawables);
     }
 
+    auto projection_matrix() const { return M_cam->projectionMatrix(); }
+
 private:
     SceneGraph::Camera3D *M_cam{};
     SceneGraph::AbstractTranslationRotation3D *M_obj{};
 
     physkit::quantity<physkit::si::degree, float> M_fov{};
-    physkit::quantity<physkit::si::metre / physkit::si::second, float> M_speed{
-        1.0f * physkit::si::metre / physkit::si::second};
+    physkit::quantity<physkit::si::metre / physkit::si::second, float> M_speed{};
 
     Quaternion M_rot{Magnum::Math::IdentityInit};
     Vector3 M_pos{0.0f};
