@@ -16,4 +16,13 @@ void units_demo();
 /// @brief A demo function that showcases the Eigen library by performing basic matrix operations.
 /// @note This is a placeholder. Remove in future versions.
 void eigen_demo();
+
+class mesh // NOLINT
+{
+public:
+    mesh() = default;
+    mesh(mesh &&) noexcept = default;
+    mesh &operator=(mesh &&) noexcept = default;
+};
+
 } // namespace physkit

@@ -2,9 +2,11 @@ Checks: |
   readability-identifier-naming,
   -*,
   bugprone-*,
+  -bugprone-easily-swappable-parameters,
   performance-*,
   modernize-*,
   cppcoreguidelines-*,
+  -cppcoreguidelines-owning-memory,
   -modernize-use-trailing-return-type,
   readability-*,
   -readability-identifier-length,
@@ -24,6 +26,10 @@ CheckOptions:
     value: lower_case
   - key: readability-identifier-naming.MemberCase
     value: lower_case
+  - key: readability-identifier-naming.MemberPrefix
+    value: 'M_'
+  - key: readability-identifier-naming.PublicMemberPrefix
+    value: ''
   - key: readability-identifier-naming.ParameterCase
     value: lower_case
   - key: readability-identifier-naming.NamespaceCase

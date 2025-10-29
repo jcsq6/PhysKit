@@ -35,7 +35,7 @@ public:
     using rep_type = typename value_type::rep;
     static constexpr auto ref = Q::reference;
 
-    constexpr explicit quantity_ref(rep_type &value) noexcept : data(&value) {}
+    constexpr explicit quantity_ref(rep_type &value) noexcept : M_data(&value) {}
     quantity_ref(const quantity_ref &) = delete;
 
     constexpr quantity_ref &operator=(const quantity_ref &other) noexcept // NOLINT
@@ -43,62 +43,62 @@ public:
         return *this = static_cast<Q>(other);
     }
 
-    constexpr operator Q() const noexcept { return *data * ref; }
+    constexpr operator Q() const noexcept { return *M_data * ref; }
     constexpr Q value() const noexcept { return *this; }
 
     constexpr quantity_ref &operator=(Q other) noexcept
     {
-        *data = other.numerical_value_in(ref);
+        *M_data = other.numerical_value_in(ref);
         return *this;
     }
 
     constexpr quantity_ref &operator+=(Q other) noexcept
     {
-        *data += other.numerical_value_in(ref);
+        *M_data += other.numerical_value_in(ref);
         return *this;
     }
 
     constexpr quantity_ref &operator-=(Q other) noexcept
     {
-        *data -= other.numerical_value_in(ref);
+        *M_data -= other.numerical_value_in(ref);
         return *this;
     }
 
     constexpr quantity_ref &operator*=(QuantityOf<dimensionless> auto scalar) noexcept
     {
-        *data *= scalar.numerical_value_in(dimensionless);
+        *M_data *= scalar.numerical_value_in(dimensionless);
         return *this;
     }
 
     constexpr quantity_ref &operator/=(QuantityOf<dimensionless> auto scalar) noexcept
     {
-        *data /= scalar.numerical_value_in(dimensionless);
+        *M_data /= scalar.numerical_value_in(dimensionless);
         return *this;
     }
 
     constexpr quantity_ref &operator++() noexcept
     {
-        ++(*data);
+        ++(*M_data);
         return *this;
     }
 
     constexpr quantity_ref &operator--() noexcept
     {
-        --(*data);
+        --(*M_data);
         return *this;
     }
 
     constexpr quantity_ref operator++(int) noexcept
     {
         quantity_ref temp = *this;
-        ++(*data);
+        ++(*M_data);
         return temp;
     }
 
     constexpr quantity_ref operator--(int) noexcept
     {
         quantity_ref temp = *this;
-        --(*data);
+        --(*M_data);
         return temp;
     }
 
@@ -108,7 +108,7 @@ public:
     const quantity_ref *operator&() const = delete;
 
 private:
-    rep_type *data;
+    rep_type *M_data;
 };
 
 template <typename T>
@@ -178,30 +178,43 @@ public:
     constexpr unit_mat &operator=(unit_mat &&) = default;
     constexpr ~unit_mat() = default;
 
-    constexpr unit_mat(const eigen_type &data) : data(data) {}
-    constexpr unit_mat(eigen_type &&data) : data(std::move(data)) {}
+    template <Quantity OtherQ>
+    constexpr unit_mat(const unit_mat<OtherQ, _rows, _cols> &other)
+        : M_data(other.base().template cast<rep_type>())
+    {
+    }
 
-    constexpr unit_mat(Eigen::Index dim) : data(dim) {}
-    constexpr unit_mat(Eigen::Index rows, Eigen::Index cols) : data(rows, cols) {}
+    template <Quantity OtherQ>
+    constexpr unit_mat &operator=(const unit_mat<OtherQ, _rows, _cols> &other)
+    {
+        M_data = other.base().template cast<rep_type>();
+        return *this;
+    }
 
-    constexpr unit_mat(const Q &scalar) : data(scalar.numerical_value_in(ref)) {}
-    constexpr unit_mat(const Q *data_ptr) : data(static_cast<rep_type *>(data_ptr)) {}
+    constexpr unit_mat(const eigen_type &data) : M_data(data) {}
+    constexpr unit_mat(eigen_type &&data) : M_data(std::move(data)) {}
+
+    constexpr unit_mat(Eigen::Index dim) : M_data(dim) {}
+    constexpr unit_mat(Eigen::Index rows, Eigen::Index cols) : M_data(rows, cols) {}
+
+    constexpr unit_mat(const Q &scalar) : M_data(scalar.numerical_value_in(ref)) {}
+    constexpr unit_mat(const Q *data_ptr) : M_data(static_cast<rep_type *>(data_ptr)) {}
 
     constexpr unit_mat(const Q &x, const Q &y)
-        : data(x.numerical_value_in(ref), y.numerical_value_in(ref))
+        : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref))
     {
     }
     constexpr unit_mat(const Q &x, const Q &y, const Q &z)
-        : data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref))
+        : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref))
     {
     }
     constexpr unit_mat(const Q &x, const Q &y, const Q &z, const Q &w)
-        : data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref),
+        : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref),
                w.numerical_value_in(ref))
     {
     }
     constexpr unit_mat(const std::initializer_list<std::initializer_list<Q>> &list)
-        : data(list.size(), list.begin()->size())
+        : M_data(list.size(), list.begin()->size())
     {
         Eigen::Index r = 0;
         for (const auto &row : list)
@@ -209,7 +222,7 @@ public:
             Eigen::Index c = 0;
             for (const auto &val : row)
             {
-                data(r, c) = val.numerical_value_in(ref);
+                M_data(r, c) = val.numerical_value_in(ref);
                 ++c;
             }
             ++r;
@@ -218,19 +231,19 @@ public:
 
     constexpr unit_mat &operator=(const eigen_type &other)
     {
-        data = other;
+        M_data = other;
         return *this;
     }
 
     constexpr unit_mat &operator=(eigen_type &&other)
     {
-        data = std::move(other);
+        M_data = std::move(other);
         return *this;
     }
 
     constexpr decltype(auto) base(this auto &&self)
     {
-        return std::forward_like<decltype(self)>(self.data);
+        return std::forward_like<decltype(self)>(self.M_data);
     }
 
     constexpr auto x(this auto &&self)
@@ -250,18 +263,24 @@ public:
         return detail::to_reference<decltype(self)>(std::forward<decltype(self)>(self).base().w());
     }
 
+    template <std::size_t I>
+    constexpr auto get(this auto &&self)
+    {
+        return detail::to_reference<decltype(self)>(std::forward<decltype(self)>(self).base()[I]);
+    }
+
     constexpr auto rows() const { return base().rows(); }
     constexpr auto cols() const { return base().cols(); }
 
     constexpr auto begin(this auto &&self)
         requires(eigen_type::IsVectorAtCompileTime == 1)
     {
-        return std::forward_like<decltype(self)>(self.data).begin();
+        return std::forward_like<decltype(self)>(self.M_data).begin();
     }
     constexpr auto end(this auto &&self)
         requires(eigen_type::IsVectorAtCompileTime == 1)
     {
-        return std::forward_like<decltype(self)>(self.data).end();
+        return std::forward_like<decltype(self)>(self.M_data).end();
     }
 
     auto transpose() const { return unit_mat{base().transpose()}; }
@@ -421,7 +440,7 @@ public:
     }
 
 private:
-    eigen_type data;
+    eigen_type M_data;
 };
 
 template <typename T, Quantity Q, int Rows, int Cols>
@@ -432,3 +451,17 @@ auto operator*(T scalar, const unit_mat<Q, Rows, Cols> &matrix)
 }
 
 } // namespace physkit
+
+namespace std
+{
+    template <physkit::Quantity Q, int Rows, int Cols>
+    struct tuple_size<physkit::unit_mat<Q, Rows, Cols>> : std::integral_constant<std::size_t, Rows>
+    {
+    };
+
+    template <std::size_t I, physkit::Quantity Q, int Rows, int Cols>
+    struct tuple_element<I, physkit::unit_mat<Q, Rows, Cols>>
+    {
+        using type = physkit::detail::quantity_ref<Q>;
+    };
+}
