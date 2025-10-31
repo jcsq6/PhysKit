@@ -3,6 +3,7 @@
 
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/DualQuaternion.h>
+#include <Magnum/Math/Functions.h>
 #include <Magnum/Platform/GlfwApplication.h>
 #include <Magnum/SceneGraph/AbstractTranslationRotation3D.h>
 #include <Magnum/SceneGraph/Camera.h>
@@ -12,9 +13,7 @@
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
 
-#include "Magnum/Math/Functions.h"
 #include "convert.h"
-#include "physkit/detail/types.h"
 
 namespace graphics
 {
@@ -26,10 +25,12 @@ public:
     constexpr static float near = 0.01f;
     constexpr static float far = 1000.0f;
 
+    constexpr static auto up = Vector3::yAxis();
+
     template <class Transform>
     explicit camera(SceneGraph::Scene<Transform> &scene,
                     physkit::quantity<physkit::si::degree, float> fov, const Vector3 &position,
-                    const Vector3 &dir, const Vector3 &up, const Vector2i &window_size,
+                    const Vector3 &dir, const Vector2i &window_size,
                     const Vector2i &viewport_size, 
                     physkit::quantity<physkit::si::metre / physkit::si::second, float> speed = 1.0f * physkit::si::metre / physkit::si::second)
         : M_fov{fov}, M_window_size{window_size}, M_pos{position}, M_speed{speed}
@@ -43,18 +44,15 @@ public:
                                                Vector2(viewport_size).aspectRatio(), near, far))
             .setViewport(viewport_size);
 
-        set_view(dir, up);
+        set_view(dir);
     }
 
-    void set_view(const Vector3 &dir, const Vector3 &up)
+    void set_view(const Vector3 &dir)
     {
         Vector3 f = dir.normalized();
-        Vector3 wu = up.normalized();
-        if (Math::abs(Math::dot(f, wu)) > 0.999f) wu = {0.0f, 1.0f, 0.0f}; // NOLINT
-        const Vector3 r = Math::cross(f, wu).normalized();
+        const Vector3 r = Math::cross(f, up).normalized();
         const Vector3 u = Math::cross(r, f);
-        M_rot = Quaternion::fromMatrix({Matrix3{r, u, -f}});
-        M_rot = M_rot.normalized();
+        M_rot = Quaternion::fromMatrix({Matrix3{r, u, -f}}).normalized();
         mark_dirty();
     }
 
@@ -77,7 +75,7 @@ public:
     {
         const Vector3 target = to_magnum_vector<float>(pos);
         const Vector3 f = (target - M_pos).normalized();
-        set_view(f, up_axis());
+        set_view(f);
     }
 
     void move(const physkit::vec3<physkit::si::metre, float> &delta)
@@ -89,14 +87,20 @@ public:
     void rotate(physkit::quantity<physkit::si::radian, float> d_yaw,
                 physkit::quantity<physkit::si::radian, float> d_pitch)
     {
-        const float yaw = d_yaw.numerical_value_in(physkit::si::radian);
-        const float pitch = d_pitch.numerical_value_in(physkit::si::radian);
+        float yaw = d_yaw.numerical_value_in(physkit::si::radian);
+        float pitch = d_pitch.numerical_value_in(physkit::si::radian);
         if (yaw == 0.0f && pitch == 0.0f) return;
 
-        const Quaternion q_yaw = Quaternion::rotation(Rad(yaw), up_axis());
-        const Quaternion q_pitch = Quaternion::rotation(Rad(pitch), right_axis());
-        M_rot = (q_pitch * q_yaw) * M_rot;
-        M_rot = M_rot.normalized();
+        M_rot = Quaternion::rotation(Rad(yaw), up) * M_rot;
+
+        constexpr auto max_pitch = std::numbers::pi_v<float> / 2 * .98f;
+        const Vector3 fwd = forward_axis();
+        const auto cur = (float)Math::asin(Math::clamp(fwd.y(), -1.0f, 1.0f));
+        const auto tgt = Math::clamp(cur + pitch, -max_pitch, max_pitch);
+
+        const Vector3 right = M_rot.transformVector(Vector3::xAxis()).normalized();
+        M_rot = (Quaternion::rotation(Rad(tgt - cur), right) * M_rot).normalized();
+
         mark_dirty();
     }
 
@@ -124,25 +128,24 @@ public:
         M_speed = s;
     }
 
-    void key_press(Platform::Application::KeyEvent &event,
-                   physkit::quantity<physkit::si::second, float> dt)
-    {
-        using Key = Platform::Application::Key;
-        if (event.key() == Key::Down) move_forward(-dt);
-        if (event.key() == Key::Up) move_forward(dt);
-        if (event.key() == Key::Left) move_right(-dt);
-        if (event.key() == Key::Right) move_right(dt);
-        if (event.key() == Key::Space) move_up(dt);
-        if (event.key() == Key::LeftShift) move_up(-dt);
-    }
-
-    void pointer_move(Platform::Application::PointerMoveEvent &event)
+    void pointer_move(Platform::Application::PointerMoveEvent &event, bool drag)
     {
         constexpr float sx = 0.002f; // yaw per pixel
         constexpr float sy = 0.002f; // pitch per pixel
-        const Vector2 dp = event.relativePosition();
-        if (dp == Vector2{}) return;
-        rotate((dp.x() * sx) * physkit::si::radian, (dp.y() * sy) * physkit::si::radian);
+
+        const Vector2 d = event.relativePosition();
+        float dx = d.x();
+        float dy = d.y();
+
+        if (!isfinite(dx) || !isfinite(dy)) return;
+        constexpr float max_delta = 200.0f;
+        dx = Math::clamp(dx, -max_delta, max_delta);
+        dy = Math::clamp(dy, -max_delta, max_delta);
+        if (drag)
+            rotate((dx * sx) * physkit::si::radian, (dy * sy) * physkit::si::radian);
+        else
+            rotate((-dx * sx) * physkit::si::radian, (-dy * sy) * physkit::si::radian);
+
     }
 
     SceneGraph::Camera3D &cam() { return *M_cam; }
