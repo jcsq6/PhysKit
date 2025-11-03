@@ -1,6 +1,4 @@
 #pragma once
-
-#include "Magnum/GL/Renderer.h"
 #include "camera.h"
 #include "convert.h"
 
@@ -16,6 +14,7 @@
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Shader.h>
+#include <Magnum/GL/Renderer.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/MeshTools/Compile.h>
