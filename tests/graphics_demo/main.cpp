@@ -1,53 +1,48 @@
-#include <graphics.h>
-#include <print>
+#include "graphics.h"
+#include "physkit/particle.h"
+#include <memory>
+#include <mp-units/systems/si/units.h>
 
-using namespace Magnum;
+using namespace graphics;
+using namespace physkit;
 
-class triangle_app : public Platform::Application // NOLINT
+class app : public graphics::graphics_app
 {
 public:
-    virtual ~triangle_app() = default;
-    explicit triangle_app(const Arguments &arguments)
-        : Platform::Application{arguments, Configuration{}.setTitle("Magnum Triangle Example")}
+    explicit app(const Arguments &arguments)
+        : graphics::graphics_app{arguments,
+                                 {800, 600},
+                                 45 * si::degree,
+                                 "PhysKit Graphics Test",
+                                 {0.0f, 5.0f, -10.0f},
+                                 {0.0f, -5.0f, 10.0f}}
+    // NOLINT
     {
-        using namespace Math::Literals;
-        using namespace ColorLiterals;
+        auto cube_mesh = mesh_objs::cube();
+        auto sphere_mesh = mesh_objs::sphere();
 
-        struct TriangleVertex
-        {
-            Vector2 position;
-            Color3 color;
-        };
-        const std::array<TriangleVertex, 3> vertices = {{
-            {.position = {-0.5f, -0.5f}, .color = 0xff0000_rgbf}, /* Left vertex, red color */
-            {.position = {0.5f, -0.5f}, .color = 0x00ff00_rgbf},  /* Right vertex, green color */
-            {.position = {0.0f, 0.5f}, .color = 0x0000ff_rgbf}    /* Top vertex, blue color */
-        }};
+        using namespace si::unit_symbols;
 
-        M_mesh.setCount(vertices.size())
-            .addVertexBuffer(GL::Buffer{Containers::arrayView(vertices.data(), vertices.size())}, 0,
-                             Shaders::VertexColorGL2D::Position{},
-                             Shaders::VertexColorGL2D::Color3{});
+        M_sphere = add_object(std::move(sphere_mesh), {1.0, 0.0, 0.0});
+        auto phys_obj = std::make_unique<physkit::object>(
+            physkit::particle{
+                .pos = {0.0 * m, 0.0 * m, 0.0 * m},
+                .vel = {0.0 * m / s, 0.0 * m / s, 0.0 * m / s},
+                .acc = {0.0 * m / s / s, 0.0 * m / s / s, 0.0 * m / s / s},
+                .mass = 1.0 * kg,
+            },
+            std::make_shared<physkit::mesh>());
+        M_cube = add_object(std::move(phys_obj), std::move(cube_mesh), {0.0, 1.0, 0.0});
+        M_sphere->translate({2.0f, 5.0f, 0.0f});
+
+        cam().speed(2.5f * si::metre / si::second);
     }
 
+    void update(physkit::quantity<physkit::si::second> dt) override {}
 
 private:
-    void drawEvent() override
-    {
-        GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
-
-        M_shader.draw(M_mesh);
-
-        swapBuffers();
-    }
-
-    GL::Mesh M_mesh;
-    Shaders::VertexColorGL2D M_shader;
+    physics_obj *M_cube{};
+    gfx_obj *M_sphere{};
 };
 
-int main(int argc, char **argv)
-{
-    std::print("PhysKit graphics demo: {}\n", physkit::version_string());
-    triangle_app app{{argc, argv}};
-    return app.exec();
-}
+MAGNUM_APPLICATION_MAIN(app) // NOLINT

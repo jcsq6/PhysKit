@@ -23,4 +23,3 @@ target_link_libraries(phys_graphics INTERFACE ${MAGNUM_LIBRARIES} physkit)
 
 add_subdirectory(demo)
 add_subdirectory(graphics_demo)
-add_subdirectory(graphics_test)
