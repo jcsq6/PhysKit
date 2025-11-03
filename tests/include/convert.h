@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <mp-units/framework.h>
 #include <physkit/physkit.h>
-#include <print>
 #include <utility>
 
 namespace graphics

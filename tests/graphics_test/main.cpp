@@ -33,7 +33,7 @@ public:
             },
             std::make_shared<physkit::mesh>());
         M_cube = add_object(std::move(phys_obj), std::move(cube_mesh), {0.0, 1.0, 0.0});
-        M_sphere->translate({2.0f, 0.0f, 0.0f});
+        M_sphere->translate({2.0f, 5.0f, 0.0f});
 
         cam().speed(2.5f * si::metre / si::second);
     }

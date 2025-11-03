@@ -104,7 +104,7 @@ public:
 private:
     void draw(const Matrix4 &transformation, SceneGraph::Camera3D & /*camera*/) override
     {
-        resetTransformation().translate(to_magnum_vector<float>(M_phys->particle().pos));
+        translate(to_magnum_vector<float>(M_phys->particle().pos));
     }
     std::unique_ptr<physkit::object> M_phys; // TODO: use shared_ptr? plain ptr?
 };
@@ -182,7 +182,7 @@ inline void instanced_drawables::draw(const Matrix4 &transformation, SceneGraph:
     {
         obj->draw(transformation, camera);
 
-        instance.transformation = transformation * (obj->transformation());
+        instance.transformation = transformation * (obj->absoluteTransformation());
         instance.normal_matrix = instance.transformation.normalMatrix();
         instance.color = obj->color();
         obj->setClean();
