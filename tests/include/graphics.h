@@ -4,6 +4,10 @@
 
 #include <cstddef>
 #include <memory>
+#include <thread>
+#include <unordered_map>
+#include <utility>
+
 #include <physkit/physkit.h>
 
 #include <Corrade/Containers/Array.h>
@@ -13,8 +17,8 @@
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
-#include <Magnum/GL/Shader.h>
 #include <Magnum/GL/Renderer.h>
+#include <Magnum/GL/Shader.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/MeshTools/Compile.h>
@@ -30,9 +34,8 @@
 #include <Magnum/SceneGraph/SceneGraph.h>
 #include <Magnum/Shaders/PhongGL.h>
 #include <Magnum/Shaders/VertexColorGL.h>
+#include <Magnum/Timeline.h>
 #include <Magnum/Trade/MeshData.h>
-#include <unordered_map>
-#include <utility>
 
 namespace physkit
 {
@@ -253,7 +256,8 @@ public:
                  physkit::quantity<physkit::si::degree> fov,
                  std::string_view title = "PhysKit Graphics Demo",
                  const Vector3 &initial_cam_pos = {0.0f, 0.0f, -5.0f},
-                 const Vector3 &initial_cam_dir = {0.0f, 0.0f, 1.0f}, bool drag = false)
+                 const Vector3 &initial_cam_dir = {0.0f, 0.0f, 1.0f}, bool drag = false,
+                 bool vsync = true)
         : Magnum::Platform::Application{arguments, Configuration{}.setTitle(Containers::StringView{
                                                        title.data(), title.size()})},
           M_cam(M_scene, fov, initial_cam_pos, initial_cam_dir, window_size, window_size),
@@ -275,8 +279,10 @@ public:
         M_mouse.reserve(8);
         M_keys.reserve(128);
 
-        if (!M_drag)
-            setCursor(Cursor::HiddenLocked);
+        if (!M_drag) setCursor(Cursor::HiddenLocked);
+
+        M_timeline.start();
+        if (vsync) set_vsync();
     }
 
     /// @brief Register and create, or fetch a previously registered shared mesh for this
@@ -375,6 +381,37 @@ protected:
         M_drag = d;
     }
 
+    /// @brief Enable or disable vertical synchronization (vsync).
+    /// @param enabled If true, vsync is enabled; if false, vsync is disabled.
+    void set_vsync(bool enabled = true)
+    {
+        if (enabled)
+            setSwapInterval(1);
+        else
+            setSwapInterval(0);
+    }
+
+    /// @brief Set a frame rate limit for the application.
+    /// @param fps The desired frame rate limit in hertz. If set to 0, no limit is applied.
+    void frame_limit(physkit::quantity<physkit::si::hertz> fps)
+    {
+        if (fps == 0 * physkit::si::hertz)
+            M_frame_limit = 0 * physkit::si::second;
+        else
+            M_frame_limit = 1 / fps;
+    }
+
+    physkit::quantity<physkit::si::hertz> frame_limit() const
+    {
+        return M_frame_limit != 0 * physkit::si::second ? 1 / M_frame_limit
+                                                        : 0 * physkit::si::hertz;
+    }
+
+    physkit::quantity<physkit::si::second> dt() const
+    {
+        return M_timeline.previousFrameDuration() * physkit::si::second;
+    }
+
 private:
     void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
     {
@@ -394,28 +431,35 @@ private:
     {
         GL::defaultFramebuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
 
-        if (M_keys[Key::S].is_pressed()) M_cam.move_forward(-M_dt);
-        if (M_keys[Key::W].is_pressed()) M_cam.move_forward(M_dt);
-        if (M_keys[Key::A].is_pressed()) M_cam.move_right(-M_dt);
-        if (M_keys[Key::D].is_pressed()) M_cam.move_right(M_dt);
-        if (M_keys[Key::Space].is_pressed()) M_cam.move_up(M_dt);
-        if (M_keys[Key::LeftShift].is_pressed()) M_cam.move_up(-M_dt);
+        float forward{};
+        float right{};
+        float up{};
+        if (M_keys[Key::S].is_pressed()) forward -= 1.0f;
+        if (M_keys[Key::W].is_pressed()) forward += 1.0f;
+        if (M_keys[Key::A].is_pressed()) right -= 1.0f;
+        if (M_keys[Key::D].is_pressed()) right += 1.0f;
+        if (M_keys[Key::Space].is_pressed()) up += 1.0f;
+        if (M_keys[Key::LeftShift].is_pressed()) up -= 1.0f;
 
-        update(M_dt);
+        M_cam.move(forward, right, up, dt());
+
+        update(dt());
 
         M_shader.setProjectionMatrix(M_cam.projection_matrix());
         M_cam.draw(M_shaded);
 
         swapBuffers();
         redraw();
+        while (M_timeline.currentFrameDuration() * physkit::si::second < M_frame_limit)
+            std::this_thread::yield();
+        M_timeline.nextFrame();
     }
 
     void keyPressEvent(KeyEvent &event) final
     {
         M_keys[event.key()].press();
         key_press(event, true);
-        if (event.key() == Key::Esc)
-           drag(!M_drag);
+        if (event.key() == Key::Esc) drag(!M_drag);
     }
 
     void keyReleaseEvent(KeyEvent &event) final
@@ -449,23 +493,26 @@ private:
     Shaders::PhongGL M_shader{NoCreate};
     SceneGraph::DrawableGroup3D M_shaded;
     camera M_cam;
-    physkit::quantity<physkit::si::second> M_dt{0.1 * physkit::si::second}; // NOLINT
     std::unordered_map<const physkit::mesh *, std::shared_ptr<GL::Mesh>> M_phys_mesh_map;
     std::unordered_map<std::shared_ptr<GL::Mesh>, instanced_drawables *> M_mesh_drawables;
     std::unordered_map<Key, key_state> M_keys;
     std::unordered_map<Pointer, key_state> M_mouse;
     Vector2 M_mouse_pos;
+    Timeline M_timeline;
+    physkit::quantity<physkit::si::second> M_frame_limit{};
     bool M_debug = false;
     bool M_drag = false;
 };
 
 namespace mesh_objs
 {
+// radius 1
 constexpr auto cube()
 {
     return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid()));
 }
 
+// radius 1
 constexpr auto sphere(unsigned int subdivisions = 3)
 {
     return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions)));

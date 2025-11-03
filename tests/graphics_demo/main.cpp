@@ -33,12 +33,20 @@ public:
             },
             std::make_shared<physkit::mesh>());
         M_cube = add_object(std::move(phys_obj), std::move(cube_mesh), {0.0, 1.0, 0.0});
-        M_sphere->translate({2.0f, 5.0f, 0.0f});
+        M_sphere->translate({3.0f, 0.0f, 0.0f});
 
-        cam().speed(2.5f * si::metre / si::second);
+        cam().speed(8.0f * si::metre / si::second);
     }
 
-    void update(physkit::quantity<physkit::si::second> dt) override {}
+    void update(physkit::quantity<physkit::si::second> dt) override
+    {
+        M_sphere->rotate(Quaternion::rotation(
+            Rad(std::numbers::pi_v<float> * (float) dt.numerical_value_in(physkit::si::second)),
+            Vector3::yAxis()));
+        M_cube->rotate(Quaternion::rotation(
+            Rad(std::numbers::pi_v<float> * (float) dt.numerical_value_in(physkit::si::second)),
+            Vector3{1.0f, 1.0f, 0.0f}.normalized()));
+    }
 
 private:
     physics_obj *M_cube{};

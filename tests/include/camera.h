@@ -30,9 +30,9 @@ public:
     template <class Transform>
     explicit camera(SceneGraph::Scene<Transform> &scene,
                     physkit::quantity<physkit::si::degree, float> fov, const Vector3 &position,
-                    const Vector3 &dir, const Vector2i &window_size,
-                    const Vector2i &viewport_size, 
-                    physkit::quantity<physkit::si::metre / physkit::si::second, float> speed = 1.0f * physkit::si::metre / physkit::si::second)
+                    const Vector3 &dir, const Vector2i &window_size, const Vector2i &viewport_size,
+                    physkit::quantity<physkit::si::metre / physkit::si::second, float> speed =
+                        4.0f * physkit::si::metre / physkit::si::second)
         : M_fov{fov}, M_window_size{window_size}, M_pos{position}, M_speed{speed}
     {
         auto *obj = new SceneGraph::Object<Transform>{&scene};
@@ -84,6 +84,16 @@ public:
         mark_dirty();
     }
 
+    void move(float forward, float right, float up, physkit::quantity<physkit::si::second, float> dt)
+    {
+        Vector3 delta{0.0f};
+        if (forward != 0) delta += forward_axis() * forward;
+        if (right != 0) delta += right_axis() * right;
+        if (up != 0) delta += camera::up * up;
+        if (delta == Vector3{0.0f}) return;
+        move((to_physkit_vector<physkit::one, float>(delta.normalized())) * (M_speed * dt));
+    }
+
     void rotate(physkit::quantity<physkit::si::radian, float> d_yaw,
                 physkit::quantity<physkit::si::radian, float> d_pitch)
     {
@@ -95,28 +105,13 @@ public:
 
         constexpr auto max_pitch = std::numbers::pi_v<float> / 2 * .98f;
         const Vector3 fwd = forward_axis();
-        const auto cur = (float)Math::asin(Math::clamp(fwd.y(), -1.0f, 1.0f));
+        const auto cur = (float) Math::asin(Math::clamp(fwd.y(), -1.0f, 1.0f));
         const auto tgt = Math::clamp(cur + pitch, -max_pitch, max_pitch);
 
         const Vector3 right = M_rot.transformVector(Vector3::xAxis()).normalized();
         M_rot = (Quaternion::rotation(Rad(tgt - cur), right) * M_rot).normalized();
 
         mark_dirty();
-    }
-
-    void move_forward(physkit::quantity<physkit::si::second, float> dt)
-    {
-        move(to_physkit_vector<physkit::si::metre, float>(forward_axis()) * M_speed * dt);
-    }
-
-    void move_right(physkit::quantity<physkit::si::second, float> dt)
-    {
-        move(to_physkit_vector<physkit::si::metre, float>(right_axis()) * M_speed * dt);
-    }
-
-    void move_up(physkit::quantity<physkit::si::second, float> dt)
-    {
-        move(to_physkit_vector<physkit::si::metre, float>(up_axis()) * M_speed * dt);
     }
 
     [[nodiscard]] physkit::quantity<physkit::si::metre / physkit::si::second, float> speed() const
@@ -145,7 +140,6 @@ public:
             rotate((dx * sx) * physkit::si::radian, (dy * sy) * physkit::si::radian);
         else
             rotate((-dx * sx) * physkit::si::radian, (-dy * sy) * physkit::si::radian);
-
     }
 
     SceneGraph::Camera3D &cam() { return *M_cam; }

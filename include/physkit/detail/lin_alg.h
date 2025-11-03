@@ -44,7 +44,6 @@ public:
     }
 
     constexpr operator Q() const noexcept { return *M_data * ref; }
-    constexpr Q value() const noexcept { return *this; }
 
     constexpr quantity_ref &operator=(Q other) noexcept
     {
@@ -178,13 +177,13 @@ public:
     constexpr unit_mat &operator=(unit_mat &&) = default;
     constexpr ~unit_mat() = default;
 
-    template <Quantity OtherQ>
+    template <Quantity OtherQ> requires(equivalent(OtherQ::reference, Q::reference))
     constexpr unit_mat(const unit_mat<OtherQ, _rows, _cols> &other)
         : M_data(other.base().template cast<rep_type>())
     {
     }
 
-    template <Quantity OtherQ>
+    template <Quantity OtherQ> requires(equivalent(OtherQ::reference, Q::reference))
     constexpr unit_mat &operator=(const unit_mat<OtherQ, _rows, _cols> &other)
     {
         M_data = other.base().template cast<rep_type>();
@@ -210,7 +209,7 @@ public:
     }
     constexpr unit_mat(const Q &x, const Q &y, const Q &z, const Q &w)
         : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref),
-               w.numerical_value_in(ref))
+                 w.numerical_value_in(ref))
     {
     }
     constexpr unit_mat(const std::initializer_list<std::initializer_list<Q>> &list)
@@ -263,8 +262,7 @@ public:
         return detail::to_reference<decltype(self)>(std::forward<decltype(self)>(self).base().w());
     }
 
-    template <std::size_t I>
-    constexpr auto get(this auto &&self)
+    template <std::size_t I> constexpr auto get(this auto &&self)
     {
         return detail::to_reference<decltype(self)>(std::forward<decltype(self)>(self).base()[I]);
     }
@@ -454,14 +452,14 @@ auto operator*(T scalar, const unit_mat<Q, Rows, Cols> &matrix)
 
 namespace std
 {
-    template <physkit::Quantity Q, int Rows, int Cols>
-    struct tuple_size<physkit::unit_mat<Q, Rows, Cols>> : std::integral_constant<std::size_t, Rows>
-    {
-    };
+template <physkit::Quantity Q, int Rows, int Cols>
+struct tuple_size<physkit::unit_mat<Q, Rows, Cols>> : std::integral_constant<std::size_t, Rows>
+{
+};
 
-    template <std::size_t I, physkit::Quantity Q, int Rows, int Cols>
-    struct tuple_element<I, physkit::unit_mat<Q, Rows, Cols>>
-    {
-        using type = physkit::detail::quantity_ref<Q>;
-    };
-}
+template <std::size_t I, physkit::Quantity Q, int Rows, int Cols>
+struct tuple_element<I, physkit::unit_mat<Q, Rows, Cols>>
+{
+    using type = physkit::detail::quantity_ref<Q>;
+};
+} // namespace std
