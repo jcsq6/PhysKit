@@ -9,6 +9,7 @@
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Object.h>
 #include <Magnum/SceneGraph/SceneGraph.h>
+#include <Magnum/Animation/Track.h>
 
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
@@ -18,6 +19,15 @@
 namespace graphics
 {
 using namespace Magnum;
+
+class track
+{
+public:
+    std::initializer_list<physkit::vec3<physkit::si::metre, float>> points;
+    std::initializer_list<physkit::quantity<physkit::si::second, float>> times;
+    unsigned int size;
+};
+
 
 class camera
 {
@@ -132,7 +142,7 @@ public:
         float dx = d.x();
         float dy = d.y();
 
-        if (!isfinite(dx) || !isfinite(dy)) return;
+        if (!std::isfinite(dx) || !std::isfinite(dy)) return;
         constexpr float max_delta = 200.0f;
         dx = Math::clamp(dx, -max_delta, max_delta);
         dy = Math::clamp(dy, -max_delta, max_delta);
@@ -140,6 +150,29 @@ public:
             rotate((dx * sx) * physkit::si::radian, (dy * sy) * physkit::si::radian);
         else
             rotate((-dx * sx) * physkit::si::radian, (-dy * sy) * physkit::si::radian);
+    }
+
+    void set_move_track(track *t)
+    {
+        Corrade::Containers::Array<std::pair<float,Math::Vector3<float>>> format{t->points.size()};
+        auto f_it = format.begin();
+        auto p_it = t->points.begin();
+        auto t_it = t->times.begin();
+        while (p_it != t->points.end() && t_it != t->times.end())
+        {
+            f_it->first = t_it->numerical_value_in(physkit::si::second);
+            f_it->second = detail::expand<Magnum::Math::Vector3<float>>([&](auto i)
+                                  { return static_cast<float>((*p_it)[i].numerical_value_in(physkit::si::metre)); },
+                                  std::make_index_sequence<3>{});
+            //f_it->second = to_magnum_vector(*p_it);
+
+
+            ++f_it;
+            ++p_it;
+            ++t_it;
+        }
+        M_move_track = Animation::Track((std::move(format)), Math::lerp,
+            Animation::Extrapolation::Constant);
     }
 
     SceneGraph::Camera3D &cam() { return *M_cam; }
@@ -155,8 +188,14 @@ public:
         return M_inverse_view.toMatrix();
     }
 
-    bool update()
+    bool update(physkit::quantity<physkit::si::second> t)
     {
+        if (M_move_track.size() > 0)
+        {
+            M_pos = M_move_track.at((float) t.numerical_value_in(physkit::si::second));
+            M_dirty = true;
+        }
+
         if (M_dirty)
         {
             M_obj->resetTransformation().rotate(M_rot).translate(M_pos);
@@ -166,9 +205,10 @@ public:
         return false;
     }
 
-    void draw(SceneGraph::DrawableGroup3D &drawables)
+    void draw(SceneGraph::DrawableGroup3D &drawables, physkit::quantity<physkit::si::second> t)
     {
-        update();
+        //printf("%2.2f\n", t.numerical_value_in(physkit::si::second));
+        update(t);
         M_cam->draw(drawables);
     }
 
@@ -180,6 +220,9 @@ private:
 
     physkit::quantity<physkit::si::degree, float> M_fov{};
     physkit::quantity<physkit::si::metre / physkit::si::second, float> M_speed{};
+
+    Animation::Track <float, Math::Vector3<float>> M_move_track;
+    Animation::Track <float, Math::Quaternion<float>> M_rotate_track;
 
     Quaternion M_rot{Magnum::Math::IdentityInit};
     Vector3 M_pos{0.0f};
