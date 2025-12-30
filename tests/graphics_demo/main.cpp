@@ -53,8 +53,10 @@ public:
                 {0.0f * m, 0.0f * m, 0.0f * m}, {-10.0f * m, -10.0f * m, -10.0f * m},
                 {0.0f * m, -10.0f * m, -10.0f * m}
             },
-            .times = {0.0f * s, 12.0f * s, 16.0f * s},
+            .times = {0.0f * s, 6.0f * s, 7.0f * s},
+            .interpolation = track::spline,
         };
+
 
         cam().set_move_track(&t);
     }
