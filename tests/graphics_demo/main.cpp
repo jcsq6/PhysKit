@@ -54,6 +54,9 @@ public:
                 {0.0f * m, -10.0f * m, -10.0f * m}
             },
             .times = {0.0f * s, 6.0f * s, 7.0f * s},
+            .angles = {
+                {0.0f * deg, 0.0f * deg}
+            },
             .interpolation = track::spline,
         };
 

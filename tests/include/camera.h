@@ -26,7 +26,9 @@ class track
 public:
     std::initializer_list<physkit::vec3<physkit::si::metre, float>> points;
     std::initializer_list<physkit::quantity<physkit::si::second, float>> times;
+    std::initializer_list<physkit::unit_mat<physkit::quantity<physkit::si::degree, float>, 2, 1>> angles;
     enum interpolation{constant, linear, spline} interpolation;
+
 };
 
 
@@ -188,12 +190,17 @@ public:
             Math::Vector3<float> a{0,0,0};
             Math::Vector3<float> b{0,0,0};
 
+            //get tangent between this point and neighboring points for easy spline
             if (i != points.size() - 1)
                 a += (points.data()[i+1] - points.data()[i]) / (times.data()[i+1] - times.data()[i]);
-            if (i != 0)
+            else if (i != 0)
                 b += (points.data()[i] - points.data()[i-1]) / (times.data()[i] - times.data()[i-1]);
 
-            tangents.data()[i] = (a + b) / 2;
+            //average tangents
+            if (i == points.size() - 1 || i == 0)
+                tangents.data()[i] = a + b;
+            else
+                tangents.data()[i] = (a + b) / 2;
         }
 
         //construct cubic hermites
@@ -206,8 +213,6 @@ public:
             format.data()[i].first = times.data()[i];
         }
 
-        //ok we need different data types for each function.
-        //everything but constant can take a CubicHermiteComplex or CubicHermiteQuaternion
         //choose interpolation function
         //Math::constant constant
         //Math::lerp linear
@@ -280,7 +285,7 @@ private:
     physkit::quantity<physkit::si::metre / physkit::si::second, float> M_speed{};
 
     Animation::Track <float, Math::CubicHermite<Math::Vector3<float>>, Math::Vector3<float>> M_move_track;
-    Animation::Track <float, Math::Quaternion<float>> M_rotate_track;
+    Animation::Track <float, Math::CubicHermite<Math::Vector2<float>>> M_rotate_track;
 
     Quaternion M_rot{Magnum::Math::IdentityInit};
     Vector3 M_pos{0.0f};
