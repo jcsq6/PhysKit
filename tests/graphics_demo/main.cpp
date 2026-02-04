@@ -45,20 +45,17 @@ public:
         M_cube = add_object(std::move(phys_obj), std::move(cube_mesh), {0.0, 1.0, 0.0});
         M_cube2 = add_object(std::move(phys_obj2), mesh_objs::cube(), {1.0, 0.0, 0.0});
         M_sphere->translate({3.0f, 0.0f, 0.0f});
-        //M_cube2->translate({0.0f, 3.0f, 0.0f});
+        // M_cube2->translate({0.0f, 3.0f, 0.0f});
 
         cam().speed(8.0f * m / s);
-        track t {
-            .points = {
-                {0.0f * m, 0.0f * m, 0.0f * m}, {-10.0f * m, -10.0f * m, -10.0f * m},
-                {0.0f * m, -10.0f * m, -10.0f * m}
-            },
+
+        cam().set_move_track({
+            .points = {{0.0f * m, 0.0f * m, 0.0f * m},
+                       {-10.0f * m, -10.0f * m, -10.0f * m},
+                       {0.0f * m, -10.0f * m, -10.0f * m}},
             .times = {0.0f * s, 6.0f * s, 7.0f * s},
             .interpolation = track::spline,
-        };
-
-
-        cam().set_move_track(t);
+        });
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override
@@ -69,7 +66,7 @@ public:
 
         M_sphere->rotate(rotation_speed * dt, {0.0f, 1.0f, 0.0f});
         M_cube->rotate(rotation_speed * dt, {1.0f, 1.0f, 0.0f});
-        
+
         cam().look_at(vec3(0.0f * m, 0.0f * m, 0.0f * m));
     }
 
