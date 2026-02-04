@@ -58,13 +58,13 @@ public:
         };
 
 
-        cam().set_move_track(&t);
+        cam().set_move_track(t);
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override
     {
         using namespace si::unit_symbols;
-        
+
         constexpr auto rotation_speed = std::numbers::pi_v<float> * rad / s;
 
         M_sphere->rotate(rotation_speed * dt, {0.0f, 1.0f, 0.0f});

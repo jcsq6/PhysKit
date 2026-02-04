@@ -15,6 +15,9 @@
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
 
+#include <ranges>
+#include <span>
+
 #include "convert.h"
 
 namespace graphics
@@ -24,9 +27,9 @@ using namespace Magnum;
 class track
 {
 public:
-    std::initializer_list<physkit::vec3<physkit::si::metre, float>> points;
-    std::initializer_list<physkit::quantity<physkit::si::second, float>> times;
-    enum interpolation{constant, linear, spline} interpolation;
+    std::span<const physkit::vec3<physkit::si::metre, float>> points;
+    std::span<const physkit::quantity<physkit::si::second, float>> times;
+    enum interpolation : std::uint8_t {constant, linear, spline} interpolation = spline;
 };
 
 
@@ -60,8 +63,20 @@ public:
 
     void set_view(const Vector3 &dir)
     {
+        if (Math::isInf(dir).any() || dir.isZero()) return;
+
         Vector3 f = dir.normalized();
-        const Vector3 r = Math::cross(f, up).normalized();
+        Vector3 r = Math::cross(f, up);
+        if (r.isZero())
+        {
+            const Vector3 alt_up = Math::abs(Math::dot(f, Vector3::zAxis())) > 0.99f
+                                      ? Vector3::xAxis()
+                                      : Vector3::zAxis();
+            r = Math::cross(f, alt_up);
+            if (r.isZero()) return;
+        }
+
+        r = r.normalized();
         const Vector3 u = Math::cross(r, f);
         M_rot = Quaternion::fromMatrix({Matrix3{r, u, -f}}).normalized();
         mark_dirty();
@@ -85,8 +100,8 @@ public:
     void look_at(const physkit::vec3<physkit::si::metre, float> &pos)
     {
         const Vector3 target = to_magnum_vector<float>(pos);
-        const Vector3 f = (target - M_pos).normalized();
-        set_view(f);
+        const Vector3 dir = target - M_pos;
+        set_view(dir);
     }
 
     void move(const physkit::vec3<physkit::si::metre, float> &delta)
@@ -153,57 +168,27 @@ public:
             rotate((-dx * sx) * physkit::si::radian, (-dy * sy) * physkit::si::radian);
     }
 
-    void set_move_track(track *t)
+    void set_move_track(const track &t)
     {
-        //put the set of points and times into a format usable by magnum
-        //Corrade::Containers::Array<std::pair<float,Math::Vector3<float>>> points{t->points.size()};
-        Containers::Array<float> times{t->points.size()};
-        Containers::Array<Math::Vector3<float>> points{t->points.size()};
-        Containers::Array<Math::Vector3<float>> tangents{t->points.size()};
+        // Put the set of points and times into a format usable by Magnum.
+        const std::size_t count = t.points.size();
+        
+        Corrade::Containers::Array<std::pair<float, Math::CubicHermite3D<float>>> format{count};
 
-        Corrade::Containers::Array<std::pair<float, Math::CubicHermite3D<float>>> format{t->points.size()};
-
-        //extract data from physkit types
-        auto p_it = points.begin();
-        auto t_it = times.begin();
-        auto tp_it = t->points.begin();
-        auto tt_it = t->times.begin();
-        while (tp_it != t->points.end() && tt_it != t->times.end())
+        // Construct cubic Hermites.
+        for (std::size_t i = 0; i < count; ++i)
         {
-            *t_it = tt_it->numerical_value_in(physkit::si::second);
-            *p_it = detail::expand<Magnum::Math::Vector3<float>>([&](auto i)
-                                  { return static_cast<float>((*tp_it)[i].numerical_value_in(physkit::si::metre)); },
-                                  std::make_index_sequence<3>{});
+            physkit::vec3<physkit::si::metre / physkit::si::second, float>  tan{};
+            if (i > 0)
+                tan += (t.points[i] - t.points[i - 1]) / (t.times[i] - t.times[i - 1]);
+            if (i + 1 < count)
+                tan += (t.points[i + 1] - t.points[i]) / (t.times[i + 1] - t.times[i]);
 
+            auto &&[time, spline] = format[i];
 
-            ++t_it;
-            ++p_it;
-            ++tp_it;
-            ++tt_it;
-        }
-
-        //calculate cubic hermite spline tangents
-        for (int i = 0; i < points.size(); i++)
-        {
-            Math::Vector3<float> a{0,0,0};
-            Math::Vector3<float> b{0,0,0};
-
-            if (i != points.size() - 1)
-                a += (points.data()[i+1] - points.data()[i]) / (times.data()[i+1] - times.data()[i]);
-            if (i != 0)
-                b += (points.data()[i] - points.data()[i-1]) / (times.data()[i] - times.data()[i-1]);
-
-            tangents.data()[i] = (a + b) / 2;
-        }
-
-        //construct cubic hermites
-        for (int i = 0; i < format.size(); i++)
-        {
-            printf("%f,%f\n", tangents.data()[i].x(), points.data()[i].x());
-            format.data()[i].second.inTangent() = tangents.data()[i];
-            format.data()[i].second.point() = points.data()[i];
-            format.data()[i].second.outTangent() = tangents.data()[i];
-            format.data()[i].first = times.data()[i];
+            spline.inTangent() = spline.outTangent() = to_magnum_vector<float>(tan) * 0.5f;
+            spline.point() = to_magnum_vector<float>(t.points[i]);
+            time = t.times[i].numerical_value_in(physkit::si::second);
         }
 
         //ok we need different data types for each function.
@@ -215,7 +200,7 @@ public:
         //Math::slerp spherical
 
         //create animation track
-        switch (t->interpolation)
+        switch (t.interpolation)
         {
         case track::interpolation::constant:
             M_move_track = Animation::Track((std::move(format)), Math::select,
