@@ -24,17 +24,17 @@ namespace graphics
 {
 using namespace Magnum;
 
-class track
+struct inter_pt
 {
-public:
-    std::span<const physkit::vec3<physkit::si::metre, float>> points;
-    std::span<const physkit::quantity<physkit::si::second, float>> times;
-    enum interpolation : std::uint8_t
-    {
-        constant,
-        linear,
-        spline
-    } interpolation = spline;
+    physkit::vec3<physkit::si::metre, float> point;
+    physkit::quantity<physkit::si::second, float> time;
+};
+
+enum interpolation_t : std::uint8_t
+{
+    constant,
+    linear,
+    spline
 };
 
 class camera
@@ -173,10 +173,10 @@ public:
             rotate((-dx * sx) * physkit::si::radian, (-dy * sy) * physkit::si::radian);
     }
 
-    void set_move_track(const track &t)
+    void set_move_track(const std::span<const inter_pt> pts, interpolation_t interp)
     {
         // Put the set of points and times into a format usable by Magnum.
-        const std::size_t count = t.points.size();
+        const std::size_t count = pts.size();
 
         Corrade::Containers::Array<std::pair<float, Math::CubicHermite3D<float>>> format{count};
 
@@ -184,15 +184,15 @@ public:
         for (std::size_t i = 0; i < count; ++i)
         {
             physkit::vec3<physkit::si::metre / physkit::si::second, float> tan{};
-            if (i > 0) tan += (t.points[i] - t.points[i - 1]) / (t.times[i] - t.times[i - 1]);
+            if (i > 0) tan += (pts[i].point - pts[i - 1].point) / (pts[i].time - pts[i - 1].time);
             if (i + 1 < count)
-                tan += (t.points[i + 1] - t.points[i]) / (t.times[i + 1] - t.times[i]);
+                tan += (pts[i + 1].point - pts[i].point) / (pts[i + 1].time - pts[i].time);
 
             auto &&[time, spline] = format[i];
 
             spline.inTangent() = spline.outTangent() = to_magnum_vector<float>(tan) * 0.5f;
-            spline.point() = to_magnum_vector<float>(t.points[i]);
-            time = t.times[i].numerical_value_in(physkit::si::second);
+            spline.point() = to_magnum_vector<float>(pts[i].point);
+            time = static_cast<float>(pts[i].time.numerical_value_in(physkit::si::second));
         }
 
         // ok we need different data types for each function.
@@ -204,13 +204,13 @@ public:
         // Math::slerp spherical
 
         // create animation track
-        switch (t.interpolation)
+        switch (interp)
         {
-        case track::interpolation::constant:
+        case interpolation_t::constant:
             M_move_track = Animation::Track((std::move(format)), Math::select,
                                             Animation::Extrapolation::Constant);
             break;
-        case track::interpolation::spline:
+        case interpolation_t::spline:
             M_move_track = Animation::Track((std::move(format)), Math::splerp,
                                             Animation::Extrapolation::Constant);
             break;
