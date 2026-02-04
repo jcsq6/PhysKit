@@ -4,11 +4,13 @@
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/DualQuaternion.h>
 #include <Magnum/Math/Functions.h>
+#include <Magnum/Math/CubicHermite.h>
 #include <Magnum/Platform/GlfwApplication.h>
 #include <Magnum/SceneGraph/AbstractTranslationRotation3D.h>
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Object.h>
 #include <Magnum/SceneGraph/SceneGraph.h>
+#include <Magnum/Animation/Track.h>
 
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
@@ -18,6 +20,15 @@
 namespace graphics
 {
 using namespace Magnum;
+
+class track
+{
+public:
+    std::initializer_list<physkit::vec3<physkit::si::metre, float>> points;
+    std::initializer_list<physkit::quantity<physkit::si::second, float>> times;
+    enum interpolation{constant, linear, spline} interpolation;
+};
+
 
 class camera
 {
@@ -132,7 +143,7 @@ public:
         float dx = d.x();
         float dy = d.y();
 
-        if (!isfinite(dx) || !isfinite(dy)) return;
+        if (!std::isfinite(dx) || !std::isfinite(dy)) return;
         constexpr float max_delta = 200.0f;
         dx = Math::clamp(dx, -max_delta, max_delta);
         dy = Math::clamp(dy, -max_delta, max_delta);
@@ -140,6 +151,85 @@ public:
             rotate((dx * sx) * physkit::si::radian, (dy * sy) * physkit::si::radian);
         else
             rotate((-dx * sx) * physkit::si::radian, (-dy * sy) * physkit::si::radian);
+    }
+
+    void set_move_track(track *t)
+    {
+        //put the set of points and times into a format usable by magnum
+        //Corrade::Containers::Array<std::pair<float,Math::Vector3<float>>> points{t->points.size()};
+        Containers::Array<float> times{t->points.size()};
+        Containers::Array<Math::Vector3<float>> points{t->points.size()};
+        Containers::Array<Math::Vector3<float>> tangents{t->points.size()};
+
+        Corrade::Containers::Array<std::pair<float, Math::CubicHermite3D<float>>> format{t->points.size()};
+
+        //extract data from physkit types
+        auto p_it = points.begin();
+        auto t_it = times.begin();
+        auto tp_it = t->points.begin();
+        auto tt_it = t->times.begin();
+        while (tp_it != t->points.end() && tt_it != t->times.end())
+        {
+            *t_it = tt_it->numerical_value_in(physkit::si::second);
+            *p_it = detail::expand<Magnum::Math::Vector3<float>>([&](auto i)
+                                  { return static_cast<float>((*tp_it)[i].numerical_value_in(physkit::si::metre)); },
+                                  std::make_index_sequence<3>{});
+
+
+            ++t_it;
+            ++p_it;
+            ++tp_it;
+            ++tt_it;
+        }
+
+        //calculate cubic hermite spline tangents
+        for (int i = 0; i < points.size(); i++)
+        {
+            Math::Vector3<float> a{0,0,0};
+            Math::Vector3<float> b{0,0,0};
+
+            if (i != points.size() - 1)
+                a += (points.data()[i+1] - points.data()[i]) / (times.data()[i+1] - times.data()[i]);
+            if (i != 0)
+                b += (points.data()[i] - points.data()[i-1]) / (times.data()[i] - times.data()[i-1]);
+
+            tangents.data()[i] = (a + b) / 2;
+        }
+
+        //construct cubic hermites
+        for (int i = 0; i < format.size(); i++)
+        {
+            printf("%f,%f\n", tangents.data()[i].x(), points.data()[i].x());
+            format.data()[i].second.inTangent() = tangents.data()[i];
+            format.data()[i].second.point() = points.data()[i];
+            format.data()[i].second.outTangent() = tangents.data()[i];
+            format.data()[i].first = times.data()[i];
+        }
+
+        //ok we need different data types for each function.
+        //everything but constant can take a CubicHermiteComplex or CubicHermiteQuaternion
+        //choose interpolation function
+        //Math::constant constant
+        //Math::lerp linear
+        //Math::splerp spline
+        //Math::slerp spherical
+
+        //create animation track
+        switch (t->interpolation)
+        {
+        case track::interpolation::constant:
+            M_move_track = Animation::Track((std::move(format)), Math::select,
+                Animation::Extrapolation::Constant);
+            break;
+        case track::interpolation::spline:
+            M_move_track = Animation::Track((std::move(format)), Math::splerp,
+                Animation::Extrapolation::Constant);
+            break;
+        default:
+            M_move_track = Animation::Track((std::move(format)), Math::lerp,
+                Animation::Extrapolation::Constant);
+            break;
+        }
     }
 
     SceneGraph::Camera3D &cam() { return *M_cam; }
@@ -155,8 +245,15 @@ public:
         return M_inverse_view.toMatrix();
     }
 
-    bool update()
+    bool update(physkit::quantity<physkit::si::second> t)
     {
+        if (M_move_track.size() > 0)
+        {
+            M_pos = M_move_track.at((float) t.numerical_value_in(physkit::si::second));
+            //printf("%f\n", M_pos.x()); //nan...
+            M_dirty = true;
+        }
+
         if (M_dirty)
         {
             M_obj->resetTransformation().rotate(M_rot).translate(M_pos);
@@ -166,9 +263,10 @@ public:
         return false;
     }
 
-    void draw(SceneGraph::DrawableGroup3D &drawables)
+    void draw(SceneGraph::DrawableGroup3D &drawables, physkit::quantity<physkit::si::second> t)
     {
-        update();
+        //printf("%2.2f\n", t.numerical_value_in(physkit::si::second));
+        update(t);
         M_cam->draw(drawables);
     }
 
@@ -180,6 +278,9 @@ private:
 
     physkit::quantity<physkit::si::degree, float> M_fov{};
     physkit::quantity<physkit::si::metre / physkit::si::second, float> M_speed{};
+
+    Animation::Track <float, Math::CubicHermite<Math::Vector3<float>>, Math::Vector3<float>> M_move_track;
+    Animation::Track <float, Math::Quaternion<float>> M_rotate_track;
 
     Quaternion M_rot{Magnum::Math::IdentityInit};
     Vector3 M_pos{0.0f};

@@ -425,6 +425,11 @@ protected:
         return M_timeline.previousFrameDuration() * physkit::si::second;
     }
 
+    physkit::quantity<physkit::si::second> current_time() const
+    {
+        return M_timeline.previousFrameTime() * physkit::si::second;
+    }
+
 private:
     void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
     {
@@ -459,7 +464,7 @@ private:
         update(dt());
 
         M_shader.setProjectionMatrix(M_cam.projection_matrix());
-        M_cam.draw(M_shaded);
+        M_cam.draw(M_shaded, current_time());
 
         swapBuffers();
         redraw();
