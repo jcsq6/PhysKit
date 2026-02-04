@@ -35,17 +35,14 @@ public:
         M_cube = add_object(std::move(phys_obj), std::move(cube_mesh), {0.0, 1.0, 0.0});
         M_sphere->translate({3.0f, 0.0f, 0.0f});
 
-        cam().speed(8.0f * si::metre / si::second);
+        cam().speed(8.0f * m / s);
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override
     {
-        M_sphere->rotate(Quaternion::rotation(
-            Rad(std::numbers::pi_v<float> * (float) dt.numerical_value_in(physkit::si::second)),
-            Vector3::yAxis()));
-        M_cube->rotate(Quaternion::rotation(
-            Rad(std::numbers::pi_v<float> * (float) dt.numerical_value_in(physkit::si::second)),
-            Vector3{1.0f, 1.0f, 0.0f}.normalized()));
+        constexpr auto rotation_speed = std::numbers::pi_v<float> * si::radian / si::second;
+        M_sphere->rotate(rotation_speed * dt, {0.0f, 1.0f, 0.0f});
+        M_cube->rotate(rotation_speed * dt, {1.0f, 1.0f, 0.0f});
     }
 
 private:
