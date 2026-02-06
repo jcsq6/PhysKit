@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.40)
 
 project(PhysKit VERSION 0.1.0 LANGUAGES C CXX)
 
@@ -8,8 +8,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_library(STDCXXEXP_LIBRARY NAMES stdc++exp)
 
 if(STDCXXEXP_LIBRARY)
-  link_libraries($<LINK_ONLY:${STDCXXEXP_LIBRARY}>)
+	link_libraries($<LINK_ONLY:${STDCXXEXP_LIBRARY}>)
 endif()
+
+include(${CMAKE_SOURCE_DIR}/cmake/EnsureClang.cmake)
+
 
 # ----- PhysKit Library -----
 set(PHYSKIT_SOURCES 

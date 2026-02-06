@@ -44,5 +44,6 @@ set(MAGNUM_LIBRARIES
     Magnum::GL
     Magnum::Primitives
     Magnum::Shaders
+    Magnum::SceneGraph
     OpenGL::GL
     ${MAGNUM_WINDOW_LIBRARY})

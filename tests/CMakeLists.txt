@@ -7,5 +7,19 @@ else()
     set(MAGNUM_LIBRARIES "")
 endif()
 
+add_library(phys_graphics INTERFACE)
+
+target_sources(phys_graphics
+  INTERFACE
+    FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+    FILES
+      include/graphics.h
+      include/camera.h
+      include/convert.h
+)
+
+target_link_libraries(phys_graphics INTERFACE ${MAGNUM_LIBRARIES} physkit)
+
 add_subdirectory(demo)
 add_subdirectory(graphics_demo)

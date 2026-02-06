@@ -2,12 +2,16 @@ Checks: |
   readability-identifier-naming,
   -*,
   bugprone-*,
+  -bugprone-easily-swappable-parameters,
   performance-*,
   modernize-*,
   cppcoreguidelines-*,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-avoid-magic-numbers,
   -modernize-use-trailing-return-type,
   readability-*,
   -readability-identifier-length,
+  -readability-magic-numbers,
   -readability-braces-around-statements,
   -readability-uppercase-literal-suffix,
   clang-analyzer-*,
@@ -24,6 +28,10 @@ CheckOptions:
     value: lower_case
   - key: readability-identifier-naming.MemberCase
     value: lower_case
+  - key: readability-identifier-naming.MemberPrefix
+    value: 'M_'
+  - key: readability-identifier-naming.PublicMemberPrefix
+    value: ''
   - key: readability-identifier-naming.ParameterCase
     value: lower_case
   - key: readability-identifier-naming.NamespaceCase
