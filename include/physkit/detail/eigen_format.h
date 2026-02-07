@@ -77,4 +77,3 @@ public:
         return std::format_to(it, " {}", Q::unit);
     }
 };
-

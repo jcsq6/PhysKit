@@ -6,11 +6,11 @@
 #include <Eigen/src/Core/util/Meta.h>
 
 #include <mp-units/framework.h>
+#include <mp-units/math.h>
 #include <mp-units/systems/international.h>
 #include <mp-units/systems/si.h>
 #include <mp-units/systems/si/unit_symbols.h>
 #include <mp-units/systems/si/units.h>
-#include <mp-units/math.h>
 
 #include <type_traits>
 #include <utility>
@@ -180,10 +180,7 @@ public:
         return M_data(row, col) * ref;
     }
 
-    constexpr void set(Eigen::Index index, Q val)
-    {
-        M_data[index] = val.numerical_value_in(ref);
-    }
+    constexpr void set(Eigen::Index index, Q val) { M_data[index] = val.numerical_value_in(ref); }
 
     constexpr void set(Eigen::Index row, Eigen::Index col, Q val)
     {

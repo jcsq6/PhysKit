@@ -22,4 +22,5 @@ target_sources(phys_graphics
 target_link_libraries(phys_graphics INTERFACE ${MAGNUM_LIBRARIES} physkit)
 
 add_subdirectory(demo)
+add_subdirectory(mesh)
 add_subdirectory(graphics_demo)
