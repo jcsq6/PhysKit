@@ -276,7 +276,7 @@ public:
                  const Vector3 &initial_cam_dir = {0.0f, 0.0f, 1.0f}, bool drag = false,
                  bool vsync = true)
         : Magnum::Platform::Application{arguments, Configuration{}.setTitle(Containers::StringView{
-                                                       title.data(), title.size()})},
+                                                       title.data(), title.size()}).setSize(window_size)},
           M_cam(M_scene, fov, initial_cam_pos, initial_cam_dir, window_size, window_size),
           M_drag(drag)
     {
@@ -546,10 +546,10 @@ constexpr auto cone(unsigned int rings, unsigned int segments, float half_length
         MeshTools::compile(Primitives::coneSolid(rings, segments, half_length)));
 }
 
-constexpr auto cylinder(unsigned int rings, unsigned int segments, float half_length)
+constexpr auto cylinder(unsigned int rings, unsigned int segments, float half_length, bool include_caps = true)
 {
     return std::make_shared<GL::Mesh>(
-        MeshTools::compile(Primitives::cylinderSolid(rings, segments, half_length)));
+        MeshTools::compile(Primitives::cylinderSolid(rings, segments, half_length, include_caps ? Primitives::CylinderFlag::CapEnds : Primitives::CylinderFlag{})));
 }
 
 constexpr auto plane()

@@ -632,6 +632,7 @@ public:
         auto update = [&]
         {
             M_obj->resetTransformation().rotate(M_rot).translate(M_pos);
+            M_inverse_view = transformation().inverted();
             M_dirty = false;
         };
 
