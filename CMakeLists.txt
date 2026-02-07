@@ -5,10 +5,25 @@ project(PhysKit VERSION 0.1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_library(STDCXXEXP_LIBRARY NAMES stdc++exp)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	# find_library doesn't find libstdc++exp.a with gcc
+	execute_process(
+		COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libstdc++exp.a
+		OUTPUT_VARIABLE STDCXXEXP_LIBRARY
+		OUTPUT_STRIP_TRAILING_WHITESPACE)
+	if(STDCXXEXP_LIBRARY AND NOT STDCXXEXP_LIBRARY STREQUAL "libstdc++exp.a")
+		link_libraries($<LINK_ONLY:${STDCXXEXP_LIBRARY}>)
+	endif()
 
-if(STDCXXEXP_LIBRARY)
-	link_libraries($<LINK_ONLY:${STDCXXEXP_LIBRARY}>)
+	# TODO: find a better alternative than just statically linking the runtime libraries on windows
+	if(WIN32)
+		add_link_options(-static-libstdc++ -static-libgcc)
+	endif()
+else()
+	find_library(STDCXXEXP_LIBRARY NAMES stdc++exp)
+	if(STDCXXEXP_LIBRARY)
+		link_libraries($<LINK_ONLY:${STDCXXEXP_LIBRARY}>)
+	endif()
 endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake/EnsureClang.cmake)
@@ -46,6 +61,8 @@ add_library(physkit::physkit ALIAS physkit)
 set(PHYSKIT_LIBRARIES physkit)
 
 add_subdirectory(tests)
+
+include(${CMAKE_SOURCE_DIR}/cmake/FilterCompileCommands.cmake)
 
 # ----- Documentation (Doxygen) -----
 option(ENABLE_DOCS "Enable building API documentation" ON)
