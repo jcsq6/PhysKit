@@ -1,6 +1,4 @@
 #include "graphics.h"
-#include "physkit/particle.h"
-#include <memory>
 #include <mp-units/systems/si/units.h>
 
 using namespace graphics;
@@ -10,76 +8,77 @@ class app : public graphics::graphics_app
 {
 public:
     explicit app(const Arguments &arguments)
-        : graphics::graphics_app{arguments,
-                                 {800, 600},
-                                 45 * si::degree,
-                                 "PhysKit Graphics Test",
-                                 {0.0f, 5.0f, -10.0f},
-                                 {0.0f, -5.0f, 10.0f}}
+        : graphics::graphics_app{arguments,           {800, 600},           45 * si::degree,
+                                 "Camera Track Test", {0.0f, 8.0f, -18.0f}, {0.0f, -8.0f, 18.0f}}
     // NOLINT
     {
-        auto cube_mesh = mesh_objs::cube();
-        auto sphere_mesh = mesh_objs::sphere();
-
         using namespace si::unit_symbols;
 
-        M_sphere = add_object(std::move(sphere_mesh), {1.0, 0.0, 0.0});
-        auto phys_obj = std::make_unique<physkit::object>(
-            physkit::particle{
-                .pos = {0.0 * m, 0.0 * m, 0.0 * m},
-                .vel = {0.0 * m / s, 0.0 * m / s, 0.0 * m / s},
-                .acc = {0.0 * m / s / s, 0.0 * m / s / s, 0.0 * m / s / s},
-                .mass = 1.0 * kg,
-            },
-            std::make_shared<physkit::mesh>());
+        auto sphere = mesh_objs::sphere();
 
-        auto phys_obj2 = std::make_unique<physkit::object>(
-            physkit::particle{
-                .pos = {0.0 * m, 0.0 * m, 0.0 * m},
-                .vel = {0.0 * m / s, 0.0 * m / s, 0.0 * m / s},
-                .acc = {0.0 * m / s / s, 0.0 * m / s / s, 0.0 * m / s / s},
-                .mass = 1.0 * kg,
-            },
-            std::make_shared<physkit::mesh>());
+        const physkit::vec3<m, float> pt_a = {-8 * m, 0 * m, -8 * m};
+        const physkit::vec3<m, float> pt_b = {8 * m, 0 * m, 8 * m};
+        const physkit::vec3<m, float> pt_c = {8 * m, 0 * m, -8 * m};
+        const physkit::vec3<m, float> pt_d = {-8 * m, 0 * m, 8 * m};
 
-        M_cube = add_object(std::move(phys_obj), std::move(cube_mesh), {0.0, 1.0, 0.0});
-        M_cube2 = add_object(std::move(phys_obj2), mesh_objs::cube(), {1.0, 0.0, 0.0});
-        M_sphere->translate({3.0f, 0.0f, 0.0f});
-        //M_cube2->translate({0.0f, 3.0f, 0.0f});
+        // Center marker: small white sphere at origin
+        M_center = add_object(sphere, {0.9f, 0.9f, 0.9f});
 
-        cam().speed(8.0f * si::metre / si::second);
-        track t {
-            .points = {
-                {0.0f * m, 0.0f * m, 0.0f * m}, {-10.0f * m, -10.0f * m, -10.0f * m},
-                {0.0f * m, -10.0f * m, -10.0f * m}
-            },
-            .times = {0.0f * s, 6.0f * s, 7.0f * s},
-            .angles = {
-                {0.0f * deg, 0.0f * deg}
-            },
-            .interpolation = track::spline,
-        };
+        M_a = add_object(sphere, {1.0f, 0.15f, 0.1f});
+        M_a->translate(to_magnum_vector<float>(pt_a));
 
+        M_b = add_object(sphere, {0.1f, 0.8f, 0.15f});
+        M_b->translate(to_magnum_vector<float>(pt_b));
 
-        cam().set_move_track(&t);
+        // Blue cone at +Z
+        M_c = add_object(sphere, {0.1f, 0.2f, 1.0f});
+        M_c->translate(to_magnum_vector<float>(pt_c));
+
+        // Yellow cylinder at -Z, elevated
+        M_d = add_object(sphere, {0.9f, 0.8f, 0.1f});
+        M_d->translate(to_magnum_vector<float>(pt_d));
+
+        cam().set_move_track(camera_track({
+            kf::make_pos({0 * m, 8 * m, -18 * m})
+                .look_at(physkit::vec3<m, float>::zero())
+                .transition(2.0f * s),
+            kf::make_pos({0 * m, 20 * m, 0 * m})
+                .look_at(physkit::vec3<m, float>::zero())
+                .transition(4.0f * s),
+            kf::make_pos(pt_a + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
+                .look_at(pt_a)
+                .transition(4.0f * s),
+            kf::make_pos(pt_b + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
+                .look_at(pt_b)
+                .transition(4.0f * s),
+            kf::make_pos(pt_c + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
+                .look_at(pt_c)
+                .transition(4.0f * s),
+            kf::make_pos(pt_d + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
+                .look_at(pt_d)
+                .transition(4.0f * s),
+            kf::make_pos({0 * m, 20 * m, 0 * m})
+                .look_at(physkit::vec3<m, float>::zero())
+                .transition(4.0f * s),
+        }));
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override
     {
         using namespace si::unit_symbols;
-        M_sphere->rotate(Quaternion::rotation(
-            Rad(std::numbers::pi_v<float> * (float) dt.numerical_value_in(physkit::si::second)),
-            Vector3::yAxis()));
-        M_cube->rotate(Quaternion::rotation(
-            Rad(std::numbers::pi_v<float> * (float) dt.numerical_value_in(physkit::si::second)),
-            Vector3{1.0f, 1.0f, 0.0f}.normalized()));
-        cam().look_at(vec3(0.0f * m, 0.0f * m, 0.0f * m));
+
+        // Spin objects so it is visually obvious the scene is live
+        // constexpr auto spin = std::numbers::pi_v<float> * rad / s;
+        // M_red_sphere->rotate(spin * dt, {0.0f, 1.0f, 0.0f});
+        // M_green_cube->rotate(spin * dt, {1.0f, 1.0f, 0.0f});
     }
 
 private:
-    physics_obj *M_cube{};
-    physics_obj *M_cube2{};
-    gfx_obj *M_sphere{};
+    gfx_obj *M_center{};
+    gfx_obj *M_a{};
+    gfx_obj *M_b{};
+    gfx_obj *M_c{};
+    gfx_obj *M_d{};
 };
 
 MAGNUM_APPLICATION_MAIN(app) // NOLINT

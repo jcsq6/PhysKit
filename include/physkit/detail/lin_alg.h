@@ -177,13 +177,15 @@ public:
     constexpr unit_mat &operator=(unit_mat &&) = default;
     constexpr ~unit_mat() = default;
 
-    template <Quantity OtherQ> requires(equivalent(OtherQ::reference, Q::reference))
+    template <Quantity OtherQ>
+        requires(equivalent(OtherQ::reference, Q::reference))
     constexpr unit_mat(const unit_mat<OtherQ, _rows, _cols> &other)
         : M_data(other.base().template cast<rep_type>())
     {
     }
 
-    template <Quantity OtherQ> requires(equivalent(OtherQ::reference, Q::reference))
+    template <Quantity OtherQ>
+        requires(equivalent(OtherQ::reference, Q::reference))
     constexpr unit_mat &operator=(const unit_mat<OtherQ, _rows, _cols> &other)
     {
         M_data = other.base().template cast<rep_type>();

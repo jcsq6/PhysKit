@@ -70,7 +70,21 @@ namespace graphics
 {
 
 using namespace Magnum;
-using gfx_obj = SceneGraph::Object<SceneGraph::MatrixTransformation3D>;
+using gfx_obj_base = SceneGraph::Object<SceneGraph::MatrixTransformation3D>;
+
+class gfx_obj : public gfx_obj_base
+{
+public:
+    using SceneGraph::Object<SceneGraph::MatrixTransformation3D>::Object;
+
+    void rotate(physkit::quantity<physkit::si::radian, float> angle,
+                const physkit::vec3<physkit::one> &axis)
+    {
+        Quaternion rot = Quaternion::rotation(Rad(angle.numerical_value_in(physkit::si::radian)),
+                                              to_magnum_vector<float>(axis.normalized()));
+        Object::rotate(rot);
+    }
+};
 
 // class caching_object : public gfx_obj, SceneGraph::AbstractFeature3D
 // {
@@ -94,7 +108,8 @@ using gfx_obj = SceneGraph::Object<SceneGraph::MatrixTransformation3D>;
 class physics_obj : public SceneGraph::Drawable3D, public gfx_obj
 {
 public:
-    explicit physics_obj(gfx_obj &parent, std::unique_ptr<physkit::object> obj = nullptr)
+    explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent,
+                         std::unique_ptr<physkit::object> obj = nullptr)
         : SceneGraph::Drawable3D{parent}, gfx_obj(&parent), M_phys{std::move(obj)}
     {
     }
@@ -116,8 +131,9 @@ class instanced_drawable;
 class instanced_drawables : public SceneGraph::Drawable3D
 {
 public:
-    explicit instanced_drawables(gfx_obj &parent, SceneGraph::DrawableGroup3D *group,
-                                 std::shared_ptr<GL::Mesh> mesh, GL::AbstractShaderProgram &shader)
+    explicit instanced_drawables(std::derived_from<gfx_obj_base> auto &parent,
+                                 SceneGraph::DrawableGroup3D *group, std::shared_ptr<GL::Mesh> mesh,
+                                 GL::AbstractShaderProgram &shader)
         : SceneGraph::Drawable3D{parent, group}, M_mesh{std::move(mesh)}, M_shader{&shader}
     {
         M_mesh->addVertexBufferInstanced(M_buffer, 1, 0, Shaders::PhongGL::TransformationMatrix{},
@@ -154,7 +170,8 @@ private:
 class instanced_drawable : public SceneGraph::Drawable3D, public gfx_obj
 {
 public:
-    explicit instanced_drawable(gfx_obj &parent, instanced_drawables &group)
+    explicit instanced_drawable(std::derived_from<gfx_obj_base> auto &parent,
+                                instanced_drawables &group)
         : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}
     {
         group.add_object(*this);
