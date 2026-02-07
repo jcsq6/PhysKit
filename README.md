@@ -38,7 +38,7 @@ os=Windows
 
 [conf]
 tools.cmake.cmaketoolchain:generator=Ninja
-tools.build:compiler_executables={"c":"C:/dev/msys2/ucrt64/bin/gcc.exe","cpp":"C:/dev/msys2/ucrt64/bin/g++.exe"}
+tools.build:compiler_executables={"c":"YOUR_PATH_TO_MSYS2/ucrt64/bin/gcc.exe","cpp":"YOUR_PATH_TO_MSYS2/ucrt64/bin/g++.exe"}
 ```
 
 Adjust the compiler paths to match your MSYS2 installation.
