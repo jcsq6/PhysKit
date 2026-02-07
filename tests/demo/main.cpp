@@ -51,8 +51,9 @@ int main()
     std::println("M / 2.0 m = \n{:.2f}", M / (2.0 * m)); // NOLINT
     std::println("M + M = \n{:.2f}", M + M);
     std::println("M - M = \n{:.2f}", M - M);
-    std::println("M[1, 1] * 5 = {::N[.2f]}", M[1, 1] * 5);        // NOLINT
-    std::println("M[1, 1] => 10 = {::N[.2f]}", M[1, 1] = 10 * m); // NOLINT
+    std::println("M[1, 1] * 5 = {::N[.2f]}", M[1, 1] * 5); // NOLINT
+    M.set(1, 1, 10 * m);                                          // NOLINT
+    std::println("M[1, 1] => 10 = {::N[.2f]}", M[1, 1]);
 
     const auto const_M = M; // NOLINT
     std::println("const M[1, 1] = {::N[.2f]}", const_M[1, 1]);
