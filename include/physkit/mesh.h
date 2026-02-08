@@ -365,12 +365,12 @@ public:
 
     /// @brief A lightweight view of a mesh placed in world space.
     /// Provides world-space collision queries by transforming into local space and back.
-    /// Not intended for long-term storage. Create one, query it, discard it. Avoid dangling references.
+    /// Not intended for long-term storage. Create one, query it, discard it. Avoid dangling
+    /// references.
     class instance
     {
     public:
-        instance(const mesh &msh, const vec3<si::metre> &position,
-                 const mat3<one> &orientation)
+        instance(const mesh &msh, const vec3<si::metre> &position, const mat3<one> &orientation)
             : M_mesh{msh}, M_position{position}, M_orientation{orientation}
         {
         }
@@ -424,9 +424,9 @@ public:
             return id;
         }
 
-        const mesh &M_mesh;              // NOLINT
+        const mesh &M_mesh; // NOLINT
         vec3<si::metre> M_position;
-        const mat3<one> &M_orientation;  // NOLINT
+        const mat3<one> &M_orientation; // NOLINT
     };
 
     mesh() = default;
@@ -464,20 +464,16 @@ public:
     [[nodiscard]] bool is_convex() const;
 
     /// @brief Create an instance view of this mesh at the given position and orientation.
-    [[nodiscard]] instance at(const vec3<si::metre>& position,
-                              const mat3<one> &orientation) const
+    [[nodiscard]] instance at(const vec3<si::metre> &position, const mat3<one> &orientation) const
     {
         return {*this, position, orientation};
     }
 
     /// @brief Create an instance view of this mesh at the given position (identity orientation).
-    [[nodiscard]] instance at(const vec3<si::metre>& position) const
-    {
-        return {*this, position};
-    }
+    [[nodiscard]] instance at(const vec3<si::metre> &position) const { return {*this, position}; }
 
     /// Prevent binding orientation to a temporary.
-    instance at(const vec3<si::metre>&, mat3<one> &&) const = delete;
+    instance at(const vec3<si::metre> &, mat3<one> &&) const = delete;
 
 private:
     aabb M_bounds;

@@ -151,6 +151,7 @@ private:
 ///
 /// A camera_track manages smooth camera movement through a series of keyframes. It interpolates
 /// both position and orientation over time using cubic Hermite splines (or simpler interpolation).
+/// If no orientation is given, the user will be free to look around normally.
 ///
 /// @par Interpolation Modes
 /// - `constant`: Step function (no interpolation)
@@ -171,7 +172,7 @@ private:
 ///     kf::make_pos({0.0f * m, 1.0f * m, 5.0f * m})
 ///         .dir({0.0f, 0.0f, 1.0f})
 ///         .transition(2.0f * s)
-/// }, camera_track::spline));
+/// }, camera_track::spline, camera_track::release, true));
 ///
 /// // Alternatively, for manual sampling:
 /// camera_track track({...keyframes...});
@@ -191,6 +192,14 @@ public:
         spline    ///< Cubic Hermite spline interpolation (smooth)
     };
 
+    /// @brief Extrapolation behavior for the camera track.
+    enum extrapolation_t : std::uint8_t
+    {
+        release, ///< User regains control over camera
+        loop,    ///< Camera returns to start and loops through track
+        reverse  ///< Camera moves back and forth through the track
+    };
+
     /// @brief Default constructor creates an empty track.
     camera_track() = default;
 
@@ -198,12 +207,20 @@ public:
     /// @param pts Span of keyframes defining the camera path.
     /// @param interp Interpolation method to use (default: spline).
     /// @throws std::runtime_error if fewer than two keyframes with position data are provided.
-    explicit camera_track(const std::span<const kf> pts,
-                          interpolation_t interp = interpolation_t::spline)
-        : M_interpolation{interp}
+    explicit camera_track(const std::span<const kf> pts) { deduce(pts); }
+
+    auto &&with_interp(this auto &&self, interpolation_t interp)
     {
-        deduce(pts);
-        clean();
+        self.M_interpolation = interp;
+        self.mark_dirty();
+        return std::forward<decltype(self)>(self);
+    }
+
+    auto &&with_extrap(this auto &&self, extrapolation_t extrap)
+    {
+        self.M_extrapolation = extrap;
+        self.mark_dirty();
+        return std::forward<decltype(self)>(self);
     }
 
     camera_track(camera_track &&) = default;
@@ -234,16 +251,21 @@ public:
     /// @return The sum of all transition durations in the track.
     [[nodiscard]] auto duration() const { return M_duration; }
 
+    /// @brief Get the freelook flag of the camera track.
+    /// @return The freelook flag of the camera track.
+    [[nodiscard]] bool freelook() const { return M_freelook; }
+
 private:
     using second_t = physkit::quantity<physkit::si::second, float>;
     std::vector<std::pair<second_t, kf>> M_kfs;
     second_t M_duration = -1.f * physkit::si::second;
     interpolation_t M_interpolation{interpolation_t::spline};
+    extrapolation_t M_extrapolation{extrapolation_t::release};
     Animation::Track<float, Math::CubicHermite3D<float>, Math::Vector3<float>> M_pos_track;
     Animation::Track<float, Math::CubicHermiteQuaternion<float>, Quaternion> M_orient_track;
 
-    bool M_repeat{false};
     bool M_dirty{true};
+    bool M_freelook{false};
 
     void deduce(const std::span<const kf> pts)
     {
@@ -342,9 +364,8 @@ private:
 
         if (q.isEmpty())
         {
-            // TODO: derive from movement direction
-            arrayAppend(t, 0.0f);
-            arrayAppend(q, Quaternion{Math::IdentityInit});
+            M_freelook = true;
+            return;
         }
 
         auto prepend = [&](float time, const Quaternion &orient)
@@ -640,7 +661,7 @@ public:
         {
             auto [pos, rot] = M_track.at(t);
             M_pos = pos;
-            M_rot = rot;
+            if (!M_track.freelook()) M_rot = rot;
             return update(), true;
         }
 
