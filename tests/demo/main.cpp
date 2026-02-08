@@ -1,4 +1,3 @@
-#include "physkit/particle.h"
 #include <mp-units/systems/si/unit_symbols.h>
 #include <physkit/physkit.h>
 #include <print>
@@ -13,20 +12,24 @@ int main()
 
     constexpr auto g = -9.80 * m / s / s;
 
-    physkit::particle p{.pos = {0.0 * m, 0.0 * m, 0.0 * m},
-                        .vel = {1.0 * m / s, 0.0 * m / s, 0.0 * m / s},
-                        .acc = {0.0 * m / s / s, 0.0 * m / s / s, g},
-                        .mass = 1.0 * kg};
+    auto obj = physkit::object(
+        physkit::object_desc::dynam()
+            .with_pos({0.0 * m, 0.0 * m, 0.0 * m})
+            .with_vel({1.0 * m / s, 0.0 * m / s, 0.0 * m / s})
+            .with_mass(1.0 * kg));
+    obj.particle().acc = {0.0 * m / s / s, 0.0 * m / s / s, g};
 
     constexpr auto dt = 0.1 * s;
     std::println("Integrating with dt = {}", dt);
     physkit::forward_euler integrator;
     for (int i = 0; i < 10; ++i) // NOLINT
     {
-        integrator.integrate(p, dt);
+        integrator.integrate(obj, dt);
+        auto &p = obj.particle();
         std::println("t = {::N[.2f]}, pos = {:.2f}, vel = {:.2f}", i * dt, p.pos, p.vel);
     }
 
+    auto &p = obj.particle();
     std::formatter<quantity<si::metre>> fmt;
 
     // demonstrate unit_mat

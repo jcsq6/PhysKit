@@ -437,7 +437,7 @@ void test_mesh_ray_intersect_local()
     // Ray from outside hitting the cube
     mesh::ray r{
         .origin = {-1.0 * m, 0.5 * m, 0.5 * m},
-        .direction = {1.0 * m, 0.0 * m, 0.0 * m},
+        .direction = {1.0 * one, 0.0 * one, 0.0 * one},
     };
     auto hit = msh->ray_intersect_local(r);
     assert(hit.has_value());
@@ -449,7 +449,7 @@ void test_mesh_ray_intersect_local()
     // Ray pointing away - no hit
     mesh::ray away{
         .origin = {-1.0 * m, 0.5 * m, 0.5 * m},
-        .direction = {-1.0 * m, 0.0 * m, 0.0 * m},
+        .direction = {-1.0 * one, 0.0 * one, 0.0 * one},
     };
     assert(!msh->ray_intersect_local(away).has_value());
 
@@ -460,7 +460,7 @@ void test_mesh_ray_intersect_local()
     // Ray from inside - should still hit
     mesh::ray inside{
         .origin = {0.5 * m, 0.5 * m, 0.5 * m},
-        .direction = {1.0 * m, 0.0 * m, 0.0 * m},
+        .direction = {1.0 * one, 0.0 * one, 0.0 * one},
     };
     auto inside_hit = msh->ray_intersect_local(inside);
     assert(inside_hit.has_value());
@@ -564,7 +564,7 @@ void test_mesh_instance_ray_intersect()
 
     mesh::ray r{
         .origin = {3.0 * m, 0.5 * m, 0.5 * m},
-        .direction = {1.0 * m, 0.0 * m, 0.0 * m},
+        .direction = {1.0 * one, 0.0 * one, 0.0 * one},
     };
     auto hit = inst.ray_intersect(r);
     assert(hit.has_value());
@@ -574,7 +574,7 @@ void test_mesh_instance_ray_intersect()
     // Miss
     mesh::ray miss{
         .origin = {3.0 * m, 5.0 * m, 0.5 * m},
-        .direction = {1.0 * m, 0.0 * m, 0.0 * m},
+        .direction = {1.0 * one, 0.0 * one, 0.0 * one},
     };
     assert(!inst.ray_intersect(miss).has_value());
 }
@@ -626,7 +626,7 @@ void test_mesh_instance_rotated()
     // Ray in +x should hit at x = -1
     mesh::ray r{
         .origin = {-3.0 * m, 0.5 * m, 0.5 * m},
-        .direction = {1.0 * m, 0.0 * m, 0.0 * m},
+        .direction = {1.0 * one, 0.0 * one, 0.0 * one},
     };
     auto hit = inst.ray_intersect(r);
     assert(hit.has_value());

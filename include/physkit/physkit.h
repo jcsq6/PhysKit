@@ -1,7 +1,8 @@
 #pragma once
+#include "accum.h"               // IWYU pragma: keep
 #include "detail/eigen_format.h" // IWYU pragma: keep
 #include "integrator.h"          // IWYU pragma: keep
-#include "mesh.h"                // IWYU pragma: keep
+#include "world.h"               // IWYU pragma: keep
 
 namespace physkit
 {

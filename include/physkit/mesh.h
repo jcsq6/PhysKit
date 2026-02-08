@@ -360,7 +360,7 @@ public:
     struct ray
     {
         vec3<si::metre> origin;
-        vec3<si::metre> direction;
+        vec3<one> direction;
     };
 
     /// @brief A lightweight view of a mesh placed in world space.
