@@ -1,10 +1,11 @@
 # FilterCompileCommands.cmake
-# Filters compile_commands.json to exclude build/_deps/
-# Runs automatically on Windows (where clangd crashes on _deps), or when PHYSKIT_FILTER_COMPILE_COMMANDS is explicitly set to ON.
+# Filters compile_commands.json to exclude specific files that crash clangd.
+# Runs automatically when compiling with GCC (clangd struggles with GCC-compiled
+# deps), or when PHYSKIT_FILTER_COMPILE_COMMANDS is explicitly set to ON.
 
 option(PHYSKIT_FILTER_COMPILE_COMMANDS "Filter _deps from compile_commands.json" OFF)
 
-if(CMAKE_EXPORT_COMPILE_COMMANDS AND (WIN32 OR PHYSKIT_FILTER_COMPILE_COMMANDS))
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR PHYSKIT_FILTER_COMPILE_COMMANDS))
     find_package(Python3 QUIET COMPONENTS Interpreter)
     if(Python3_FOUND)
         file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/filter_compile_commands.py" CONTENT [[
@@ -18,11 +19,13 @@ with open(path) as f:
     commands = json.load(f)
 
 filtered = [e for e in commands if "/_deps/" not in e.get("file", "").replace("\\", "/")]
+removed = len(commands) - len(filtered)
 
 with open(path, "w") as f:
     json.dump(filtered, f, indent=2)
 
-print(f"compile_commands.json: kept {len(filtered)}/{len(commands)} entries (excluded _deps)")
+if removed:
+    print(f"compile_commands.json: removed {removed} crashing entries, kept {len(filtered)}/{len(commands)}")
 ]])
         add_custom_target(filter-compile-commands ALL
             COMMAND ${Python3_EXECUTABLE} "${CMAKE_BINARY_DIR}/filter_compile_commands.py"
