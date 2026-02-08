@@ -151,6 +151,7 @@ private:
 ///
 /// A camera_track manages smooth camera movement through a series of keyframes. It interpolates
 /// both position and orientation over time using cubic Hermite splines (or simpler interpolation).
+/// If no orientation is given, the user will be free to look around normally.
 ///
 /// @par Interpolation Modes
 /// - `constant`: Step function (no interpolation)
@@ -206,14 +207,23 @@ public:
     /// @param pts Span of keyframes defining the camera path.
     /// @param interp Interpolation method to use (default: spline).
     /// @throws std::runtime_error if fewer than two keyframes with position data are provided.
-    explicit camera_track(const std::span<const kf> pts,
-                          interpolation_t interp = interpolation_t::spline,
-                          extrapolation_t extrap = extrapolation_t::release,
-                          bool freelook = false)
-        : M_interpolation{interp}, M_extrapolation{extrap}, M_freelook{freelook}
+    explicit camera_track(const std::span<const kf> pts)
     {
         deduce(pts);
-        clean();
+    }
+
+    auto &&with_interp(this auto &&self, interpolation_t interp)
+    {
+        self.M_interpolation = interp;
+        self.mark_dirty();
+        return std::forward<decltype(self)>(self);
+    }
+
+    auto &&with_extrap(this auto &&self, extrapolation_t extrap)
+    {
+        self.M_extrapolation = extrap;
+        self.mark_dirty();
+        return std::forward<decltype(self)>(self);
     }
 
     camera_track(camera_track &&) = default;
@@ -257,7 +267,6 @@ private:
     Animation::Track<float, Math::CubicHermite3D<float>, Math::Vector3<float>> M_pos_track;
     Animation::Track<float, Math::CubicHermiteQuaternion<float>, Quaternion> M_orient_track;
 
-    bool M_repeat{false};
     bool M_dirty{true};
     bool M_freelook{false};
 
@@ -358,9 +367,8 @@ private:
 
         if (q.isEmpty())
         {
-            // TODO: derive from movement direction
-            arrayAppend(t, 0.0f);
-            arrayAppend(q, Quaternion{Math::IdentityInit});
+            M_freelook = true;
+            return;
         }
 
         auto prepend = [&](float time, const Quaternion &orient)

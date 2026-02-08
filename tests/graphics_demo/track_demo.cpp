@@ -40,27 +40,20 @@ public:
 
         cam().set_move_track(camera_track({
             kf::make_pos({0 * m, 8 * m, -18 * m})
-                .look_at(physkit::vec3<m, float>::zero())
                 .transition(2.0f * s),
             kf::make_pos({0 * m, 20 * m, 0 * m})
-                .look_at(physkit::vec3<m, float>::zero())
                 .transition(4.0f * s),
             kf::make_pos(pt_a + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                .look_at(pt_a)
                 .transition(4.0f * s),
             kf::make_pos(pt_b + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                .look_at(pt_b)
                 .transition(4.0f * s),
             kf::make_pos(pt_c + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                .look_at(pt_c)
                 .transition(4.0f * s),
             kf::make_pos(pt_d + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                .look_at(pt_d)
                 .transition(4.0f * s),
             kf::make_pos({0 * m, 20 * m, 0 * m})
-                .look_at(physkit::vec3<m, float>::zero())
                 .transition(4.0f * s),
-        }, camera_track::spline, camera_track::release, true));
+        }).with_interp(camera_track::spline).with_extrap(camera_track::release));
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override

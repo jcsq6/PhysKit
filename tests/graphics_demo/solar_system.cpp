@@ -91,8 +91,7 @@ public:
                 kf::make_pos({15 * m, 20 * m, -30 * m}).look_at(origin).transition(3.5f * s),
                 // Return to start
                 kf::make_pos({0 * m, 35 * m, -45 * m}).look_at(origin).transition(0.0f * s),
-            },
-            camera_track::spline));
+            }).with_extrap(camera_track::reverse));
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override

@@ -58,23 +58,22 @@ The graphics testing framework includes a camera animation system for creating s
 ```cpp
 #include "camera.h"
 using namespace mp_units::si::unit_symbols;
+using namespace graphics;
 
-// Pass keyframes directly via initializer list (std::span constructor)
-cam.set_move_track(graphics::camera_track({
-    // Start at origin, looking at a target, transition over 2 seconds
-    graphics::kf::make_pos({0.0f * m, 1.0f * m, -5.0f * m})
-        .look_at({0.0f * m, 0.0f * m, 0.0f * m})
-        .transition(2.0f * s),
-
-    // Move to a new position, transition over 1.5 seconds
-    graphics::kf::make_pos({5.0f * m, 2.0f * m, -3.0f * m})
-        .transition(1.5f * s),
-
-    // Final position with explicit direction
-    graphics::kf::make_pos({0.0f * m, 1.0f * m, 5.0f * m})
-        .dir({0.0f, 0.0f, 1.0f})
-        .transition(2.0f * s)
-}, graphics::camera_track::spline));
+// Build a track from keyframes, then configure interpolation/extrapolation.
+cam.set_move_track(
+    graphics::camera_track({
+        graphics::kf::make_pos({0.0f * m, 1.0f * m, -5.0f * m})
+            .look_at({0.0f * m, 0.0f * m, 0.0f * m})
+            .transition(2.0f * s),
+        graphics::kf::make_pos({5.0f * m, 2.0f * m, -3.0f * m})
+            .transition(1.5f * s),
+        graphics::kf::make_pos({0.0f * m, 1.0f * m, 5.0f * m})
+            .dir({0.0f, 0.0f, 1.0f})
+            .transition(2.0f * s),
+    })
+        .with_interp(graphics::camera_track::spline)
+        .with_extrap(graphics::camera_track::release));
 ```
 
 ### Keyframe Options
@@ -87,19 +86,44 @@ Each keyframe can specify:
   - `.orient(Quaternion)` - Explicit quaternion orientation
 - **Transition**: `.transition(duration)` - Time to interpolate to next keyframe
 
+You can use the factory helpers:
+- `kf::make_pos(position)`
+- `kf::make_look_at(target)`
+- `kf::make_dir(direction)`
+- `kf::make_orient(quaternion)`
+
 ### Interpolation Modes
 
 ```cpp
 // Step function (no interpolation)
-cam.set_move_track(camera_track({...keyframes...}, camera_track::constant));
+cam.set_move_track(
+    camera_track({...keyframes...}).with_interp(camera_track::constant));
 
 // Linear interpolation
-cam.set_move_track(camera_track({...keyframes...}, camera_track::linear));
+cam.set_move_track(
+    camera_track({...keyframes...}).with_interp(camera_track::linear));
 
 // Smooth cubic spline (recommended, default)
-cam.set_move_track(camera_track({...keyframes...}, camera_track::spline));
-// or simply:
 cam.set_move_track(camera_track({...keyframes...}));
+// or explicitly:
+cam.set_move_track(
+    camera_track({...keyframes...}).with_interp(camera_track::spline));
+```
+
+### Extrapolation Modes
+
+```cpp
+// Default: release control when track duration is exceeded
+cam.set_move_track(
+    camera_track({...keyframes...}).with_extrap(camera_track::release));
+
+// Loop from end back to beginning
+cam.set_move_track(
+    camera_track({...keyframes...}).with_extrap(camera_track::loop));
+
+// Ping-pong between endpoints
+cam.set_move_track(
+    camera_track({...keyframes...}).with_extrap(camera_track::reverse));
 ```
 
 ### Manual Track Sampling
@@ -122,6 +146,7 @@ auto [pos, rot] = track.at(current_time);
 
 - At least **two keyframes** with position data are required
 - Keyframes without explicit orientation derive it from movement direction
+- If no orientation keyframes are provided at all, the track enters **freelook** mode (position is animated, rotation remains user-controlled)
 - Track durations are cumulative based on transition times
 
 ### Complete Example
