@@ -516,24 +516,23 @@ void test_mesh_support_local()
 
 void test_mesh_instance_basic()
 {
-    std::println("  mesh_instance::basic construction");
+    std::println("  mesh::instance basic construction");
     cube_fixture cube;
     auto msh = cube.make_mesh();
-    mesh_instance inst(msh, {5.0 * m, 0.0 * m, 0.0 * m});
+    auto inst = msh->at({5.0 * m, 0.0 * m, 0.0 * m});
 
     assert(&inst.geometry() == msh.get());
-    assert(inst.shared_geometry() == msh);
     assert(approx_vec(inst.position(), {5.0 * m, 0.0 * m, 0.0 * m}));
 }
 
 void test_mesh_instance_world_bounds()
 {
-    std::println("  mesh_instance::world_bounds");
+    std::println("  mesh::instance world_bounds");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
     // Translated by (5,0,0)
-    mesh_instance inst(msh, {5.0 * m, 0.0 * m, 0.0 * m});
+    auto inst = msh->at({5.0 * m, 0.0 * m, 0.0 * m});
     auto wb = inst.world_bounds();
     assert(approx_vec(wb.min, {5.0 * m, 0.0 * m, 0.0 * m}));
     assert(approx_vec(wb.max, {6.0 * m, 1.0 * m, 1.0 * m}));
@@ -541,11 +540,11 @@ void test_mesh_instance_world_bounds()
 
 void test_mesh_instance_world_bsphere()
 {
-    std::println("  mesh_instance::world_bsphere");
+    std::println("  mesh::instance world_bsphere");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
-    mesh_instance inst(msh, {5.0 * m, 0.0 * m, 0.0 * m});
+    auto inst = msh->at({5.0 * m, 0.0 * m, 0.0 * m});
     auto ws = inst.world_bsphere();
     // Center should be translated
     auto local_center = msh->bsphere().center;
@@ -556,12 +555,12 @@ void test_mesh_instance_world_bsphere()
 
 void test_mesh_instance_ray_intersect()
 {
-    std::println("  mesh_instance::ray_intersect");
+    std::println("  mesh::instance ray_intersect");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
     // Place the cube at (5,0,0)
-    mesh_instance inst(msh, {5.0 * m, 0.0 * m, 0.0 * m});
+    auto inst = msh->at({5.0 * m, 0.0 * m, 0.0 * m});
 
     mesh::ray r{
         .origin = {3.0 * m, 0.5 * m, 0.5 * m},
@@ -582,22 +581,22 @@ void test_mesh_instance_ray_intersect()
 
 void test_mesh_instance_contains()
 {
-    std::println("  mesh_instance::contains");
+    std::println("  mesh::instance contains");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
-    mesh_instance inst(msh, {5.0 * m, 0.0 * m, 0.0 * m});
+    auto inst = msh->at({5.0 * m, 0.0 * m, 0.0 * m});
     assert(inst.contains({5.3 * m, 0.2 * m, 0.4 * m}));
     assert(!inst.contains({0.3 * m, 0.2 * m, 0.4 * m})); // original location, not translated
 }
 
 void test_mesh_instance_support()
 {
-    std::println("  mesh_instance::support");
+    std::println("  mesh::instance support");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
-    mesh_instance inst(msh, {5.0 * m, 0.0 * m, 0.0 * m});
+    auto inst = msh->at({5.0 * m, 0.0 * m, 0.0 * m});
     // Support in +x should be x = 5 + 1 = 6
     auto sup = inst.support({1.0 * one, 0.0 * one, 0.0 * one});
     assert(approx_q(sup.x(), 6.0 * m));
@@ -605,7 +604,7 @@ void test_mesh_instance_support()
 
 void test_mesh_instance_rotated()
 {
-    std::println("  mesh_instance::rotated ray_intersect");
+    std::println("  mesh::instance rotated ray_intersect");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
@@ -616,7 +615,7 @@ void test_mesh_instance_rotated()
         {0.0 * one, 0.0 * one, 1.0 * one},
     };
 
-    mesh_instance inst(msh, {0.0 * m, 0.0 * m, 0.0 * m}, rot_z);
+    auto inst = msh->at({0.0 * m, 0.0 * m, 0.0 * m}, rot_z);
 
     // After rotating the unit cube [0,1]^3 by 90 degrees around Z,
     // the AABB becomes [-1,0] x [0,1] x [0,1]
@@ -634,19 +633,18 @@ void test_mesh_instance_rotated()
     assert(approx_q(hit->pos.x(), -1.0 * m));
 }
 
-void test_mesh_instance_set_position_orientation()
+void test_mesh_instance_different_positions()
 {
-    std::println("  mesh_instance::set_position/set_orientation");
+    std::println("  mesh::instance different positions");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
-    mesh_instance inst(msh, {0.0 * m, 0.0 * m, 0.0 * m});
-    inst.set_position({10.0 * m, 0.0 * m, 0.0 * m});
-    assert(approx_vec(inst.position(), {10.0 * m, 0.0 * m, 0.0 * m}));
+    // Same mesh, different instances — position is copied so temporaries are fine
+    auto inst1 = msh->at({10.0 * m, 0.0 * m, 0.0 * m});
+    assert(inst1.contains({10.3 * m, 0.2 * m, 0.4 * m}));
 
-    inst.set_orientation(mat3<one>::identity());
-    // Should still function
-    assert(inst.contains({10.3 * m, 0.2 * m, 0.4 * m}));
+    auto inst2 = msh->at({0.0 * m, 0.0 * m, 0.0 * m});
+    assert(inst2.contains({0.3 * m, 0.2 * m, 0.4 * m}));
 }
 
 // ---------------------------------------------------------------------------
@@ -696,7 +694,7 @@ int main()
     test_mesh_instance_contains();
     test_mesh_instance_support();
     test_mesh_instance_rotated();
-    test_mesh_instance_set_position_orientation();
+    test_mesh_instance_different_positions();
 
     std::println("\nAll mesh tests passed!");
     return 0;

@@ -182,18 +182,18 @@ bool mesh::is_convex() const
 }
 
 /*
--------------------------------------------------------
--------------------- MESH INSTANCE --------------------
--------------------------------------------------------
+------------------------------------------------------------
+-------------------- MESH :: INSTANCE --------------------
+------------------------------------------------------------
 */
 
-aabb mesh_instance::world_bounds() const
+aabb mesh::instance::world_bounds() const
 {
-    return M_mesh->bounds().operator* <quantity<one>>(M_orientation) + M_position;
+    return M_mesh.bounds().operator* <quantity<one>>(M_orientation) + M_position;
 }
 
-std::optional<mesh::ray_hit> mesh_instance::ray_intersect(const mesh::ray &r,
-                                                          quantity<si::metre> max_distance) const
+std::optional<mesh::ray_hit> mesh::instance::ray_intersect(const mesh::ray &r,
+                                                           quantity<si::metre> max_distance) const
 {
     // Transform ray into local space.
     auto inv_orient = M_orientation.transpose();
@@ -201,7 +201,7 @@ std::optional<mesh::ray_hit> mesh_instance::ray_intersect(const mesh::ray &r,
     auto local_dir = inv_orient * r.direction;
     mesh::ray local_ray{.origin = local_origin, .direction = local_dir};
 
-    auto hit = M_mesh->ray_intersect_local(local_ray, max_distance);
+    auto hit = M_mesh.ray_intersect_local(local_ray, max_distance);
     if (hit)
     {
         hit->pos = M_orientation * hit->pos + M_position;
@@ -210,35 +210,35 @@ std::optional<mesh::ray_hit> mesh_instance::ray_intersect(const mesh::ray &r,
     return hit;
 }
 
-vec3<si::metre> mesh_instance::closest_point(const vec3<si::metre> &point) const
+vec3<si::metre> mesh::instance::closest_point(const vec3<si::metre> &point) const
 {
     auto inv_orient = M_orientation.transpose();
     auto local_point = inv_orient * (point - M_position);
-    auto local_closest = M_mesh->closest_point_local(local_point);
+    auto local_closest = M_mesh.closest_point_local(local_point);
     return M_orientation * local_closest + M_position;
 }
 
-bool mesh_instance::contains(const vec3<si::metre> &point) const
+bool mesh::instance::contains(const vec3<si::metre> &point) const
 {
     auto inv_orient = M_orientation.transpose();
     auto local_point = inv_orient * (point - M_position);
-    return M_mesh->contains_local(local_point);
+    return M_mesh.contains_local(local_point);
 }
 
-vec3<si::metre> mesh_instance::support(const vec3<one> &direction) const
+vec3<si::metre> mesh::instance::support(const vec3<one> &direction) const
 {
     auto inv_orient = M_orientation.transpose();
     auto local_dir = inv_orient * direction;
-    auto local_support = M_mesh->support_local(local_dir);
+    auto local_support = M_mesh.support_local(local_dir);
     return M_orientation * local_support + M_position;
 }
 
 mat3<si::kilogram * pow<2>(si::metre)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-mesh_instance::world_inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
+mesh::instance::world_inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
 {
     // TODO: rotate local inertia tensor into world frame and apply parallel axis theorem
-    assert(false && "mesh_instance::world_inertia_tensor not yet implemented");
+    assert(false && "mesh::instance::world_inertia_tensor not yet implemented");
     return mat3<si::kilogram * pow<2>(si::metre)>::zero();
 }
 

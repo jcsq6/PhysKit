@@ -363,6 +363,72 @@ public:
         vec3<si::metre> direction;
     };
 
+    /// @brief A lightweight view of a mesh placed in world space.
+    /// Provides world-space collision queries by transforming into local space and back.
+    /// Not intended for long-term storage. Create one, query it, discard it. Avoid dangling references.
+    class instance
+    {
+    public:
+        instance(const mesh &msh, const vec3<si::metre> &position,
+                 const mat3<one> &orientation)
+            : M_mesh{msh}, M_position{position}, M_orientation{orientation}
+        {
+        }
+
+        /// @brief Construct with identity orientation.
+        instance(const mesh &msh, const vec3<si::metre> &position)
+            : M_mesh{msh}, M_position{position}, M_orientation{identity_orientation()}
+        {
+        }
+
+        /// Prevent binding orientation to a temporary.
+        instance(const mesh &, const vec3<si::metre> &, mat3<one> &&) = delete;
+
+        [[nodiscard]] const mesh &geometry() const { return M_mesh; }
+        [[nodiscard]] const vec3<si::metre> &position() const { return M_position; }
+        [[nodiscard]] const mat3<one> &orientation() const { return M_orientation; }
+
+        /// @brief Compute the world-space AABB by rotating the local AABB and translating.
+        [[nodiscard]] aabb world_bounds() const;
+
+        /// @brief Compute the world-space bounding sphere. Rotation-invariant — only the
+        /// center is translated.
+        [[nodiscard]] bounding_sphere world_bsphere() const
+        {
+            auto local = M_mesh.bsphere();
+            return {.center = M_orientation * local.center + M_position, .radius = local.radius};
+        }
+
+        [[nodiscard]] std::optional<ray_hit>
+        ray_intersect(const ray &r, quantity<si::metre> max_distance =
+                                        std::numeric_limits<quantity<si::metre>>::infinity()) const;
+
+        [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
+
+        /// @brief Point containment test in world space.
+        [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
+
+        /// @brief GJK support function in world space. Rotates the direction into
+        /// local frame, queries the mesh, and transforms the result back.
+        [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const;
+
+        /// @brief Compute the inertia tensor rotated into the world frame and shifted to the
+        /// instance's position via the parallel axis theorem.
+        [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
+        world_inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
+
+    private:
+        static const mat3<one> &identity_orientation()
+        {
+            static const auto id = mat3<one>::identity();
+            return id;
+        }
+
+        const mesh &M_mesh;              // NOLINT
+        vec3<si::metre> M_position;
+        const mat3<one> &M_orientation;  // NOLINT
+    };
+
     mesh() = default;
     mesh(const mesh &) = default;
     mesh &operator=(const mesh &) = default;
@@ -397,68 +463,26 @@ public:
     [[nodiscard]] vec3<si::metre> support_local(const vec3<one> &direction) const;
     [[nodiscard]] bool is_convex() const;
 
+    /// @brief Create an instance view of this mesh at the given position and orientation.
+    [[nodiscard]] instance at(const vec3<si::metre>& position,
+                              const mat3<one> &orientation) const
+    {
+        return {*this, position, orientation};
+    }
+
+    /// @brief Create an instance view of this mesh at the given position (identity orientation).
+    [[nodiscard]] instance at(const vec3<si::metre>& position) const
+    {
+        return {*this, position};
+    }
+
+    /// Prevent binding orientation to a temporary.
+    instance at(const vec3<si::metre>&, mat3<one> &&) const = delete;
+
 private:
     aabb M_bounds;
     bounding_sphere M_bsphere;
     std::vector<vec3<si::metre>> M_vertices;
     std::vector<triangle_t> M_triangles;
-};
-
-/// @brief A positioned and oriented reference to a shared mesh.
-/// Provides world-space collision queries after transforming into local space then back.
-class mesh_instance
-{
-public:
-    mesh_instance() = default;
-
-    mesh_instance(std::shared_ptr<const mesh> m, const vec3<si::metre> &position,
-                  const mat3<one> &orientation = mat3<one>::identity())
-        : M_mesh{std::move(m)}, M_position{position}, M_orientation{orientation}
-    {
-    }
-
-    [[nodiscard]] const mesh &geometry() const { return *M_mesh; }
-    [[nodiscard]] const std::shared_ptr<const mesh> &shared_geometry() const { return M_mesh; }
-
-    [[nodiscard]] const vec3<si::metre> &position() const { return M_position; }
-    [[nodiscard]] const mat3<one> &orientation() const { return M_orientation; }
-
-    void set_position(const vec3<si::metre> &pos) { M_position = pos; }
-    void set_orientation(const mat3<one> &orient) { M_orientation = orient; }
-
-    /// @brief Compute the world-space AABB by rotating the local AABB and translating.
-    [[nodiscard]] aabb world_bounds() const;
-
-    /// @brief Compute the world-space bounding sphere. Rotation-invariant — only the center is
-    /// translated.
-    [[nodiscard]] bounding_sphere world_bsphere() const
-    {
-        auto local = M_mesh->bsphere();
-        return {.center = M_orientation * local.center + M_position, .radius = local.radius};
-    }
-
-    [[nodiscard]] std::optional<mesh::ray_hit>
-    ray_intersect(const mesh::ray &r,
-                  quantity<si::metre> max_distance =
-                      std::numeric_limits<quantity<si::metre>>::infinity()) const;
-
-    [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
-
-    /// @brief Point containment test in world space.
-    [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
-
-    /// @brief GJK support function in world space. Rotates the direction into
-    /// local frame, queries the mesh, and transforms the result back.
-    [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const;
-
-    /// @brief Compute the inertia tensor rotated into the world frame and shifted to the instance's
-    /// position via the parallel axis theorem.
-    [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
-    world_inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
-
-private:
-    std::shared_ptr<const mesh> M_mesh;
-    vec3<si::metre> M_position;
-    mat3<one> M_orientation;
 };
 } // namespace physkit
