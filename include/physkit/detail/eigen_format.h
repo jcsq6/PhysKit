@@ -4,7 +4,6 @@
 #include <Eigen/src/Core/Matrix.h>
 #include <format>
 #include <ranges>
-#include <type_traits>
 
 #include "lin_alg.h"
 
@@ -76,16 +75,5 @@ public:
         auto it = std::formatter<typename physkit::unit_mat<Q, Rows, Cols>::eigen_type>::format(
             matrix.base(), ctx);
         return std::format_to(it, " {}", Q::unit);
-    }
-};
-
-template <mp_units::Quantity Q>
-class std::formatter<physkit::detail::quantity_ref<Q>> : public std::formatter<std::remove_cv_t<Q>>
-{
-public:
-    template <typename FormatContext>
-    auto format(const physkit::detail::quantity_ref<Q> &ref, FormatContext &ctx) const
-    {
-        return std::formatter<std::remove_cv_t<Q>>::format(static_cast<Q>(ref), ctx);
     }
 };

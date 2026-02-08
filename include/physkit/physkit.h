@@ -1,6 +1,8 @@
 #pragma once
+#include "accum.h"               // IWYU pragma: keep
 #include "detail/eigen_format.h" // IWYU pragma: keep
 #include "integrator.h"          // IWYU pragma: keep
+#include "world.h"               // IWYU pragma: keep
 
 namespace physkit
 {
@@ -16,13 +18,5 @@ void units_demo();
 /// @brief A demo function that showcases the Eigen library by performing basic matrix operations.
 /// @note This is a placeholder. Remove in future versions.
 void eigen_demo();
-
-class mesh // NOLINT
-{
-public:
-    mesh() = default;
-    mesh(mesh &&) noexcept = default;
-    mesh &operator=(mesh &&) noexcept = default;
-};
 
 } // namespace physkit
