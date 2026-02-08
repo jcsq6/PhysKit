@@ -172,7 +172,9 @@ private:
 ///     kf::make_pos({0.0f * m, 1.0f * m, 5.0f * m})
 ///         .dir({0.0f, 0.0f, 1.0f})
 ///         .transition(2.0f * s)
-/// }, camera_track::spline, camera_track::release, true));
+///         })
+///     .with_interp(camera_track::spline)
+///     .with_extrap(camera_track::release));
 ///
 /// // Alternatively, for manual sampling:
 /// camera_track track({...keyframes...});
@@ -195,7 +197,7 @@ public:
     /// @brief Extrapolation behavior for the camera track.
     enum extrapolation_t : std::uint8_t
     {
-        release, ///< User regains control over camera
+        release, ///< Camera is released from camera track
         loop,    ///< Camera returns to start and loops through track
         reverse  ///< Camera moves back and forth through the track
     };
@@ -245,6 +247,14 @@ public:
 
         return {.pos = M_pos_track.at(time.numerical_value_in(physkit::si::second)),
                 .rot = M_orient_track.at(time.numerical_value_in(physkit::si::second))};
+    }
+
+    /// @brief Check if the camera should be released at a certain time.
+    /// @param time The time at which to check.
+    /// @return Boolean representing if the camera is released.
+    [[nodiscard]] bool released(const physkit::quantity<physkit::si::second, float> time)
+    {
+        return (time > M_duration && M_extrapolation == release);
     }
 
     /// @brief Get the total duration of the camera track.
@@ -657,7 +667,8 @@ public:
             M_dirty = false;
         };
 
-        if (M_track.duration() > 0.0f * physkit::si::second)
+        if ((M_track.duration() > 0.0f * physkit::si::second) &&
+             !M_track.released(t))
         {
             auto [pos, rot] = M_track.at(t);
             M_pos = pos;
