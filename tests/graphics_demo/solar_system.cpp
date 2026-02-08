@@ -69,29 +69,31 @@ public:
         // Camera track: tour the solar system
         const auto origin = physkit::vec3<m, float>{0 * m, 0 * m, 0 * m};
 
-        cam().set_move_track(camera_track(
-            {
-                // High overview
-                kf::make_pos({0 * m, 35 * m, -45 * m}).look_at(origin).transition(4.0f * s),
-                // Swoop down toward inner planets
-                kf::make_pos({8 * m, 8 * m, -12 * m}).look_at(origin).transition(3.0f * s),
-                // Pass Earth orbit
-                kf::make_pos({12 * m, 5 * m, 5 * m}).look_at(origin).transition(3.0f * s),
-                // Out toward Mars
-                kf::make_pos({5 * m, 6 * m, 14 * m}).look_at(origin).transition(3.0f * s),
-                // Jupiter flyby
-                kf::make_pos({-10 * m, 8 * m, 18 * m}).look_at(origin).transition(3.0f * s),
-                // Saturn region
-                kf::make_pos({-22 * m, 10 * m, 8 * m}).look_at(origin).transition(3.0f * s),
-                // Outer planets sweep
-                kf::make_pos({-20 * m, 15 * m, -15 * m}).look_at(origin).transition(3.0f * s),
-                // High vantage point
-                kf::make_pos({0 * m, 45 * m, 0 * m}).look_at(origin).transition(4.0f * s),
-                // Swing back down
-                kf::make_pos({15 * m, 20 * m, -30 * m}).look_at(origin).transition(3.5f * s),
-                // Return to start
-                kf::make_pos({0 * m, 35 * m, -45 * m}).look_at(origin).transition(0.0f * s),
-            }).with_extrap(camera_track::reverse));
+        cam().set_move_track(
+            camera_track(
+                {
+                    // High overview
+                    kf::make_pos({0 * m, 35 * m, -45 * m}).look_at(origin).transition(4.0f * s),
+                    // Swoop down toward inner planets
+                    kf::make_pos({8 * m, 8 * m, -12 * m}).look_at(origin).transition(3.0f * s),
+                    // Pass Earth orbit
+                    kf::make_pos({12 * m, 5 * m, 5 * m}).look_at(origin).transition(3.0f * s),
+                    // Out toward Mars
+                    kf::make_pos({5 * m, 6 * m, 14 * m}).look_at(origin).transition(3.0f * s),
+                    // Jupiter flyby
+                    kf::make_pos({-10 * m, 8 * m, 18 * m}).look_at(origin).transition(3.0f * s),
+                    // Saturn region
+                    kf::make_pos({-22 * m, 10 * m, 8 * m}).look_at(origin).transition(3.0f * s),
+                    // Outer planets sweep
+                    kf::make_pos({-20 * m, 15 * m, -15 * m}).look_at(origin).transition(3.0f * s),
+                    // High vantage point
+                    kf::make_pos({0 * m, 45 * m, 0 * m}).look_at(origin).transition(4.0f * s),
+                    // Swing back down
+                    kf::make_pos({15 * m, 20 * m, -30 * m}).look_at(origin).transition(3.5f * s),
+                    // Return to start
+                    kf::make_pos({0 * m, 35 * m, -45 * m}).look_at(origin).transition(0.0f * s),
+                })
+                .with_extrap(camera_track::reverse));
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override

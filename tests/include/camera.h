@@ -196,8 +196,8 @@ public:
     enum extrapolation_t : std::uint8_t
     {
         release, ///< User regains control over camera
-        loop, ///< Camera returns to start and loops through track
-        reverse ///< Camera moves back and forth through the track
+        loop,    ///< Camera returns to start and loops through track
+        reverse  ///< Camera moves back and forth through the track
     };
 
     /// @brief Default constructor creates an empty track.
@@ -207,10 +207,7 @@ public:
     /// @param pts Span of keyframes defining the camera path.
     /// @param interp Interpolation method to use (default: spline).
     /// @throws std::runtime_error if fewer than two keyframes with position data are provided.
-    explicit camera_track(const std::span<const kf> pts)
-    {
-        deduce(pts);
-    }
+    explicit camera_track(const std::span<const kf> pts) { deduce(pts); }
 
     auto &&with_interp(this auto &&self, interpolation_t interp)
     {
@@ -664,8 +661,7 @@ public:
         {
             auto [pos, rot] = M_track.at(t);
             M_pos = pos;
-            if (!M_track.freelook())
-                M_rot = rot;
+            if (!M_track.freelook()) M_rot = rot;
             return update(), true;
         }
 

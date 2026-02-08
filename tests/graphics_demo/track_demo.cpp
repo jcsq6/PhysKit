@@ -38,22 +38,22 @@ public:
         M_d = add_object(sphere, {0.9f, 0.8f, 0.1f});
         M_d->translate(to_magnum_vector<float>(pt_d));
 
-        cam().set_move_track(camera_track({
-            kf::make_pos({0 * m, 8 * m, -18 * m})
-                .transition(2.0f * s),
-            kf::make_pos({0 * m, 20 * m, 0 * m})
-                .transition(4.0f * s),
-            kf::make_pos(pt_a + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                .transition(4.0f * s),
-            kf::make_pos(pt_b + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                .transition(4.0f * s),
-            kf::make_pos(pt_c + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                .transition(4.0f * s),
-            kf::make_pos(pt_d + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                .transition(4.0f * s),
-            kf::make_pos({0 * m, 20 * m, 0 * m})
-                .transition(4.0f * s),
-        }).with_interp(camera_track::spline).with_extrap(camera_track::release));
+        cam().set_move_track(
+            camera_track({
+                             kf::make_pos({0 * m, 8 * m, -18 * m}).transition(2.0f * s),
+                             kf::make_pos({0 * m, 20 * m, 0 * m}).transition(4.0f * s),
+                             kf::make_pos(pt_a + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
+                                 .transition(4.0f * s),
+                             kf::make_pos(pt_b + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
+                                 .transition(4.0f * s),
+                             kf::make_pos(pt_c + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
+                                 .transition(4.0f * s),
+                             kf::make_pos(pt_d + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
+                                 .transition(4.0f * s),
+                             kf::make_pos({0 * m, 20 * m, 0 * m}).transition(4.0f * s),
+                         })
+                .with_interp(camera_track::spline)
+                .with_extrap(camera_track::release));
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override
@@ -66,10 +66,7 @@ public:
         // M_green_cube->rotate(spin * dt, {1.0f, 1.0f, 0.0f});
     }
 
-    void pointer_move(PointerMoveEvent &event) override
-    {
-        cam().pointer_move(event, false);
-    }
+    void pointer_move(PointerMoveEvent &event) override { cam().pointer_move(event, false); }
 
 private:
     gfx_obj *M_center{};

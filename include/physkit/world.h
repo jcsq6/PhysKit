@@ -22,8 +22,7 @@ public:
     static world_desc make() { return {}; }
 
     [[nodiscard]] auto gravity() const { return M_gravity; }
-    auto &&with_gravity(this auto &&self,
-                        const vec3<si::metre / si::second / si::second> &gravity)
+    auto &&with_gravity(this auto &&self, const vec3<si::metre / si::second / si::second> &gravity)
     {
         self.M_gravity = gravity;
         return std::forward<decltype(self)>(self);

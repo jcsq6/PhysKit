@@ -12,11 +12,10 @@ int main()
 
     constexpr auto g = -9.80 * m / s / s;
 
-    auto obj = physkit::object(
-        physkit::object_desc::dynam()
-            .with_pos({0.0 * m, 0.0 * m, 0.0 * m})
-            .with_vel({1.0 * m / s, 0.0 * m / s, 0.0 * m / s})
-            .with_mass(1.0 * kg));
+    auto obj = physkit::object(physkit::object_desc::dynam()
+                                   .with_pos({0.0 * m, 0.0 * m, 0.0 * m})
+                                   .with_vel({1.0 * m / s, 0.0 * m / s, 0.0 * m / s})
+                                   .with_mass(1.0 * kg));
     obj.particle().acc = {0.0 * m / s / s, 0.0 * m / s / s, g};
 
     constexpr auto dt = 0.1 * s;
