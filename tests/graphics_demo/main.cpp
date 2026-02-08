@@ -60,7 +60,7 @@ public:
             kf::make_pos({0 * m, 20 * m, 0 * m})
                 .look_at(physkit::vec3<m, float>::zero())
                 .transition(4.0f * s),
-        }));
+        }, camera_track::spline, camera_track::release, true));
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override
@@ -71,6 +71,11 @@ public:
         // constexpr auto spin = std::numbers::pi_v<float> * rad / s;
         // M_red_sphere->rotate(spin * dt, {0.0f, 1.0f, 0.0f});
         // M_green_cube->rotate(spin * dt, {1.0f, 1.0f, 0.0f});
+    }
+
+    void pointer_move(PointerMoveEvent &event) override
+    {
+        cam().pointer_move(event, false);
     }
 
 private:
