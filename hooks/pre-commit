@@ -1,0 +1,3 @@
+#!/bin/bash
+./util/run-format.sh
+git add -u

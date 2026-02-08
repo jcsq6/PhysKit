@@ -154,6 +154,17 @@ auto [pos, rot] = track.at(current_time);
 See [tests/graphics_demo/main.cpp](tests/graphics_demo/main.cpp) for a working demonstration of camera tracks in action, featuring a smooth camera path that visits multiple points of interest while maintaining focus on different targets.
 
 # Contributing
+
+## Setup
+
+After cloning, enable the repo's Git hooks:
+```sh
+git config core.hooksPath hooks/
+```
+
+This installs a pre-commit hook that auto-formats all source files before each commit.
+
+## References
 See the following pages for dependency documentation:
 - [mp-units](https://mpusz.github.io/mp-units/latest/)
 - [Eigen](https://devdocs.io/eigen3/)
