@@ -59,14 +59,7 @@ public:
     void update(physkit::quantity<physkit::si::second> dt) override
     {
         using namespace si::unit_symbols;
-
-        // Spin objects so it is visually obvious the scene is live
-        // constexpr auto spin = std::numbers::pi_v<float> * rad / s;
-        // M_red_sphere->rotate(spin * dt, {0.0f, 1.0f, 0.0f});
-        // M_green_cube->rotate(spin * dt, {1.0f, 1.0f, 0.0f});
     }
-
-    void pointer_move(PointerMoveEvent &event) override { cam().pointer_move(event, false); }
 
 private:
     gfx_obj *M_center{};
