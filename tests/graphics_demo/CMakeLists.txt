@@ -1,5 +1,5 @@
-add_executable(graphics_demo
-    main.cpp
+add_executable(solar_system
+    solar_system.cpp
 )
 
-target_link_libraries(graphics_demo PRIVATE phys_graphics)
+target_link_libraries(solar_system PRIVATE phys_graphics)
