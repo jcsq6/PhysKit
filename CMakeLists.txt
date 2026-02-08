@@ -35,7 +35,30 @@ set(PHYSKIT_SOURCES
 	src/mesh.cpp
 )
 
+set(PHYSKIT_HEADERS
+	object.h
+	particle.h
+	world.h
+	integrator.h
+	mesh.h
+	accum.h
+	physkit.h
+	detail/eigen_format.h
+	detail/lin_alg.h
+	detail/types.h
+)
+
+list(TRANSFORM PHYSKIT_HEADERS PREPEND "include/physkit/")
+
 add_library(physkit ${PHYSKIT_SOURCES})
+
+target_sources(physkit
+  	PUBLIC
+    	FILE_SET HEADERS
+    	BASE_DIRS include
+    FILES
+    	${PHYSKIT_HEADERS}
+)
 
 target_include_directories(physkit
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
