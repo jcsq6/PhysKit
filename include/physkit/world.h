@@ -99,10 +99,8 @@ public:
         }
     }
 
-    void step(quantity<si::second> dt)
-    {
-        assert(false && "world::step not yet implemented");
-    } // NOLINT(readability-convert-member-functions-to-static)
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    void step(quantity<si::second> dt) { assert(false && "world::step not yet implemented"); }
 
     auto create_rigid(const object_desc &desc) { return M_rigid.add(object(desc)); }
     auto remove_rigid(handle h) { return M_rigid.remove(h); }
