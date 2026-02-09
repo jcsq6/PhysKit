@@ -16,7 +16,7 @@ int main()
                                    .with_pos({0.0 * m, 0.0 * m, 0.0 * m})
                                    .with_vel({1.0 * m / s, 0.0 * m / s, 0.0 * m / s})
                                    .with_mass(1.0 * kg));
-    obj.particle().acc = {0.0 * m / s / s, 0.0 * m / s / s, g};
+    obj.particle().apply_acceleration({0.0 * m / s / s, 0.0 * m / s / s, g});
 
     constexpr auto dt = 0.1 * s;
     std::println("Integrating with dt = {}", dt);
@@ -25,7 +25,7 @@ int main()
     {
         integrator.integrate(obj, dt);
         auto &p = obj.particle();
-        std::println("t = {::N[.2f]}, pos = {:.2f}, vel = {:.2f}", i * dt, p.pos, p.vel);
+        std::println("t = {::N[.2f]}, pos = {:.2f}, vel = {:.2f}", i * dt, p.pos(), p.vel());
     }
 
     auto &p = obj.particle();
@@ -33,10 +33,10 @@ int main()
 
     // demonstrate unit_mat
     std::println("\nunit_mat demo:");
-    std::println("pos.x = {::N[.2f]}", p.pos.x());
-    std::println("cross(pos, vel) = {:.2f}", p.pos.cross(p.vel));
-    std::println("dot(pos, vel) = {::N[.2f]}", p.pos.dot(p.vel));
-    std::println("norm(pos) = {::N[.2f]}", p.pos.norm());
+    std::println("pos.x = {::N[.2f]}", p.pos().x());
+    std::println("cross(pos, vel) = {:.2f}", p.pos().cross(p.vel()));
+    std::println("dot(pos, vel) = {::N[.2f]}", p.pos().dot(p.vel()));
+    std::println("norm(pos) = {::N[.2f]}", p.pos().norm());
     physkit::mat3<si::metre> M = physkit::mat3<si::metre>::identity(); // NOLINT
     std::println("M = \n{:.2f}", M);
     std::println("M^T = \n{:.2f}", M.transpose());

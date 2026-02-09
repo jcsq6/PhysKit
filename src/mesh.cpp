@@ -187,16 +187,13 @@ bool mesh::is_convex() const
 ------------------------------------------------------------
 */
 
-aabb mesh::instance::world_bounds() const
-{
-    return M_mesh.bounds().operator* <quantity<one>>(M_orientation) + M_position;
-}
+aabb mesh::instance::world_bounds() const { return M_mesh.bounds() * M_orientation + M_position; }
 
 std::optional<mesh::ray_hit> mesh::instance::ray_intersect(const mesh::ray &r,
                                                            quantity<si::metre> max_distance) const
 {
     // Transform ray into local space.
-    auto inv_orient = M_orientation.transpose();
+    auto inv_orient = M_orientation.conjugate();
     auto local_origin = inv_orient * (r.origin - M_position);
     auto local_dir = inv_orient * r.direction;
     mesh::ray local_ray{.origin = local_origin, .direction = local_dir};
@@ -212,7 +209,7 @@ std::optional<mesh::ray_hit> mesh::instance::ray_intersect(const mesh::ray &r,
 
 vec3<si::metre> mesh::instance::closest_point(const vec3<si::metre> &point) const
 {
-    auto inv_orient = M_orientation.transpose();
+    auto inv_orient = M_orientation.conjugate();
     auto local_point = inv_orient * (point - M_position);
     auto local_closest = M_mesh.closest_point_local(local_point);
     return M_orientation * local_closest + M_position;
@@ -220,14 +217,14 @@ vec3<si::metre> mesh::instance::closest_point(const vec3<si::metre> &point) cons
 
 bool mesh::instance::contains(const vec3<si::metre> &point) const
 {
-    auto inv_orient = M_orientation.transpose();
+    auto inv_orient = M_orientation.conjugate();
     auto local_point = inv_orient * (point - M_position);
     return M_mesh.contains_local(local_point);
 }
 
 vec3<si::metre> mesh::instance::support(const vec3<one> &direction) const
 {
-    auto inv_orient = M_orientation.transpose();
+    auto inv_orient = M_orientation.conjugate();
     auto local_dir = inv_orient * direction;
     auto local_support = M_mesh.support_local(local_dir);
     return M_orientation * local_support + M_position;

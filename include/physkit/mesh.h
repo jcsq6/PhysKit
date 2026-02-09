@@ -29,19 +29,19 @@ public:
         box.max = points[0];
         for (std::size_t i = 1; i < points.size(); ++i)
         {
-            box.min.set_x(std::min(box.min.x(), points[i].x()));
-            box.min.set_y(std::min(box.min.y(), points[i].y()));
-            box.min.set_z(std::min(box.min.z(), points[i].z()));
-            box.max.set_x(std::max(box.max.x(), points[i].x()));
-            box.max.set_y(std::max(box.max.y(), points[i].y()));
-            box.max.set_z(std::max(box.max.z(), points[i].z()));
+            box.min.x(std::min(box.min.x(), points[i].x()));
+            box.min.y(std::min(box.min.y(), points[i].y()));
+            box.min.z(std::min(box.min.z(), points[i].z()));
+            box.max.x(std::max(box.max.x(), points[i].x()));
+            box.max.y(std::max(box.max.y(), points[i].y()));
+            box.max.z(std::max(box.max.z(), points[i].z()));
         }
         return box;
     }
 
     [[nodiscard]] constexpr auto size() const { return max - min; }
-    [[nodiscard]] constexpr auto center() const { return (min + max) / 2.0f; }
-    [[nodiscard]] constexpr auto extent() const { return (max - min) / 2.0f; }
+    [[nodiscard]] constexpr auto center() const { return (min + max) / 2.0; }
+    [[nodiscard]] constexpr auto extent() const { return (max - min) / 2.0; }
     [[nodiscard]] constexpr auto volume() const
     {
         auto s = size();
@@ -94,19 +94,38 @@ public:
         return {.min = center - half_size, .max = center + half_size};
     }
 
-    template <QuantityOf<dimensionless> T>
-    [[nodiscard]] aabb operator*(const mat3<T::reference> &transform) const
+    template <Quantity Q>
+        requires(QuantityOf<Q, dimensionless>)
+    [[nodiscard]] aabb operator*(const unit_mat<Q, 3, 3> &transform) const
     {
         aabb result{.min = transform * min, .max = transform * min};
         for (unsigned int i = 1; i < 8; ++i)
         {
             auto pt = transform * point(i);
-            result.min.set_x(std::min(result.min.x(), pt.x()));
-            result.min.set_y(std::min(result.min.y(), pt.y()));
-            result.min.set_z(std::min(result.min.z(), pt.z()));
-            result.max.set_x(std::max(result.max.x(), pt.x()));
-            result.max.set_y(std::max(result.max.y(), pt.y()));
-            result.max.set_z(std::max(result.max.z(), pt.z()));
+            result.min.x(std::min(result.min.x(), pt.x()));
+            result.min.y(std::min(result.min.y(), pt.y()));
+            result.min.z(std::min(result.min.z(), pt.z()));
+            result.max.x(std::max(result.max.x(), pt.x()));
+            result.max.y(std::max(result.max.y(), pt.y()));
+            result.max.z(std::max(result.max.z(), pt.z()));
+        }
+        return result;
+    }
+
+    template <Quantity Q>
+        requires(QuantityOf<Q, dimensionless>)
+    [[nodiscard]] aabb operator*(const unit_quat<Q> &transform) const
+    {
+        aabb result{.min = transform * min, .max = transform * min};
+        for (unsigned int i = 1; i < 8; ++i)
+        {
+            auto pt = transform * point(i);
+            result.min.x(std::min(result.min.x(), pt.x()));
+            result.min.y(std::min(result.min.y(), pt.y()));
+            result.min.z(std::min(result.min.z(), pt.z()));
+            result.max.x(std::max(result.max.x(), pt.x()));
+            result.max.y(std::max(result.max.y(), pt.y()));
+            result.max.z(std::max(result.max.z(), pt.z()));
         }
         return result;
     }
@@ -370,23 +389,15 @@ public:
     class instance
     {
     public:
-        instance(const mesh &msh, const vec3<si::metre> &position, const mat3<one> &orientation)
+        instance(const mesh &msh, const vec3<si::metre> &position,
+                 const quat<one> &orientation = quat<one>::identity())
             : M_mesh{msh}, M_position{position}, M_orientation{orientation}
         {
         }
 
-        /// @brief Construct with identity orientation.
-        instance(const mesh &msh, const vec3<si::metre> &position)
-            : M_mesh{msh}, M_position{position}, M_orientation{identity_orientation()}
-        {
-        }
-
-        /// Prevent binding orientation to a temporary.
-        instance(const mesh &, const vec3<si::metre> &, mat3<one> &&) = delete;
-
         [[nodiscard]] const mesh &geometry() const { return M_mesh; }
         [[nodiscard]] const vec3<si::metre> &position() const { return M_position; }
-        [[nodiscard]] const mat3<one> &orientation() const { return M_orientation; }
+        [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
 
         /// @brief Compute the world-space AABB by rotating the local AABB and translating.
         [[nodiscard]] aabb world_bounds() const;
@@ -418,15 +429,9 @@ public:
         world_inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
 
     private:
-        static const mat3<one> &identity_orientation()
-        {
-            static const auto id = mat3<one>::identity();
-            return id;
-        }
-
         const mesh &M_mesh; // NOLINT
         vec3<si::metre> M_position;
-        const mat3<one> &M_orientation; // NOLINT
+        quat<one> M_orientation;
     };
 
     mesh() = default;
@@ -464,16 +469,11 @@ public:
     [[nodiscard]] bool is_convex() const;
 
     /// @brief Create an instance view of this mesh at the given position and orientation.
-    [[nodiscard]] instance at(const vec3<si::metre> &position, const mat3<one> &orientation) const
+    [[nodiscard]] instance at(const vec3<si::metre> &position,
+                              const quat<one> &orientation = quat<one>::identity()) const
     {
         return {*this, position, orientation};
     }
-
-    /// @brief Create an instance view of this mesh at the given position (identity orientation).
-    [[nodiscard]] instance at(const vec3<si::metre> &position) const { return {*this, position}; }
-
-    /// Prevent binding orientation to a temporary.
-    instance at(const vec3<si::metre> &, mat3<one> &&) const = delete;
 
 private:
     aabb M_bounds;

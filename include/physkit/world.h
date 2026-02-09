@@ -15,7 +15,6 @@ public:
     {
         forward_euler,
         semi_implicit_euler,
-        velocity_verlet,
         rk4,
     };
 
@@ -83,7 +82,8 @@ public:
         friend world;
     };
 
-    world(const world_desc &desc) : M_gravity(desc.gravity()), M_iters(desc.solver_iterations())
+    explicit world(const world_desc &desc)
+        : M_gravity(desc.gravity()), M_iters(desc.solver_iterations())
     {
         switch (desc.integrator())
         {
@@ -93,22 +93,22 @@ public:
         case world_desc::integ_t::semi_implicit_euler:
             M_int = std::make_unique<semi_implicit_euler>();
             break;
-        case world_desc::integ_t::velocity_verlet:
-            M_int = std::make_unique<velocity_verlet>();
-            break;
         case world_desc::integ_t::rk4:
             M_int = std::make_unique<rk4>();
             break;
         }
     }
 
-    void step(quantity<si::second> dt);
+    void step(quantity<si::second> dt)
+    {
+        assert(false && "world::step not yet implemented");
+    } // NOLINT(readability-convert-member-functions-to-static)
 
     auto create_rigid(const object_desc &desc) { return M_rigid.add(object(desc)); }
     auto remove_rigid(handle h) { return M_rigid.remove(h); }
-    auto get_rigid(handle h)
+    auto get_rigid(this auto &&self, handle h)
     {
-        return M_rigid.get(h).transform([](auto p) { return std::ref(*p); });
+        return self.M_rigid.get(h).transform([](auto p) { return std::ref(*p); });
     }
 
 private:
@@ -150,10 +150,13 @@ private:
             return std::move(slot.value);
         }
 
-        std::expected<T *, err_t> get(handle h)
+        auto get(this auto &&self, handle h) -> std::expected<
+            std::conditional_t<std::is_const_v<std::remove_reference_t<decltype(self)>>, const T *,
+                               T *>,
+            err_t>
         {
-            assert(h.index() < slots.size());
-            auto &slot = slots[h.index()];
+            assert(h.index() < self.slots.size());
+            auto &slot = self.slots[h.index()];
             if (slot.gen != h.generation() || slot.available)
                 return std::unexpected(err_t::stale_handle);
             return &slot.value;

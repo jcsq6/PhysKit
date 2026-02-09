@@ -1,9 +1,6 @@
 #pragma once
 #include <Eigen/Dense>
-
-#include <Eigen/src/Core/Matrix.h>
-#include <Eigen/src/Core/NumTraits.h>
-#include <Eigen/src/Core/util/Meta.h>
+#include <Eigen/Geometry>
 
 #include <mp-units/framework.h>
 #include <mp-units/math.h>
@@ -62,7 +59,7 @@ public:
     constexpr unit_mat(Eigen::Index rows, Eigen::Index cols) : M_data(rows, cols) {}
 
     constexpr unit_mat(const Q &scalar) : M_data(scalar.numerical_value_in(ref)) {}
-    constexpr unit_mat(const Q *data_ptr) : M_data(static_cast<rep_type *>(data_ptr)) {}
+    // constexpr unit_mat(const Q *data_ptr) : M_data(static_cast<rep_type *>(data_ptr)) {}
 
     constexpr unit_mat(const Q &x, const Q &y)
         : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref))
@@ -115,10 +112,10 @@ public:
     constexpr Q z() const { return M_data.z() * ref; }
     constexpr Q w() const { return M_data.w() * ref; }
 
-    constexpr void set_x(Q val) { M_data.x() = val.numerical_value_in(ref); }
-    constexpr void set_y(Q val) { M_data.y() = val.numerical_value_in(ref); }
-    constexpr void set_z(Q val) { M_data.z() = val.numerical_value_in(ref); }
-    constexpr void set_w(Q val) { M_data.w() = val.numerical_value_in(ref); }
+    constexpr void x(Q val) { M_data.x() = val.numerical_value_in(ref); }
+    constexpr void y(Q val) { M_data.y() = val.numerical_value_in(ref); }
+    constexpr void z(Q val) { M_data.z() = val.numerical_value_in(ref); }
+    constexpr void w(Q val) { M_data.w() = val.numerical_value_in(ref); }
 
     template <std::size_t I> constexpr Q get() const { return M_data[I] * ref; }
 
@@ -136,7 +133,7 @@ public:
         return std::forward_like<decltype(self)>(self.M_data).end();
     }
 
-    auto transpose() const { return unit_mat{base().transpose()}; }
+    auto transpose() const { return unit_mat<Q, _cols, _rows>{base().transpose()}; }
     auto determinant() const
         requires(_rows == _cols)
     {
@@ -305,6 +302,196 @@ auto operator*(T scalar, const unit_mat<Q, Rows, Cols> &matrix)
 {
     return matrix * scalar;
 }
+
+template <Quantity Q> class unit_quat
+{
+public:
+    using value_type = Q;
+    using rep_type = typename value_type::rep;
+    using eigen_type = Eigen::Quaternion<rep_type>;
+
+    static constexpr auto ref = Q::reference;
+
+    constexpr unit_quat() = default;
+    constexpr unit_quat(const unit_quat &) = default;
+    constexpr unit_quat &operator=(const unit_quat &) = default;
+    constexpr unit_quat(unit_quat &&) = default;
+    constexpr unit_quat &operator=(unit_quat &&) = default;
+    constexpr ~unit_quat() = default;
+
+    template <Quantity OtherQ>
+        requires(equivalent(OtherQ::reference, Q::reference))
+    constexpr unit_quat(const unit_quat<OtherQ> &other)
+        : M_data(other.base().coeffs().template cast<rep_type>())
+    {
+    }
+
+    template <Quantity OtherQ>
+        requires(equivalent(OtherQ::reference, Q::reference))
+    constexpr unit_quat &operator=(const unit_quat<OtherQ> &other)
+    {
+        M_data = eigen_type(other.base().coeffs().template cast<rep_type>());
+        return *this;
+    }
+
+    constexpr unit_quat(const eigen_type &data) : M_data(data) {}
+    constexpr unit_quat(eigen_type &&data) : M_data(std::move(data)) {}
+
+    constexpr unit_quat(const Q &w, const Q &x, const Q &y, const Q &z)
+        : M_data(w.numerical_value_in(ref), x.numerical_value_in(ref), y.numerical_value_in(ref),
+                 z.numerical_value_in(ref))
+    {
+    }
+
+    constexpr unit_quat(const unit_mat<Q, 3, 3> &rotation_matrix) : M_data(rotation_matrix.base())
+    {
+    }
+
+    // Eigen: w(), x(), y(), z()
+    constexpr Q w() const { return M_data.w() * ref; }
+    constexpr Q x() const { return M_data.x() * ref; }
+    constexpr Q y() const { return M_data.y() * ref; }
+    constexpr Q z() const { return M_data.z() * ref; }
+
+    constexpr void w(Q val) { M_data.w() = val.numerical_value_in(ref); }
+    constexpr void x(Q val) { M_data.x() = val.numerical_value_in(ref); }
+    constexpr void y(Q val) { M_data.y() = val.numerical_value_in(ref); }
+    constexpr void z(Q val) { M_data.z() = val.numerical_value_in(ref); }
+
+    unit_mat<Q, 3, 1> vec() const { return unit_mat<Q, 3, 1>{M_data.vec()}; }
+
+    unit_mat<Q, 4, 1> coeffs() const { return unit_mat<Q, 4, 1>{M_data.coeffs()}; }
+
+    constexpr decltype(auto) base(this auto &&self)
+    {
+        return std::forward_like<decltype(self)>(self.M_data);
+    }
+
+    template <Quantity OtherQ> auto operator*(const unit_quat<OtherQ> &other) const
+    {
+        using result_quantity = quantity<ref * OtherQ::reference, rep_type>;
+        return unit_quat<result_quantity>{
+            typename unit_quat<result_quantity>::eigen_type{M_data * other.base()}};
+    }
+
+    template <Quantity OtherQ>
+        requires(equivalent(ref *OtherQ::reference, ref))
+    auto &operator*=(const unit_quat<OtherQ> &other)
+    {
+        M_data *= other.base();
+        return *this;
+    }
+
+    template <Quantity VecQ>
+    auto operator*(const unit_mat<VecQ, 3, 1> &v) const
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        return unit_mat<VecQ, 3, 1>{M_data._transformVector(v.base())};
+    }
+
+    auto conjugate() const { return unit_quat{M_data.conjugate()}; }
+
+    auto inverse() const
+    {
+        return unit_quat<quantity<mp_units::one / ref, rep_type>>{M_data.inverse()};
+    }
+
+    auto norm() const { return M_data.norm() * ref; }
+
+    auto squared_norm() const { return M_data.squaredNorm() * ref * ref; }
+
+    void normalize()
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        M_data.normalize();
+    }
+
+    auto normalized() const
+    {
+        using result_quantity = quantity<ref / ref, rep_type>;
+        return unit_quat<result_quantity>{M_data.normalized()};
+    }
+
+    template <Quantity OtherQ> auto dot(const unit_quat<OtherQ> &other) const
+    {
+        return M_data.dot(other.base()) * ref * OtherQ::reference;
+    }
+
+    auto angular_distance(const unit_quat &other) const
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        return M_data.angularDistance(other.M_data) * si::radian;
+    }
+
+    auto to_rotation_matrix() const
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        return unit_mat<Q, 3, 3>{M_data.toRotationMatrix()};
+    }
+
+    auto slerp(rep_type t, const unit_quat &other) const
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        return unit_quat{M_data.slerp(t, other.M_data)};
+    }
+
+    auto &set_identity()
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        M_data.setIdentity();
+        return *this;
+    }
+
+    template <Quantity VecQ1, Quantity VecQ2>
+    auto &set_from_two_vectors(const unit_mat<VecQ1, 3, 1> &a, const unit_mat<VecQ2, 3, 1> &b)
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        M_data.setFromTwoVectors(a.base(), b.base());
+        return *this;
+    }
+
+    bool is_approx(const unit_quat &other,
+                   rep_type prec = Eigen::NumTraits<rep_type>::dummy_precision()) const
+    {
+        return M_data.isApprox(other.M_data, prec);
+    }
+
+    constexpr bool operator==(const unit_quat &other) const { return base() == other.base(); }
+
+    constexpr bool operator!=(const unit_quat &other) const { return !(*this == other); }
+
+    constexpr static auto identity()
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        return unit_quat{eigen_type::Identity()};
+    }
+
+    static auto unit_random()
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        return unit_quat{eigen_type::UnitRandom()};
+    }
+
+    template <Quantity AngleQ>
+    static unit_quat from_angle_axis(const AngleQ &angle, const unit_mat<Q, 3, 1> &axis)
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        Eigen::AngleAxis<rep_type> aa(static_cast<rep_type>(angle.numerical_value_in(si::radian)),
+                                      axis.base());
+        return unit_quat{eigen_type{aa}};
+    }
+
+    template <Quantity VecQ1, Quantity VecQ2>
+    static unit_quat from_two_vectors(const unit_mat<VecQ1, 3, 1> &a,
+                                      const unit_mat<VecQ2, 3, 1> &b)
+        requires(QuantityOf<Q, dimensionless>)
+    {
+        return unit_quat{eigen_type::FromTwoVectors(a.base(), b.base())};
+    }
+
+private:
+    eigen_type M_data{rep_type(1), rep_type(0), rep_type(0), rep_type(0)};
+};
 
 } // namespace physkit
 

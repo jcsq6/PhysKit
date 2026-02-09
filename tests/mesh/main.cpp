@@ -231,12 +231,12 @@ void test_aabb_compound_assign()
 
 void test_aabb_mat_transform()
 {
-    std::println("  aabb::operator*(mat3)");
+    std::println("  aabb::operator*(mat3/quat)");
     aabb box{.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {1.0 * m, 1.0 * m, 1.0 * m}};
 
     // Identity transform should leave bounds unchanged
     auto identity = mat3<one>::identity();
-    auto result = box.operator* <quantity<one>>(identity);
+    auto result = box * identity;
     assert(approx_vec(result.min, box.min));
     assert(approx_vec(result.max, box.max));
 
@@ -247,9 +247,15 @@ void test_aabb_mat_transform()
         {1.0 * one, 0.0 * one, 0.0 * one},
         {0.0 * one, 0.0 * one, 1.0 * one},
     };
-    auto rotated = box.operator* <quantity<one>>(rot_z);
+    auto rotated = box * rot_z;
     assert(approx_vec(rotated.min, {-1.0 * m, 0.0 * m, 0.0 * m}));
     assert(approx_vec(rotated.max, {0.0 * m, 1.0 * m, 1.0 * m}));
+
+    auto rot_q = quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian,
+                                            {0.0 * one, 0.0 * one, 1.0 * one});
+    auto rotated_q = box * rot_q;
+    assert(approx_vec(rotated_q.min, rotated.min));
+    assert(approx_vec(rotated_q.max, rotated.max));
 }
 
 // ---------------------------------------------------------------------------
@@ -609,11 +615,8 @@ void test_mesh_instance_rotated()
     auto msh = cube.make_mesh();
 
     // 90-degree rotation around Z: (x,y,z) -> (-y,x,z)
-    auto rot_z = mat3<one>{
-        {0.0 * one, -1.0 * one, 0.0 * one},
-        {1.0 * one, 0.0 * one, 0.0 * one},
-        {0.0 * one, 0.0 * one, 1.0 * one},
-    };
+    auto rot_z = quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian,
+                                            {0.0 * one, 0.0 * one, 1.0 * one});
 
     auto inst = msh->at({0.0 * m, 0.0 * m, 0.0 * m}, rot_z);
 

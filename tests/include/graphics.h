@@ -92,7 +92,7 @@ public:
 private:
     void draw(const Matrix4 &transformation, SceneGraph::Camera3D & /*camera*/) override
     {
-        translate(to_magnum_vector<float>(M_phys->particle().pos));
+        translate(to_magnum_vector<float>(M_phys->particle().pos()));
     }
     std::unique_ptr<physkit::object> M_phys; // TODO: use shared_ptr? plain ptr?
 };
