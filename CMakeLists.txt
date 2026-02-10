@@ -31,7 +31,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/EnsureClang.cmake)
 
 # ----- PhysKit Library -----
 set(PHYSKIT_SOURCES 
-	src/physkit.cpp
+	src/world.cpp
 	src/mesh.cpp
 )
 

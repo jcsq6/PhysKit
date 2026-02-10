@@ -62,8 +62,8 @@ private:
     object_desc(body_type type) : M_type(type) {}
 
     body_type M_type;
-    vec3<si::metre> M_pos;
-    vec3<si::metre / si::second> M_vel;
+    vec3<si::metre> M_pos = vec3<si::metre>::zero();
+    vec3<si::metre / si::second> M_vel = vec3<si::metre / si::second>::zero();
     quantity<si::kilogram> M_mass = 1.0 * si::kilogram;
     quat<one> M_orientation = quat<one>::identity();
     std::shared_ptr<const physkit::mesh> M_mesh;

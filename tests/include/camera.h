@@ -558,6 +558,8 @@ public:
         set_view(dir);
     }
 
+    auto pos() const { return to_physkit_vector<physkit::si::metre, float>(M_pos); }
+
     void move(const physkit::vec3<physkit::si::metre, float> &delta)
     {
         M_pos += to_magnum_vector<float>(delta);

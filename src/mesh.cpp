@@ -1,5 +1,7 @@
 #include "physkit/mesh.h"
 
+#include <cmath>
+
 namespace physkit
 {
 using namespace mp_units;
@@ -25,6 +27,122 @@ std::shared_ptr<mesh> mesh::make(std::span<const vec3<si::metre>> vertices,
     m->M_bsphere = bounding_sphere::from_points(vertices);
 
     return m;
+}
+
+std::shared_ptr<mesh> mesh::box(const vec3<si::metre> &half_extents)
+{
+    auto hx = half_extents.x();
+    auto hy = half_extents.y();
+    auto hz = half_extents.z();
+
+    std::array vertices{
+        vec3{-hx, -hy, -hz}, // 0
+        vec3{+hx, -hy, -hz}, // 1
+        vec3{+hx, +hy, -hz}, // 2
+        vec3{-hx, +hy, -hz}, // 3
+        vec3{-hx, -hy, +hz}, // 4
+        vec3{+hx, -hy, +hz}, // 5
+        vec3{+hx, +hy, +hz}, // 6
+        vec3{-hx, +hy, +hz}, // 7
+    };
+
+    std::array<triangle_t, 12> triangles{{
+        {4, 5, 6},
+        {4, 6, 7}, // +z
+        {0, 3, 2},
+        {0, 2, 1}, // -z
+        {1, 2, 6},
+        {1, 6, 5}, // +x
+        {0, 4, 7},
+        {0, 7, 3}, // -x
+        {3, 7, 6},
+        {3, 6, 2}, // +y
+        {0, 1, 5},
+        {0, 5, 4}, // -y
+    }};
+
+    return make(vertices, triangles);
+}
+
+std::shared_ptr<mesh> mesh::sphere(quantity<si::metre> radius, unsigned int stacks,
+                                   unsigned int sectors)
+{
+    assert(stacks >= 2);
+    assert(sectors >= 3);
+
+    std::vector<vec3<si::metre>> vertices;
+    std::vector<triangle_t> triangles;
+
+    vertices.reserve(2 + ((stacks - 1) * sectors));
+    triangles.reserve(2ULL * sectors * (stacks - 1));
+
+    // North pole
+    vertices.emplace_back(0.0 * m, radius, 0.0 * m);
+
+    // Intermediate rings
+    for (unsigned int i = 1; i < stacks; ++i)
+    {
+        auto phi = std::numbers::pi * static_cast<double>(i) / static_cast<double>(stacks);
+        for (unsigned int j = 0; j < sectors; ++j)
+        {
+            auto theta =
+                2.0 * std::numbers::pi * static_cast<double>(j) / static_cast<double>(sectors);
+            vertices.emplace_back(radius * std::sin(phi) * std::cos(theta), radius * std::cos(phi),
+                                  radius * std::sin(phi) * std::sin(theta));
+        }
+    }
+
+    // South pole
+    vertices.emplace_back(0.0 * m, -radius, 0.0 * m);
+    auto south_pole = static_cast<unsigned int>(vertices.size() - 1);
+
+    // North cap
+    for (unsigned int j = 0; j < sectors; ++j)
+        triangles.push_back({0, 1 + ((j + 1) % sectors), 1 + j});
+
+    // Body bands
+    for (unsigned int i = 1; i < stacks - 1; ++i)
+    {
+        for (unsigned int j = 0; j < sectors; ++j)
+        {
+            auto top = 1 + ((i - 1) * sectors) + j;
+            auto top_next = 1 + ((i - 1) * sectors) + ((j + 1) % sectors);
+            auto bot = 1 + (i * sectors) + j;
+            auto bot_next = 1 + (i * sectors) + ((j + 1) % sectors);
+            triangles.push_back({top, top_next, bot_next});
+            triangles.push_back({top, bot_next, bot});
+        }
+    }
+
+    // South cap
+    auto last_ring = 1 + ((stacks - 2) * sectors);
+    for (unsigned int j = 0; j < sectors; ++j)
+        triangles.push_back({south_pole, last_ring + j, last_ring + ((j + 1) % sectors)});
+
+    return make(vertices, triangles);
+}
+
+std::shared_ptr<mesh> mesh::pyramid(quantity<si::metre> base_half, quantity<si::metre> height)
+{
+    // clang-format off
+    std::array vertices{
+        vec3{-base_half, 0.0 * m, -base_half}, // 0
+        vec3{+base_half, 0.0 * m, -base_half}, // 1
+        vec3{+base_half, 0.0 * m, +base_half}, // 2
+        vec3{-base_half, 0.0 * m, +base_half}, // 3
+        vec3{    0.0 * m,  height,     0.0 * m}, // 4 (apex)
+    };
+
+    std::array<triangle_t, 6> triangles{{
+        {0, 1, 2}, {0, 2, 3}, // base (-y)
+        {1, 0, 4},            // front (-z)
+        {2, 1, 4},            // right (+x)
+        {3, 2, 4},            // back  (+z)
+        {0, 3, 4},            // left  (-x)
+    }};
+    // clang-format on
+
+    return make(vertices, triangles);
 }
 
 quantity<pow<3>(si::metre)> mesh::volume() const

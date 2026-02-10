@@ -86,9 +86,12 @@ private:
     quantity<si::kilogram> M_mass = 1.0 * si::kilogram;
 
     vec3<si::radian / si::second> M_ang_vel = vec3<si::radian / si::second>::zero();
-    mat3<si::kilogram * si::metre * si::metre> M_inertia_tensor;
-    mat3<one / (si::kilogram * si::metre * si::metre)> M_inv_inertia_tensor;
-    vec3<si::kilogram * si::metre * si::metre / si::second / si::second> M_torque_acc;
+    mat3<si::kilogram * si::metre * si::metre> M_inertia_tensor =
+        mat3<si::kilogram * si::metre * si::metre>::identity();
+    mat3<one / (si::kilogram * si::metre * si::metre)> M_inv_inertia_tensor =
+        mat3<one / (si::kilogram * si::metre * si::metre)>::identity();
+    vec3<si::kilogram * si::metre * si::metre / si::second / si::second> M_torque_acc =
+        vec3<si::kilogram * si::metre * si::metre / si::second / si::second>::zero();
 
     quat<one> M_orientation = quat<one>::identity();
 };

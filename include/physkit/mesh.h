@@ -367,7 +367,20 @@ private:
 class mesh
 {
 public:
-    using triangle_t = std::array<unsigned int, 3>;
+    struct instance;
+
+    struct triangle_t : std::array<unsigned int, 3>
+    {
+        [[nodiscard]] auto normal(const mesh &m) const
+        {
+            auto v0 = m.M_vertices[(*this)[0]];
+            auto v1 = m.M_vertices[(*this)[1]];
+            auto v2 = m.M_vertices[(*this)[2]];
+            return (v1 - v0).cross(v2 - v0).normalized();
+        }
+
+        [[nodiscard]] vec3<one> normal(const instance &inst) const;
+    };
 
     struct ray_hit
     {
@@ -398,6 +411,12 @@ public:
         [[nodiscard]] const mesh &geometry() const { return M_mesh; }
         [[nodiscard]] const vec3<si::metre> &position() const { return M_position; }
         [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
+
+        [[nodiscard]] auto vertex(unsigned int index) const
+        {
+            assert(index < M_mesh.vertices().size());
+            return M_orientation * M_mesh.vertices()[index] + M_position;
+        }
 
         /// @brief Compute the world-space AABB by rotating the local AABB and translating.
         [[nodiscard]] aabb world_bounds() const;
@@ -444,8 +463,30 @@ public:
     static std::shared_ptr<mesh> make(std::span<const vec3<si::metre>> vertices,
                                       std::span<const triangle_t> triangles);
 
+    /// @brief Create a box mesh centered at the origin with the given half-extents.
+    static std::shared_ptr<mesh> box(const vec3<si::metre> &half_extents);
+
+    /// @brief Create a UV-sphere mesh centered at the origin.
+    /// @param radius Sphere radius.
+    /// @param stacks Number of horizontal divisions (latitude, >= 2).
+    /// @param sectors Number of vertical divisions (longitude, >= 3).
+    static std::shared_ptr<mesh> sphere(quantity<si::metre> radius, unsigned int stacks = 16,
+                                        unsigned int sectors = 32);
+
+    /// @brief Create a square-base pyramid with base centered at the origin and apex at
+    /// (0, height, 0).
+    /// @param base_half Half the side length of the square base.
+    /// @param height Height from base to apex.
+    static std::shared_ptr<mesh> pyramid(quantity<si::metre> base_half, quantity<si::metre> height);
+
     [[nodiscard]] std::span<const vec3<si::metre>> vertices() const { return M_vertices; }
     [[nodiscard]] std::span<const triangle_t> triangles() const { return M_triangles; }
+    [[nodiscard]] const auto &vertex(unsigned int index) const
+    {
+        assert(index < M_vertices.size());
+        return M_vertices[index];
+    }
+
     [[nodiscard]] const aabb &bounds() const { return M_bounds; }
     [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
 
@@ -481,4 +522,9 @@ private:
     std::vector<vec3<si::metre>> M_vertices;
     std::vector<triangle_t> M_triangles;
 };
+
+inline vec3<one> mesh::triangle_t::normal(const mesh::instance &inst) const
+{
+    return inst.orientation() * this->normal(inst.geometry());
+}
 } // namespace physkit

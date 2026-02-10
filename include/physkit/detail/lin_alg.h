@@ -507,4 +507,14 @@ struct tuple_element<I, physkit::unit_mat<Q, Rows, Cols>>
 {
     using type = Q;
 };
+
+template <physkit::Quantity Q>
+struct tuple_size<physkit::unit_quat<Q>> : std::integral_constant<std::size_t, 4>
+{
+};
+
+template <std::size_t I, physkit::Quantity Q> struct tuple_element<I, physkit::unit_quat<Q>>
+{
+    using type = Q;
+};
 } // namespace std

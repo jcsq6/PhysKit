@@ -11,7 +11,7 @@ namespace physkit
 class world_desc
 {
 public:
-    enum class integ_t : std::uint8_t
+    enum integ_t : std::uint8_t
     {
         forward_euler,
         semi_implicit_euler,
@@ -47,7 +47,7 @@ private:
         -9.81 * si::metre / si::second / si::second,
         0.0 * si::metre / si::second / si::second,
     };
-    integ_t M_integrator_type = integ_t::semi_implicit_euler;
+    integ_t M_integrator_type = semi_implicit_euler;
     std::size_t M_solver_iterations = 10;
 };
 
@@ -87,27 +87,23 @@ public:
     {
         switch (desc.integrator())
         {
-        case world_desc::integ_t::forward_euler:
+        case world_desc::forward_euler:
             M_int = std::make_unique<forward_euler>();
             break;
-        case world_desc::integ_t::semi_implicit_euler:
+        case world_desc::semi_implicit_euler:
             M_int = std::make_unique<semi_implicit_euler>();
             break;
-        case world_desc::integ_t::rk4:
+        case world_desc::rk4:
             M_int = std::make_unique<rk4>();
             break;
         }
     }
 
-    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    void step(quantity<si::second> dt) { assert(false && "world::step not yet implemented"); }
+    void step(quantity<si::second> dt);
 
     auto create_rigid(const object_desc &desc) { return M_rigid.add(object(desc)); }
     auto remove_rigid(handle h) { return M_rigid.remove(h); }
-    auto get_rigid(this auto &&self, handle h)
-    {
-        return self.M_rigid.get(h).transform([](auto p) { return std::ref(*p); });
-    }
+    auto get_rigid(this auto &&self, handle h) { return self.M_rigid.get(h); }
 
 private:
     template <typename T> struct slot
