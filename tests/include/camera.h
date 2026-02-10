@@ -246,16 +246,23 @@ public:
     {
         clean();
 
-        //this method doesn't take into account the dt of the last frame.
-        //add a hidden frame at the end of the track if loop is the case??
-        if (time - M_start > M_end) {
-            if (M_extrapolation == loop)
+        if (time - M_start > M_end)
+        {
+            switch (M_extrapolation)
             {
-                while (time - M_start > M_duration)
-                    time = time - M_duration;
-            }
-            else
+            case loop:
+                time = M_start + fmod(time - M_start, M_duration);
+                break;
+            case reverse:
+                //causes a sharp change in velocity at the ends of the track
+                //unsure how you would fix that or if it is worth it to
+                time =  M_start + fmod(time - M_start, 2*(M_end-M_start));
+                time = (time < M_end) ? time : (M_end - (time - M_end));
+                break;
+            default:
                 time = M_end;
+                break;
+            }
         }
 
         return {.pos = M_pos_track.at(time.numerical_value_in(physkit::si::second)),
