@@ -246,21 +246,21 @@ public:
     {
         clean();
 
-        if (time - M_start > M_end)
+        if (time - M_start_time > M_end_time)
         {
             switch (M_extrapolation)
             {
             case loop:
-                time = M_start + fmod(time - M_start, M_duration);
+                time = M_start_time + fmod(time - M_start_time, M_duration);
                 break;
             case reverse:
                 //causes a sharp change in velocity at the ends of the track
                 //unsure how you would fix that or if it is worth it to
-                time =  M_start + fmod(time - M_start, 2*(M_end-M_start));
-                time = (time < M_end) ? time : (M_end - (time - M_end));
+                time =  M_start_time + fmod(time - M_start_time, 2*(M_end_time-M_start_time));
+                time = (time < M_end_time) ? time : (M_end_time - (time - M_end_time));
                 break;
             default:
-                time = M_end;
+                time = M_end_time;
                 break;
             }
         }
@@ -274,7 +274,7 @@ public:
     /// @return Boolean representing if the camera is released.
     [[nodiscard]] bool released(const physkit::quantity<physkit::si::second, float> time)
     {
-        return (time > M_end && M_extrapolation == release);
+        return (time > M_end_time && M_extrapolation == release);
     }
 
     /// @brief Get the total duration of the camera track.
@@ -289,8 +289,8 @@ private:
     using second_t = physkit::quantity<physkit::si::second, float>;
     std::vector<std::pair<second_t, kf>> M_kfs;
     second_t M_duration = -1.f * physkit::si::second;
-    second_t M_start = -1.f * physkit::si::second;
-    second_t M_end = -1.f * physkit::si::second;
+    second_t M_start_time = -1.f * physkit::si::second;
+    second_t M_end_time = -1.f * physkit::si::second;
     interpolation_t M_interpolation{interpolation_t::spline};
     extrapolation_t M_extrapolation{extrapolation_t::release};
     Animation::Track<float, Math::CubicHermite3D<float>, Math::Vector3<float>> M_pos_track;
@@ -315,8 +315,8 @@ private:
 
         //secret key frame to implement looping behavior, the at function limits time to hide it
         M_kfs.emplace_back(M_duration, M_kfs.at(0).second);
-        M_start = 0.0f * physkit::si::second;
-        M_end = M_kfs.at(pts.size() - 1).first;
+        M_start_time = 0.0f * physkit::si::second;
+        M_end_time = M_kfs.at(pts.size() - 1).first;
 
         mark_dirty();
     }
