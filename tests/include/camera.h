@@ -183,7 +183,8 @@ private:
 ///
 /// @note At least two keyframes with position data are required.
 /// @note Keyframes without explicit orientation will derive orientation from movement direction.
-class camera_track //TODO: currently the animation track starts at t=0 implicitly. this might be worth changing
+// currently, the animation track starts at t=0 implicitly. this might be worth changing
+class camera_track
 {
 public:
     /// @brief Interpolation method for the camera track.
