@@ -164,13 +164,13 @@ private:
 ///
 /// // Pass keyframes directly via initializer list
 /// cam.set_move_track(camera_track({
-///     kf::make_pos({0.0f * m, 1.0f * m, -5.0f * m})
-///         .look_at({0.0f * m, 0.0f * m, 0.0f * m})
+///     kf::make_pos(vec3{0, 1, -5} * m)
+///         .look_at(vec3{0, 0, 0} * m)
 ///         .transition(2.0f * s),
-///     kf::make_pos({5.0f * m, 2.0f * m, -3.0f * m})
+///     kf::make_pos(vec3{5, 2, -3} * m)
 ///         .transition(1.5f * s),
-///     kf::make_pos({0.0f * m, 1.0f * m, 5.0f * m})
-///         .dir({0.0f, 0.0f, 1.0f})
+///     kf::make_pos(vec3{0, 1, 5} * m)
+///         .dir(vec3{0, 0, 1} * m)
 ///         .transition(2.0f * s)
 ///         })
 ///     .with_interp(camera_track::spline)

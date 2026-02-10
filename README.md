@@ -63,13 +63,13 @@ using namespace graphics;
 // Build a track from keyframes, then configure interpolation/extrapolation.
 cam.set_move_track(
     graphics::camera_track({
-        graphics::kf::make_pos({0.0f * m, 1.0f * m, -5.0f * m})
-            .look_at({0.0f * m, 0.0f * m, 0.0f * m})
+        graphics::kf::make_pos(vec3{0, 1, -5} * m)
+            .look_at(vec3{0, 0, 0} * m)
             .transition(2.0f * s),
-        graphics::kf::make_pos({5.0f * m, 2.0f * m, -3.0f * m})
+        graphics::kf::make_pos(vec3{5, 2, -3} * m)
             .transition(1.5f * s),
-        graphics::kf::make_pos({0.0f * m, 1.0f * m, 5.0f * m})
-            .dir({0.0f, 0.0f, 1.0f})
+        graphics::kf::make_pos(vec3{0, 1, 5} * one)
+            .dir(vec3{0, 0, 1} * one)
             .transition(2.0f * s),
     })
         .with_interp(graphics::camera_track::spline)
@@ -133,8 +133,8 @@ If you need to manually sample the track (without applying it to a camera), crea
 ```cpp
 // Create a track for manual sampling
 camera_track track({
-    kf::make_pos({0.0f * m, 0.0f * m, 0.0f * m}).transition(1.0f * s),
-    kf::make_pos({5.0f * m, 0.0f * m, 0.0f * m}).transition(1.0f * s)
+    kf::make_pos(vec3{0, 0, 0} * m).transition(1.0f * s),
+    kf::make_pos(vec3{5, 0, 0} * m).transition(1.0f * s)
 });
 
 // Sample at any time
