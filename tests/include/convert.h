@@ -96,8 +96,9 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh) // NOLINT
     GL::Mesh mesh;
     mesh.setPrimitive(GL::MeshPrimitive::Triangles)
         .setCount(static_cast<Int>(indices.size()))
-        .addVertexBuffer(vertex_buffer, 0, Shaders::PhongGL::Position{}, Shaders::PhongGL::Normal{})
-        .setIndexBuffer(index_buffer, 0, GL::MeshIndexType::UnsignedInt);
+        .addVertexBuffer(std::move(vertex_buffer), 0, Shaders::PhongGL::Position{},
+                         Shaders::PhongGL::Normal{})
+        .setIndexBuffer(std::move(index_buffer), 0, GL::MeshIndexType::UnsignedInt);
 
     return mesh;
 }

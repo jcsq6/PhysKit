@@ -254,9 +254,9 @@ public:
                 time = M_start + fmod(time - M_start, M_duration);
                 break;
             case reverse:
-                //causes a sharp change in velocity at the ends of the track
-                //unsure how you would fix that or if it is worth it to
-                time =  M_start + fmod(time - M_start, 2*(M_end-M_start));
+                // causes a sharp change in velocity at the ends of the track
+                // unsure how you would fix that or if it is worth it to
+                time = M_start + fmod(time - M_start, 2 * (M_end - M_start));
                 time = (time < M_end) ? time : (M_end - (time - M_end));
                 break;
             default:
@@ -302,7 +302,7 @@ private:
     void deduce(const std::span<const kf> pts)
     {
         M_kfs.clear();
-        M_kfs.reserve(pts.size()+1);
+        M_kfs.reserve(pts.size() + 1);
         M_duration = std::ranges::fold_left(pts, 0.0f * physkit::si::second,
                                             [this](second_t acc, const kf &p)
                                             {
@@ -313,7 +313,7 @@ private:
             throw std::runtime_error(
                 "camera_track requires at least two keyframes with position data");
 
-        //secret key frame to implement looping behavior, the at function limits time to hide it
+        // secret key frame to implement looping behavior, the at function limits time to hide it
         M_kfs.emplace_back(M_duration, M_kfs.at(0).second);
         M_start = 0.0f * physkit::si::second;
         M_end = M_kfs.at(pts.size() - 1).first;
@@ -696,8 +696,7 @@ public:
             M_dirty = false;
         };
 
-        if ((M_track.duration() > 0.0f * physkit::si::second) &&
-             !M_track.released(t))
+        if ((M_track.duration() > 0.0f * physkit::si::second) && !M_track.released(t))
         {
             auto [pos, rot] = M_track.at(t);
             M_pos = pos;
