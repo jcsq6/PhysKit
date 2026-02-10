@@ -9,22 +9,17 @@ namespace physkit
 
 namespace detail
 {
-/// @brief Build a skew-symmetric matrix from an angular displacement vector.
-/// Treats radian values as dimensionless (physically correct for small-angle rotation).
-inline mat3<one> skew(const vec3<si::radian / si::second> &ang_vel, quantity<si::second> dt)
+inline auto exp(const vec3<si::radian / si::second> &ang_vel, quantity<si::second> dt)
 {
-    auto wx = (ang_vel.x() * dt).numerical_value_in(si::radian);
-    auto wy = (ang_vel.y() * dt).numerical_value_in(si::radian);
-    auto wz = (ang_vel.z() * dt).numerical_value_in(si::radian);
-
-    auto sk = mat3<one>::zero();
-    sk.set(0, 1, -wz * one);
-    sk.set(0, 2, wy * one);
-    sk.set(1, 0, wz * one);
-    sk.set(1, 2, -wx * one);
-    sk.set(2, 0, -wy * one);
-    sk.set(2, 1, wx * one);
-    return sk;
+    auto angle = ang_vel * dt;
+    auto angle_mag = angle.norm();
+    if (angle_mag < 1e-6 * si::radian)
+    {
+        auto half = angle * 0.5;
+        return quat{1.0 * si::radian, half.x(), half.y(), half.z()}
+            .normalized(); // Small angle approx breaks type system
+    }
+    return quat<one>::from_angle_axis(angle_mag, angle / angle_mag);
 }
 } // namespace detail
 
@@ -47,11 +42,14 @@ public:
     void integrate(object &obj, quantity<si::second> dt) override
     {
         auto &p = obj.particle();
-        p.pos += p.vel * dt;
-        p.vel += p.acc * dt;
 
-        obj.orientation() += detail::skew(p.ang_vel, dt) * obj.orientation();
-        p.ang_vel += p.ang_acc * dt;
+        p.pos() += p.vel() * dt;
+        p.vel() += p.acc() * dt;
+
+        auto ang_acc = p.angular_accel();
+
+        p.orientation() = detail::exp(p.ang_vel(), dt) * p.orientation();
+        p.ang_vel() += ang_acc * dt;
     }
 };
 
@@ -61,21 +59,12 @@ public:
     void integrate(object &obj, quantity<si::second> dt) override
     {
         auto &p = obj.particle();
-        p.vel += p.acc * dt;
-        p.pos += p.vel * dt;
 
-        p.ang_vel += p.ang_acc * dt;
-        obj.orientation() += detail::skew(p.ang_vel, dt) * obj.orientation();
-    }
-};
+        p.vel() += p.acc() * dt;
+        p.pos() += p.vel() * dt;
 
-class velocity_verlet : public integrator
-{
-public:
-    void integrate(object & /*obj*/, quantity<si::second> /*dt*/) override
-    {
-        // TODO: implement velocity Verlet integration
-        assert(false && "velocity_verlet::integrate not yet implemented");
+        p.ang_vel() += p.angular_accel() * dt;
+        p.orientation() = detail::exp(p.ang_vel(), dt) * p.orientation();
     }
 };
 

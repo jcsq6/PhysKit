@@ -2,7 +2,6 @@
 #include "camera.h"
 #include "convert.h"
 
-#include <cstddef>
 #include <memory>
 #include <thread>
 #include <unordered_map>
@@ -76,25 +75,34 @@ public:
 //     Vector3 M_absolute_position;
 // };
 
-class physics_obj : public SceneGraph::Drawable3D, public gfx_obj
+class physics_obj : public gfx_obj
 {
 public:
-    explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent,
-                         std::unique_ptr<physkit::object> obj = nullptr)
-        : SceneGraph::Drawable3D{parent}, gfx_obj(&parent), M_phys{std::move(obj)}
+    explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent, physkit::world &world,
+                         physkit::world::handle handle)
+        : gfx_obj(&parent), M_world{&world}, M_handle{handle}
     {
     }
 
-    void obj(std::unique_ptr<physkit::object> o) { M_phys = std::move(o); }
+    [[nodiscard]] auto handle() const { return M_handle; }
 
-    decltype(auto) obj(this auto &&self) { return std::forward_like<decltype(self)>(*self.M_phys); }
+    physkit::object &obj() { return **M_world->get_rigid(M_handle); }
+    [[nodiscard]] const physkit::object &obj() const
+    {
+        return **std::as_const(*M_world).get_rigid(M_handle);
+    }
+
+    void sync()
+    {
+        if (auto res = M_world->get_rigid(M_handle))
+            resetTransformation()
+                .rotate(to_magnum_quaternion<float>(res.value()->orientation()))
+                .translate(to_magnum_vector<float>(res.value()->particle().pos()));
+    }
 
 private:
-    void draw(const Matrix4 &transformation, SceneGraph::Camera3D & /*camera*/) override
-    {
-        translate(to_magnum_vector<float>(M_phys->particle().pos));
-    }
-    std::unique_ptr<physkit::object> M_phys; // TODO: use shared_ptr? plain ptr?
+    physkit::world *M_world;
+    physkit::world::handle M_handle;
 };
 
 class instanced_drawable;
@@ -104,7 +112,7 @@ class instanced_drawables : public SceneGraph::Drawable3D
 public:
     explicit instanced_drawables(std::derived_from<gfx_obj_base> auto &parent,
                                  SceneGraph::DrawableGroup3D *group, std::shared_ptr<GL::Mesh> mesh,
-                                 GL::AbstractShaderProgram &shader)
+                                 Shaders::PhongGL &shader)
         : SceneGraph::Drawable3D{parent, group}, M_mesh{std::move(mesh)}, M_shader{&shader}
     {
         M_mesh->addVertexBufferInstanced(M_buffer, 1, 0, Shaders::PhongGL::TransformationMatrix{},
@@ -132,10 +140,10 @@ private:
     Containers::Array<instanced_drawable *> M_objects;
     std::shared_ptr<GL::Mesh> M_mesh;
     GL::Buffer M_buffer;
-    GL::AbstractShaderProgram *M_shader;
+    Shaders::PhongGL *M_shader;
     bool M_added{false};
 
-    void draw(const Matrix4 &transformation, SceneGraph::Camera3D & /*camera*/) override;
+    void draw(const Matrix4 &transformation, SceneGraph::Camera3D &camera) override;
 };
 
 class instanced_drawable : public SceneGraph::Drawable3D, public gfx_obj
@@ -290,46 +298,57 @@ public:
 
     /// @brief Add a physics object to the scene with the specified color. This method will create
     /// or fetch a shared GL::Mesh for the object's mesh, as if by calling get_mesh().
-    /// @param obj The physics object to add to the scene.
+    /// @param world The physics world that owns the object.
+    /// @param handle Handle to the rigid body in the world.
     /// @param color The color to use for rendering the object.
     /// @return A pointer to the created physics_obj instance.
-    auto add_object(std::unique_ptr<physkit::object> obj, Color3 color)
+    auto add_object(physkit::world &world, physkit::world::handle handle, Color3 color)
     {
-        auto *phys_obj = new physics_obj{M_scene, std::move(obj)};
+        auto *phys_obj = new physics_obj{M_scene, world, handle};
+        auto &obj = phys_obj->obj();
         std::shared_ptr<GL::Mesh> mesh;
-        if (auto it = M_phys_mesh_map.find(&phys_obj->obj().mesh()); it == M_phys_mesh_map.end())
+        if (auto it = M_phys_mesh_map.find(&obj.mesh()); it == M_phys_mesh_map.end())
             mesh = M_phys_mesh_map
-                       .emplace(&phys_obj->obj().mesh(),
-                                std::make_shared<GL::Mesh>(to_magnum_mesh(phys_obj->obj().mesh())))
+                       .emplace(&obj.mesh(), std::make_shared<GL::Mesh>(to_magnum_mesh(obj.mesh())))
                        .first->second;
         else
             mesh = it->second;
 
         internal_add_obj(phys_obj, std::move(mesh), color);
 
+        M_physics_objs.push_back(phys_obj);
         return phys_obj;
     }
 
     /// @brief Add a physics object to the scene with the specified color. This method will create
     /// or fetch a shared GL::Mesh for the object's mesh, as if by calling get_mesh().
-    /// @param obj The physics object to add to the scene.
+    /// @param world The physics world that owns the object.
+    /// @param handle Handle to the rigid body in the world.
+    /// @param mesh The shared GL::Mesh to use for rendering.
     /// @param color The color to use for rendering the object.
     /// @return A pointer to the created physics_obj instance.
-    auto add_object(std::unique_ptr<physkit::object> obj, std::shared_ptr<GL::Mesh> mesh,
-                    Color3 color)
+    auto add_object(physkit::world &world, physkit::world::handle handle,
+                    std::shared_ptr<GL::Mesh> mesh, Color3 color)
     {
-        if (auto it = M_phys_mesh_map.find(&obj->mesh()); it == M_phys_mesh_map.end())
-            M_phys_mesh_map.emplace(&obj->mesh(), mesh);
-        else if (it->second != mesh)
-            throw std::runtime_error("graphics_app::add_object: provided mesh does not match "
-                                     "physkit::object mesh"); // caller loses ownership of obj?
-                                                              // TODO: fix.
 
-        auto *phys_obj = new physics_obj{M_scene, std::move(obj)};
+        return world.get_rigid(handle)
+            .transform(
+                [&](auto obj)
+                {
+                    if (auto it = M_phys_mesh_map.find(&obj->mesh()); it == M_phys_mesh_map.end())
+                        M_phys_mesh_map.emplace(&obj->mesh(), mesh);
+                    else if (it->second != mesh)
+                        throw std::runtime_error(
+                            "graphics_app::add_object: provided mesh does not match "
+                            "physkit::object mesh");
+                    auto *phys_obj = new physics_obj{M_scene, world, handle};
 
-        internal_add_obj(phys_obj, std::move(mesh), color);
+                    internal_add_obj(phys_obj, std::move(mesh), color);
 
-        return phys_obj;
+                    M_physics_objs.push_back(phys_obj);
+                    return phys_obj;
+                })
+            .value_or(nullptr);
     }
 
     /// @brief Add a graphics object to the scene with the specified color and shared mesh.
@@ -440,6 +459,8 @@ private:
 
         update(dt());
 
+        for (auto *obj : M_physics_objs) obj->sync();
+
         M_shader.setProjectionMatrix(M_cam.projection_matrix());
         M_cam.draw(M_shaded, current_time());
 
@@ -490,6 +511,7 @@ private:
     camera M_cam;
     std::unordered_map<const physkit::mesh *, std::shared_ptr<GL::Mesh>> M_phys_mesh_map;
     std::unordered_map<std::shared_ptr<GL::Mesh>, instanced_drawables *> M_mesh_drawables;
+    std::vector<physics_obj *> M_physics_objs;
     std::unordered_map<Key, key_state> M_keys;
     std::unordered_map<Pointer, key_state> M_mouse;
     Vector2 M_mouse_pos;

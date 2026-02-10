@@ -7,16 +7,4 @@
 namespace physkit
 {
 constexpr std::string_view version_string() noexcept { return PHYSKIT_VERSION; }
-/// @brief A demo function that prints the PhysKit version.
-/// @note This is a placeholder. Remove in future versions.
-void print_demo();
-
-/// @brief A demo function that showcases the mp-units unit library by printing the speed of light.
-/// @note This is a placeholder. Remove in future versions.
-void units_demo();
-
-/// @brief A demo function that showcases the Eigen library by performing basic matrix operations.
-/// @note This is a placeholder. Remove in future versions.
-void eigen_demo();
-
 } // namespace physkit

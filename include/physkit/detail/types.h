@@ -13,4 +13,6 @@ template <auto unit, typename Rep = float_t> using mat4 = unit_mat<quantity<unit
 template <int Size, auto unit, typename Rep = float_t>
 using vec = unit_mat<quantity<unit, Rep>, Size, 1>;
 
+template <auto unit, typename Rep = float_t> using quat = unit_quat<quantity<unit, Rep>>;
+
 } // namespace physkit

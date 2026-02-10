@@ -11,11 +11,10 @@ namespace physkit
 class world_desc
 {
 public:
-    enum class integ_t : std::uint8_t
+    enum integ_t : std::uint8_t
     {
         forward_euler,
         semi_implicit_euler,
-        velocity_verlet,
         rk4,
     };
 
@@ -48,7 +47,7 @@ private:
         -9.81 * si::metre / si::second / si::second,
         0.0 * si::metre / si::second / si::second,
     };
-    integ_t M_integrator_type = integ_t::semi_implicit_euler;
+    integ_t M_integrator_type = semi_implicit_euler;
     std::size_t M_solver_iterations = 10;
 };
 
@@ -83,20 +82,18 @@ public:
         friend world;
     };
 
-    world(const world_desc &desc) : M_gravity(desc.gravity()), M_iters(desc.solver_iterations())
+    explicit world(const world_desc &desc)
+        : M_gravity(desc.gravity()), M_iters(desc.solver_iterations())
     {
         switch (desc.integrator())
         {
-        case world_desc::integ_t::forward_euler:
+        case world_desc::forward_euler:
             M_int = std::make_unique<forward_euler>();
             break;
-        case world_desc::integ_t::semi_implicit_euler:
+        case world_desc::semi_implicit_euler:
             M_int = std::make_unique<semi_implicit_euler>();
             break;
-        case world_desc::integ_t::velocity_verlet:
-            M_int = std::make_unique<velocity_verlet>();
-            break;
-        case world_desc::integ_t::rk4:
+        case world_desc::rk4:
             M_int = std::make_unique<rk4>();
             break;
         }
@@ -106,10 +103,7 @@ public:
 
     auto create_rigid(const object_desc &desc) { return M_rigid.add(object(desc)); }
     auto remove_rigid(handle h) { return M_rigid.remove(h); }
-    auto get_rigid(handle h)
-    {
-        return M_rigid.get(h).transform([](auto p) { return std::ref(*p); });
-    }
+    auto get_rigid(this auto &&self, handle h) { return self.M_rigid.get(h); }
 
 private:
     template <typename T> struct slot
@@ -150,10 +144,13 @@ private:
             return std::move(slot.value);
         }
 
-        std::expected<T *, err_t> get(handle h)
+        auto get(this auto &&self, handle h) -> std::expected<
+            std::conditional_t<std::is_const_v<std::remove_reference_t<decltype(self)>>, const T *,
+                               T *>,
+            err_t>
         {
-            assert(h.index() < slots.size());
-            auto &slot = slots[h.index()];
+            assert(h.index() < self.slots.size());
+            auto &slot = self.slots[h.index()];
             if (slot.gen != h.generation() || slot.available)
                 return std::unexpected(err_t::stale_handle);
             return &slot.value;

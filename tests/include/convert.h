@@ -1,10 +1,15 @@
 #pragma once
+#include <Corrade/Containers/ArrayViewStl.h>
+#include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/Math/Vector.h>
+#include <Magnum/Math/Vector3.h>
+#include <Magnum/Shaders/PhongGL.h>
 #include <cstddef>
 #include <mp-units/framework.h>
 #include <physkit/physkit.h>
 #include <utility>
+#include <vector>
 
 namespace graphics
 {
@@ -16,6 +21,7 @@ constexpr auto expand(auto &&nth, std::index_sequence<Indices...> /*helper*/)
     return Ret{nth(Indices)...};
 }
 } // namespace detail
+
 template <typename T, int Size, mp_units::Quantity Q>
 constexpr Magnum::Math::Vector<Size, T> to_magnum_vector(const physkit::unit_mat<Q, Size, 1> &v)
 {
@@ -32,9 +38,67 @@ constexpr physkit::vec<Size, ref, T> to_physkit_vector(const Magnum::Math::Vecto
         std::make_index_sequence<Size>{});
 }
 
-Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &magnum_mesh) // TODO
+template <typename T, mp_units::Quantity Q>
+constexpr Magnum::Math::Quaternion<T> to_magnum_quaternion(const physkit::unit_quat<Q> &q)
 {
-    Magnum::GL::Mesh mesh;
+    return Magnum::Math::Quaternion<T>(to_magnum_vector<T>(q.vec()),
+                                       q.w().numerical_value_in(Q::reference));
+}
+
+template <auto ref, typename T, typename U>
+constexpr physkit::quat<ref, T> to_physkit_quaternion(const Magnum::Math::Quaternion<U> &q)
+{
+    return physkit::quat<ref, T>(q.w() * ref, q.x() * ref, q.y() * ref, q.z() * ref);
+}
+
+inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh) // NOLINT
+{
+    using namespace Magnum;
+
+    auto verts = phys_mesh.vertices();
+    auto tris = phys_mesh.triangles();
+
+    struct vertex_data
+    {
+        Math::Vector3<Float> position;
+        Math::Vector3<Float> normal;
+    };
+
+    std::vector<vertex_data> vertex_buf(verts.size());
+
+    for (std::size_t i = 0; i < verts.size(); ++i)
+    {
+        vertex_buf[i].position = to_magnum_vector<Float>(verts[i]);
+        vertex_buf[i].normal = {};
+    }
+
+    std::vector<UnsignedInt> indices;
+    indices.reserve(tris.size() * 3);
+
+    for (const auto &tri : tris)
+    {
+        auto normal = to_magnum_vector<float>(tri.normal(phys_mesh));
+        vertex_buf[tri[0]].normal += normal;
+        vertex_buf[tri[1]].normal += normal;
+        vertex_buf[tri[2]].normal += normal;
+
+        indices.append_range(tri);
+    }
+
+    for (auto &v : vertex_buf) v.normal = v.normal.normalized();
+
+    GL::Buffer vertex_buffer;
+    vertex_buffer.setData(vertex_buf);
+
+    GL::Buffer index_buffer;
+    index_buffer.setData(indices);
+
+    GL::Mesh mesh;
+    mesh.setPrimitive(GL::MeshPrimitive::Triangles)
+        .setCount(static_cast<Int>(indices.size()))
+        .addVertexBuffer(vertex_buffer, 0, Shaders::PhongGL::Position{}, Shaders::PhongGL::Normal{})
+        .setIndexBuffer(index_buffer, 0, GL::MeshIndexType::UnsignedInt);
+
     return mesh;
 }
 } // namespace graphics

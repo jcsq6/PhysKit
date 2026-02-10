@@ -65,15 +65,35 @@ struct std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCol
 };
 
 template <mp_units::Quantity Q, int Rows, int Cols>
-class std::formatter<physkit::unit_mat<Q, Rows, Cols>>
+struct std::formatter<physkit::unit_mat<Q, Rows, Cols>>
     : public std::formatter<typename physkit::unit_mat<Q, Rows, Cols>::eigen_type>
 {
-public:
     template <typename FormatContext>
     auto format(const physkit::unit_mat<Q, Rows, Cols> &matrix, FormatContext &ctx) const
     {
         auto it = std::formatter<typename physkit::unit_mat<Q, Rows, Cols>::eigen_type>::format(
             matrix.base(), ctx);
         return std::format_to(it, " {}", Q::unit);
+    }
+};
+
+template <mp_units::Quantity Q> struct std::formatter<physkit::unit_quat<Q>>
+{
+    std::formatter<typename Q::rep> underlying;
+    constexpr auto parse(std::format_parse_context &pc) { return underlying.parse(pc); }
+
+    template <typename FormatContext>
+    auto format(const physkit::unit_quat<Q> &q, FormatContext &ctx) const
+    {
+        ctx.advance_to(std::ranges::copy("(", ctx.out()).out);
+        ctx.advance_to(underlying.format(q.base().w(), ctx));
+        ctx.advance_to(std::ranges::copy(", ", ctx.out()).out);
+        ctx.advance_to(underlying.format(q.base().x(), ctx));
+        ctx.advance_to(std::ranges::copy(", ", ctx.out()).out);
+        ctx.advance_to(underlying.format(q.base().y(), ctx));
+        ctx.advance_to(std::ranges::copy(", ", ctx.out()).out);
+        ctx.advance_to(underlying.format(q.base().z(), ctx));
+        ctx.advance_to(std::ranges::copy(")", ctx.out()).out);
+        return std::format_to(ctx.out(), " {}", Q::unit);
     }
 };

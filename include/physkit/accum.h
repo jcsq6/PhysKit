@@ -10,7 +10,7 @@ public:
 
     void update(quantity<si::second> dt) { M_accum += dt; }
 
-    bool should_step()
+    [[nodiscard]] bool should_step()
     {
         if (M_accum >= M_dt)
         {
@@ -34,7 +34,7 @@ class stepper
 public:
     stepper(world &w, quantity<si::second> dt) : M_accum(dt), M_w(&w) {}
 
-    auto update(quantity<si::second> dt)
+    void update(quantity<si::second> dt)
     {
         M_accum.update(dt);
         while (M_accum.should_step()) M_w->step(M_accum.step_size());
