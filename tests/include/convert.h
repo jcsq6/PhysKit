@@ -22,15 +22,15 @@ constexpr auto expand(auto &&nth, std::index_sequence<Indices...> /*helper*/)
 }
 } // namespace detail
 
-template <typename T, int Size, mp_units::Quantity Q>
+template <mp_units::Reference auto ref, typename T, int Size, mp_units::Quantity Q>
 constexpr Magnum::Math::Vector<Size, T> to_magnum_vector(const physkit::unit_mat<Q, Size, 1> &v)
 {
     return detail::expand<Magnum::Math::Vector<Size, T>>(
-        [&](auto i) { return static_cast<T>(v[i].numerical_value_in(Q::reference)); },
+        [&](auto i) { return static_cast<T>(v[i].numerical_value_in(ref)); },
         std::make_index_sequence<Size>{});
 }
 
-template <auto ref, typename T, typename U, std::size_t Size>
+template <mp_units::Reference auto ref, typename T, typename U, std::size_t Size>
 constexpr physkit::vec<Size, ref, T> to_physkit_vector(const Magnum::Math::Vector<Size, U> &v)
 {
     return detail::expand<physkit::vec<Size, ref, T>>(
@@ -38,14 +38,14 @@ constexpr physkit::vec<Size, ref, T> to_physkit_vector(const Magnum::Math::Vecto
         std::make_index_sequence<Size>{});
 }
 
-template <typename T, mp_units::Quantity Q>
+template <mp_units::Reference auto ref, typename T, mp_units::Quantity Q>
 constexpr Magnum::Math::Quaternion<T> to_magnum_quaternion(const physkit::unit_quat<Q> &q)
 {
-    return Magnum::Math::Quaternion<T>(to_magnum_vector<T>(q.vec()),
-                                       q.w().numerical_value_in(Q::reference));
+    return Magnum::Math::Quaternion<T>(to_magnum_vector<ref, T>(q.vec()),
+                                       q.w().numerical_value_in(ref));
 }
 
-template <auto ref, typename T, typename U>
+template <mp_units::Reference auto ref, typename T, typename U>
 constexpr physkit::quat<ref, T> to_physkit_quaternion(const Magnum::Math::Quaternion<U> &q)
 {
     return physkit::quat<ref, T>(q.w() * ref, q.x() * ref, q.y() * ref, q.z() * ref);
@@ -68,7 +68,7 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh) // NOLINT
 
     for (std::size_t i = 0; i < verts.size(); ++i)
     {
-        vertex_buf[i].position = to_magnum_vector<Float>(verts[i]);
+        vertex_buf[i].position = to_magnum_vector<physkit::si::metre, Float>(verts[i]);
         vertex_buf[i].normal = {};
     }
 
@@ -77,7 +77,7 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh) // NOLINT
 
     for (const auto &tri : tris)
     {
-        auto normal = to_magnum_vector<float>(tri.normal(phys_mesh));
+        auto normal = to_magnum_vector<physkit::one, float>(tri.normal(phys_mesh));
         vertex_buf[tri[0]].normal += normal;
         vertex_buf[tri[1]].normal += normal;
         vertex_buf[tri[2]].normal += normal;

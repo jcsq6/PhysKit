@@ -50,8 +50,9 @@ public:
     void rotate(physkit::quantity<physkit::si::radian, float> angle,
                 const physkit::vec3<physkit::one> &axis)
     {
-        Quaternion rot = Quaternion::rotation(Rad(angle.numerical_value_in(physkit::si::radian)),
-                                              to_magnum_vector<float>(axis.normalized()));
+        Quaternion rot =
+            Quaternion::rotation(Rad(angle.numerical_value_in(physkit::si::radian)),
+                                 to_magnum_vector<physkit::one, float>(axis.normalized()));
         Object::rotate(rot);
     }
 };
@@ -96,8 +97,9 @@ public:
     {
         if (auto res = M_world->get_rigid(M_handle))
             resetTransformation()
-                .rotate(to_magnum_quaternion<float>(res.value()->orientation()))
-                .translate(to_magnum_vector<float>(res.value()->particle().pos()));
+                .rotate(to_magnum_quaternion<physkit::one, float>(res.value()->orientation()))
+                .translate(
+                    to_magnum_vector<physkit::si::metre, float>(res.value()->particle().pos()));
     }
 
 private:

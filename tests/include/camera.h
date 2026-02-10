@@ -336,7 +336,7 @@ private:
              M_kfs | std::views::filter([](auto &kv) { return kv.second.point().has_value(); }))
         {
             arrayAppend(t, time.numerical_value_in(physkit::si::second));
-            arrayAppend(p, to_magnum_vector<float>(keyframe.point().value()));
+            arrayAppend(p, to_magnum_vector<physkit::si::metre, float>(keyframe.point().value()));
         }
 
         n = p.size();
@@ -513,9 +513,9 @@ private:
                 if constexpr (std::same_as<T, kf::orient_t>)
                     return o.rot.normalized();
                 else if constexpr (std::same_as<T, kf::facing_t>)
-                    return look_rotation(to_magnum_vector<float>(o.dir));
+                    return look_rotation(to_magnum_vector<physkit::one, float>(o.dir));
                 else if constexpr (std::same_as<T, kf::look_at_t>)
-                    return look_rotation(to_magnum_vector<float>(o.target) -
+                    return look_rotation(to_magnum_vector<physkit::si::metre, float>(o.target) -
                                          pos_track.at(t_seconds));
                 else
                     static_assert(sizeof(T) == 0, "non-exhaustive visitor!");
@@ -590,7 +590,7 @@ public:
 
     void look_at(const physkit::vec3<physkit::si::metre, float> &pos)
     {
-        const Vector3 target = to_magnum_vector<float>(pos);
+        const Vector3 target = to_magnum_vector<physkit::si::metre, float>(pos);
         const Vector3 dir = target - M_pos;
         set_view(dir);
     }
@@ -599,7 +599,7 @@ public:
 
     void move(const physkit::vec3<physkit::si::metre, float> &delta)
     {
-        M_pos += to_magnum_vector<float>(delta);
+        M_pos += to_magnum_vector<physkit::si::metre, float>(delta);
         mark_dirty();
     }
 

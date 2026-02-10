@@ -25,18 +25,18 @@ public:
         M_center = add_object(sphere, {0.9f, 0.9f, 0.9f});
 
         M_a = add_object(sphere, {1.0f, 0.15f, 0.1f});
-        M_a->translate(to_magnum_vector<float>(pt_a));
+        M_a->translate(to_magnum_vector<m, float>(pt_a));
 
         M_b = add_object(sphere, {0.1f, 0.8f, 0.15f});
-        M_b->translate(to_magnum_vector<float>(pt_b));
+        M_b->translate(to_magnum_vector<m, float>(pt_b));
 
         // Blue cone at +Z
         M_c = add_object(sphere, {0.1f, 0.2f, 1.0f});
-        M_c->translate(to_magnum_vector<float>(pt_c));
+        M_c->translate(to_magnum_vector<m, float>(pt_c));
 
         // Yellow cylinder at -Z, elevated
         M_d = add_object(sphere, {0.9f, 0.8f, 0.1f});
-        M_d->translate(to_magnum_vector<float>(pt_d));
+        M_d->translate(to_magnum_vector<m, float>(pt_d));
 
         cam().set_move_track(
             camera_track({
