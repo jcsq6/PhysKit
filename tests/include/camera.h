@@ -183,7 +183,7 @@ private:
 ///
 /// @note At least two keyframes with position data are required.
 /// @note Keyframes without explicit orientation will derive orientation from movement direction.
-class camera_track
+class camera_track //TODO: currently the animation track starts at t=0 implicitly. this might be worth changing
 {
 public:
     /// @brief Interpolation method for the camera track.
@@ -245,6 +245,18 @@ public:
     {
         clean();
 
+        //this method doesn't take into account the dt of the last frame.
+        //add a hidden frame at the end of the track if loop is the case??
+        if (time - M_start > M_end) {
+            if (M_extrapolation == loop)
+            {
+                while (time - M_start > M_duration)
+                    time = time - M_duration;
+            }
+            else
+                time = M_end;
+        }
+
         return {.pos = M_pos_track.at(time.numerical_value_in(physkit::si::second)),
                 .rot = M_orient_track.at(time.numerical_value_in(physkit::si::second))};
     }
@@ -254,7 +266,7 @@ public:
     /// @return Boolean representing if the camera is released.
     [[nodiscard]] bool released(const physkit::quantity<physkit::si::second, float> time)
     {
-        return (time > M_duration && M_extrapolation == release);
+        return (time > M_end && M_extrapolation == release);
     }
 
     /// @brief Get the total duration of the camera track.
@@ -269,6 +281,8 @@ private:
     using second_t = physkit::quantity<physkit::si::second, float>;
     std::vector<std::pair<second_t, kf>> M_kfs;
     second_t M_duration = -1.f * physkit::si::second;
+    second_t M_start = -1.f * physkit::si::second;
+    second_t M_end = -1.f * physkit::si::second;
     interpolation_t M_interpolation{interpolation_t::spline};
     extrapolation_t M_extrapolation{extrapolation_t::release};
     Animation::Track<float, Math::CubicHermite3D<float>, Math::Vector3<float>> M_pos_track;
@@ -280,7 +294,7 @@ private:
     void deduce(const std::span<const kf> pts)
     {
         M_kfs.clear();
-        M_kfs.reserve(pts.size());
+        M_kfs.reserve(pts.size()+1);
         M_duration = std::ranges::fold_left(pts, 0.0f * physkit::si::second,
                                             [this](second_t acc, const kf &p)
                                             {
@@ -290,6 +304,11 @@ private:
         if (std::ranges::count_if(pts, [](const kf &p) { return p.point().has_value(); }) < 2)
             throw std::runtime_error(
                 "camera_track requires at least two keyframes with position data");
+
+        //secret key frame to implement looping behavior, the at function limits time to hide it
+        M_kfs.emplace_back(M_duration, M_kfs.at(0).second);
+        M_start = 0.0f * physkit::si::second;
+        M_end = M_kfs.at(pts.size() - 1).first;
 
         mark_dirty();
     }

@@ -53,7 +53,16 @@ public:
                              kf::make_pos({0 * m, 20 * m, 0 * m}).transition(4.0f * s),
                          })
                 .with_interp(camera_track::spline)
-                .with_extrap(camera_track::release));
+                .with_extrap(camera_track::loop));
+        /*
+        cam().set_move_track(
+            camera_track({
+                            //kf::make_pos({0 * m, 0 * m, 0 * m}).transition(0.0f * s),
+                            kf::make_pos({0 * m, 8 * m, -18 * m}).transition(4.0f * s),
+                            kf::make_pos({0 * m, 20 * m, 0 * m}).transition(4.0f * s)})
+                .with_interp(camera_track::spline)
+                .with_extrap(camera_track::loop));
+        */
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override
