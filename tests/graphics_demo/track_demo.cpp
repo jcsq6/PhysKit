@@ -13,13 +13,14 @@ public:
     // NOLINT
     {
         using namespace si::unit_symbols;
+        using namespace physkit;
 
         auto sphere = mesh_objs::sphere();
 
-        const physkit::vec3<m, float> pt_a = {-8 * m, 0 * m, -8 * m};
-        const physkit::vec3<m, float> pt_b = {8 * m, 0 * m, 8 * m};
-        const physkit::vec3<m, float> pt_c = {8 * m, 0 * m, -8 * m};
-        const physkit::vec3<m, float> pt_d = {-8 * m, 0 * m, 8 * m};
+        const auto pt_a = vec3<float>{-8, 0, -8} * m;
+        const auto pt_b = vec3<float>{8, 0, 8} * m;
+        const auto pt_c = vec3<float>{8, 0, -8} * m;
+        const auto pt_d = vec3<float>{-8, 0, 8} * m;
 
         // Center marker: small white sphere at origin
         M_center = add_object(sphere, {0.9f, 0.9f, 0.9f});
@@ -40,17 +41,13 @@ public:
 
         cam().set_move_track(
             camera_track({
-                             kf::make_pos({0 * m, 8 * m, -18 * m}).transition(2.0f * s),
-                             kf::make_pos({0 * m, 20 * m, 0 * m}).transition(4.0f * s),
-                             kf::make_pos(pt_a + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                                 .transition(4.0f * s),
-                             kf::make_pos(pt_b + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                                 .transition(4.0f * s),
-                             kf::make_pos(pt_c + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                                 .transition(4.0f * s),
-                             kf::make_pos(pt_d + physkit::vec3<m, float>{0 * m, 20 * m, 0 * m})
-                                 .transition(4.0f * s),
-                             kf::make_pos({0 * m, 20 * m, 0 * m}).transition(4.0f * s),
+                             kf::make_pos(vec3<float>{0, 8, -18} * m).transition(2.0f * s),
+                             kf::make_pos(vec3<float>{0, 20, 0} * m).transition(4.0f * s),
+                             kf::make_pos(pt_a + vec3<float>{0, 20, 0} * m).transition(4.0f * s),
+                             kf::make_pos(pt_b + vec3<float>{0, 20, 0} * m).transition(4.0f * s),
+                             kf::make_pos(pt_c + vec3<float>{0, 20, 0} * m).transition(4.0f * s),
+                             kf::make_pos(pt_d + vec3<float>{0, 20, 0} * m).transition(4.0f * s),
+                             kf::make_pos(vec3<float>{0, 20, 0} * m).transition(4.0f * s),
                          })
                 .with_interp(camera_track::spline)
                 .with_extrap(camera_track::reverse));

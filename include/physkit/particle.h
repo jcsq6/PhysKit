@@ -8,8 +8,8 @@ namespace physkit
 class particle
 {
 public:
-    particle(const vec3<si::metre> &pos, const vec3<si::metre / si::second> &vel,
-             quantity<si::kilogram> mass, const quat<one> &orientation = quat<one>::identity())
+    particle(const uvec3<si::metre> &pos, const uvec3<si::metre / si::second> &vel,
+             quantity<si::kilogram> mass, const uquat<one> &orientation = uquat<one>::identity())
         : M_pos(pos), M_vel(vel), M_mass(mass), M_orientation(orientation)
     {
     }
@@ -37,7 +37,7 @@ public:
 
     [[nodiscard]] const auto &inv_inertia_tensor() const { return M_inv_inertia_tensor; }
 
-    void inertia_tensor(const mat3<si::kilogram * si::metre * si::metre> &tensor)
+    void inertia_tensor(const umat3<si::kilogram * si::metre * si::metre> &tensor)
     {
         M_inertia_tensor = tensor;
         M_inv_inertia_tensor = tensor.inverse();
@@ -52,47 +52,48 @@ public:
         return i_inv_world * (M_torque_acc - M_ang_vel.cross(i_world * M_ang_vel));
     }
 
-    void apply_force(const vec3<si::kilogram * si::metre / si::second / si::second> &force)
+    void apply_force(const uvec3<si::kilogram * si::metre / si::second / si::second> &force)
     {
         M_acc += force / M_mass;
     }
 
-    void apply_force(const vec3<si::kilogram * si::metre / si::second / si::second> &force,
-                     const vec3<si::metre> &application_point)
+    void apply_force(const uvec3<si::kilogram * si::metre / si::second / si::second> &force,
+                     const uvec3<si::metre> &application_point)
     {
         M_acc += force / M_mass;
         M_torque_acc += (application_point - M_pos).cross(force);
     }
 
-    void apply_acceleration(const vec3<si::metre / si::second / si::second> &a) { M_acc += a; }
+    void apply_acceleration(const uvec3<si::metre / si::second / si::second> &a) { M_acc += a; }
 
-    void
-    apply_torque(const vec3<si::kilogram * si::metre * si::metre / si::second / si::second> &torque)
+    void apply_torque(
+        const uvec3<si::kilogram * si::metre * si::metre / si::second / si::second> &torque)
     {
         M_torque_acc += torque;
     }
 
     void clear_forces()
     {
-        M_acc = vec3<si::metre / si::second / si::second>::zero();
-        M_torque_acc = vec3<si::kilogram * si::metre * si::metre / si::second / si::second>::zero();
+        M_acc = uvec3<si::metre / si::second / si::second>::zero();
+        M_torque_acc =
+            uvec3<si::kilogram * si::metre * si::metre / si::second / si::second>::zero();
     }
 
 private:
-    vec3<si::metre> M_pos = vec3<si::metre>::zero();
-    vec3<si::metre / si::second> M_vel = vec3<si::metre / si::second>::zero();
-    vec3<si::metre / si::second / si::second> M_acc =
-        vec3<si::metre / si::second / si::second>::zero();
+    uvec3<si::metre> M_pos = uvec3<si::metre>::zero();
+    uvec3<si::metre / si::second> M_vel = uvec3<si::metre / si::second>::zero();
+    uvec3<si::metre / si::second / si::second> M_acc =
+        uvec3<si::metre / si::second / si::second>::zero();
     quantity<si::kilogram> M_mass = 1.0 * si::kilogram;
 
-    vec3<si::radian / si::second> M_ang_vel = vec3<si::radian / si::second>::zero();
-    mat3<si::kilogram * si::metre * si::metre> M_inertia_tensor =
-        mat3<si::kilogram * si::metre * si::metre>::identity();
-    mat3<one / (si::kilogram * si::metre * si::metre)> M_inv_inertia_tensor =
-        mat3<one / (si::kilogram * si::metre * si::metre)>::identity();
-    vec3<si::kilogram * si::metre * si::metre / si::second / si::second> M_torque_acc =
-        vec3<si::kilogram * si::metre * si::metre / si::second / si::second>::zero();
+    uvec3<si::radian / si::second> M_ang_vel = uvec3<si::radian / si::second>::zero();
+    umat3<si::kilogram * si::metre * si::metre> M_inertia_tensor =
+        umat3<si::kilogram * si::metre * si::metre>::identity();
+    umat3<one / (si::kilogram * si::metre * si::metre)> M_inv_inertia_tensor =
+        umat3<one / (si::kilogram * si::metre * si::metre)>::identity();
+    uvec3<si::kilogram * si::metre * si::metre / si::second / si::second> M_torque_acc =
+        uvec3<si::kilogram * si::metre * si::metre / si::second / si::second>::zero();
 
-    quat<one> M_orientation = quat<one>::identity();
+    uquat<one> M_orientation = uquat<one>::identity();
 };
 } // namespace physkit

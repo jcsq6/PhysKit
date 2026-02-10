@@ -493,7 +493,60 @@ private:
     eigen_type M_data{rep_type(1), rep_type(0), rep_type(0), rep_type(0)};
 };
 
+namespace detail
+{
+template <typename T> constexpr bool is_matrix_v = false;
+template <typename T, int Rows, int Cols, int Opt, int MaxRows, int MaxCols>
+constexpr bool is_matrix_v<Eigen::Matrix<T, Rows, Cols, Opt, MaxRows, MaxCols>> = true;
+
+template <typename T>
+concept MatrixType = is_matrix_v<std::remove_cvref_t<T>>;
+
+template <typename T> constexpr bool is_quaternion_v = false;
+template <typename T, int Options>
+constexpr bool is_quaternion_v<Eigen::Quaternion<T, Options>> = true;
+
+template <typename T>
+concept QuaternionType = is_quaternion_v<std::remove_cvref_t<T>>;
+} // namespace detail
 } // namespace physkit
+
+namespace mp_units
+{
+template <physkit::detail::MatrixType MatrixT, Reference Ref,
+          RepresentationOf<get_quantity_spec(Ref{})> Rep = std::remove_cvref_t<MatrixT>::Scalar>
+constexpr auto operator*(MatrixT && mat, Ref ref)
+    requires(!detail::OffsetUnit<decltype(physkit::get_unit(Ref{}))>)
+{
+    return physkit::unit_mat<quantity<Ref{}, Rep>, mat.RowsAtCompileTime, mat.ColsAtCompileTime>{
+        std::forward<MatrixT>(mat)};
+}
+
+template <physkit::detail::MatrixType MatrixT, Reference Ref,
+          RepresentationOf<get_quantity_spec(Ref{})> Rep = std::remove_cvref_t<MatrixT>::Scalar>
+constexpr auto operator/(MatrixT && mat, Ref ref)
+    requires(!detail::OffsetUnit<decltype(physkit::get_unit(Ref{}))>)
+{
+    return physkit::unit_mat<quantity<inverse(Ref{}), Rep>, mat.RowsAtCompileTime,
+                             mat.ColsAtCompileTime>{std::forward<MatrixT>(mat)};
+}
+
+template <physkit::detail::QuaternionType QuatT, Reference Ref,
+          RepresentationOf<get_quantity_spec(Ref{})> Rep = std::remove_cvref_t<QuatT>::Scalar>
+constexpr auto operator*(QuatT && quat, Ref ref)
+    requires(!detail::OffsetUnit<decltype(physkit::get_unit(Ref{}))>)
+{
+    return physkit::unit_quat<quantity<Ref{}, Rep>>{std::forward<QuatT>(quat)};
+}
+
+template <physkit::detail::QuaternionType QuatT, Reference Ref,
+          RepresentationOf<get_quantity_spec(Ref{})> Rep = std::remove_cvref_t<QuatT>::Scalar>
+constexpr auto operator/(QuatT && quat, Ref ref)
+    requires(!detail::OffsetUnit<decltype(physkit::get_unit(Ref{}))>)
+{
+    return physkit::unit_quat<quantity<inverse(Ref{}), Rep>>{std::forward<QuatT>(quat)};
+}
+} // namespace mp_units
 
 namespace std
 {

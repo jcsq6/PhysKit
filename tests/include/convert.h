@@ -31,9 +31,9 @@ constexpr Magnum::Math::Vector<Size, T> to_magnum_vector(const physkit::unit_mat
 }
 
 template <mp_units::Reference auto ref, typename T, typename U, std::size_t Size>
-constexpr physkit::vec<Size, ref, T> to_physkit_vector(const Magnum::Math::Vector<Size, U> &v)
+constexpr physkit::uvec<Size, ref, T> to_physkit_vector(const Magnum::Math::Vector<Size, U> &v)
 {
-    return detail::expand<physkit::vec<Size, ref, T>>(
+    return detail::expand<physkit::uvec<Size, ref, T>>(
         [&](auto i) { return physkit::value_cast<ref, T>(v[i] * ref); },
         std::make_index_sequence<Size>{});
 }
@@ -46,12 +46,12 @@ constexpr Magnum::Math::Quaternion<T> to_magnum_quaternion(const physkit::unit_q
 }
 
 template <mp_units::Reference auto ref, typename T, typename U>
-constexpr physkit::quat<ref, T> to_physkit_quaternion(const Magnum::Math::Quaternion<U> &q)
+constexpr physkit::uquat<ref, T> to_physkit_quaternion(const Magnum::Math::Quaternion<U> &q)
 {
-    return physkit::quat<ref, T>(q.w() * ref, q.x() * ref, q.y() * ref, q.z() * ref);
+    return physkit::quat<T>(q.w(), q.x(), q.y(), q.z()) * ref;
 }
 
-inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh) // NOLINT
+inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh)
 {
     using namespace Magnum;
 

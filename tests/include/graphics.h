@@ -48,7 +48,7 @@ public:
     using SceneGraph::Object<SceneGraph::MatrixTransformation3D>::Object;
 
     void rotate(physkit::quantity<physkit::si::radian, float> angle,
-                const physkit::vec3<physkit::one> &axis)
+                const physkit::uvec3<physkit::one> &axis)
     {
         Quaternion rot =
             Quaternion::rotation(Rad(angle.numerical_value_in(physkit::si::radian)),

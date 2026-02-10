@@ -8,7 +8,7 @@ include(FetchContent)
 FetchContent_Declare(
     corrade
     GIT_REPOSITORY https://github.com/mosra/corrade.git
-    GIT_TAG 5f66f3cbc47c14da57bb7014ffae76ab6f255b29 # arbitrary stable commit
+    GIT_TAG ef37b2a35a149d29854bf30240100e0d924af4a9 # arbitrary stable commit
     GIT_SHALLOW    FALSE
     GIT_PROGRESS   TRUE)
 
@@ -20,7 +20,7 @@ FetchContent_MakeAvailable(corrade)
 FetchContent_Declare(
     magnum
     GIT_REPOSITORY https://github.com/mosra/magnum.git
-    GIT_TAG 4d80751e6f31abdafbba2233fe4315fb7cbcf5a7 # arbitrary stable commit
+    GIT_TAG f3a4ce7d1d0cd8085d4f05811c378813ada3cfcc # arbitrary stable commit
     GIT_SHALLOW    FALSE
     GIT_PROGRESS   TRUE)
 

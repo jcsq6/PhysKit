@@ -9,17 +9,17 @@ namespace physkit
 
 namespace detail
 {
-inline auto exp(const vec3<si::radian / si::second> &ang_vel, quantity<si::second> dt)
+inline auto exp(const uvec3<si::radian / si::second> &ang_vel, quantity<si::second> dt)
 {
     auto angle = ang_vel * dt;
     auto angle_mag = angle.norm();
     if (angle_mag < 1e-6 * si::radian)
     {
         auto half = angle * 0.5;
-        return quat{1.0 * si::radian, half.x(), half.y(), half.z()}
+        return uquat{1.0 * si::radian, half.x(), half.y(), half.z()}
             .normalized(); // Small angle approx breaks type system
     }
-    return quat<one>::from_angle_axis(angle_mag, angle / angle_mag);
+    return uquat<one>::from_angle_axis(angle_mag, angle / angle_mag);
 }
 } // namespace detail
 
