@@ -69,37 +69,29 @@ private:
     std::shared_ptr<const physkit::mesh> M_mesh;
 };
 
-class object
+class object : public particle
 {
 public:
     explicit object(object_desc desc)
-        : M_mesh(std::move(desc).mesh()),
-          M_info(desc.pos(), desc.vel(), desc.mass(), desc.orientation()), M_type(desc.type())
+        : particle(desc.pos(), desc.vel(), desc.mass(), desc.orientation()), M_type(desc.type()),
+          M_mesh(std::move(desc).mesh())
     {
     }
 
-    [[nodiscard]] const struct particle &particle() const { return M_info; }
-    [[nodiscard]] struct particle &particle() { return M_info; }
     [[nodiscard]] const struct mesh &mesh() const
     {
         assert(M_mesh != nullptr);
         return *M_mesh;
     }
-    [[nodiscard]] const quat<one> &orientation() const { return M_info.orientation(); }
-    [[nodiscard]] quat<one> &orientation() { return M_info.orientation(); }
     [[nodiscard]] body_type type() const { return M_type; }
     [[nodiscard]] bool is_dynamic() const { return M_type == body_type::dynam; }
     [[nodiscard]] bool is_static() const { return M_type == body_type::stat; }
 
     /// @brief Return a lightweight view for world-space queries.
-    [[nodiscard]] struct mesh::instance instance() const
-    {
-        return {*M_mesh, M_info.pos(), M_info.orientation()};
-    }
+    [[nodiscard]] struct mesh::instance instance() const { return {*M_mesh, pos(), orientation()}; }
 
 private:
     std::shared_ptr<const struct mesh> M_mesh;
-    struct particle M_info;
     body_type M_type;
 };
 

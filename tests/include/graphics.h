@@ -98,8 +98,7 @@ public:
         if (auto res = M_world->get_rigid(M_handle))
             resetTransformation()
                 .rotate(to_magnum_quaternion<physkit::one, float>(res.value()->orientation()))
-                .translate(
-                    to_magnum_vector<physkit::si::metre, float>(res.value()->particle().pos()));
+                .translate(to_magnum_vector<physkit::si::metre, float>(res.value()->pos()));
     }
 
 private:

@@ -9,9 +9,9 @@ void world::step(quantity<si::second> dt)
         if (!slot.available)
         {
             auto &obj = slot.value;
-            obj.particle().apply_force(M_gravity * obj.particle().mass());
+            obj.apply_force(M_gravity * obj.mass());
             M_int->integrate(obj, dt);
-            obj.particle().clear_forces();
+            obj.clear_forces();
         }
     }
 }

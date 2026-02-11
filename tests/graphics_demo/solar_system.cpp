@@ -100,7 +100,7 @@ public:
     {
         using namespace si::unit_symbols;
         M_elapsed += dt;
-        const float t = static_cast<double>(M_elapsed.numerical_value_in(s));
+        const float t = static_cast<double>(M_elapsed.numerical_value_in(s)); // NOLINT
 
         // Orbital speeds (rad/s)
         constexpr float spd_mercury = 1.8f;

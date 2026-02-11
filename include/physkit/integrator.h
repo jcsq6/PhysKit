@@ -41,15 +41,13 @@ class forward_euler : public integrator
 public:
     void integrate(object &obj, quantity<si::second> dt) override
     {
-        auto &p = obj.particle();
+        obj.pos() += obj.vel() * dt;
+        obj.vel() += obj.acc() * dt;
 
-        p.pos() += p.vel() * dt;
-        p.vel() += p.acc() * dt;
+        auto ang_acc = obj.angular_accel();
 
-        auto ang_acc = p.angular_accel();
-
-        p.orientation() = detail::exp(p.ang_vel(), dt) * p.orientation();
-        p.ang_vel() += ang_acc * dt;
+        obj.orientation() = detail::exp(obj.ang_vel(), dt) * obj.orientation();
+        obj.ang_vel() += ang_acc * dt;
     }
 };
 
@@ -58,13 +56,11 @@ class semi_implicit_euler : public integrator
 public:
     void integrate(object &obj, quantity<si::second> dt) override
     {
-        auto &p = obj.particle();
+        obj.vel() += obj.acc() * dt;
+        obj.pos() += obj.vel() * dt;
 
-        p.vel() += p.acc() * dt;
-        p.pos() += p.vel() * dt;
-
-        p.ang_vel() += p.angular_accel() * dt;
-        p.orientation() = detail::exp(p.ang_vel(), dt) * p.orientation();
+        obj.ang_vel() += obj.angular_accel() * dt;
+        obj.orientation() = detail::exp(obj.ang_vel(), dt) * obj.orientation();
     }
 };
 
