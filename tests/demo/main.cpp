@@ -37,17 +37,17 @@ public:
 
         set_vsync();
         cam().speed(10 * m / s);
-        cam().look_at({0 * m, M_a->obj().particle().pos().y(), 0 * m});
+        cam().look_at({0 * m, M_a->obj().pos().y(), 0 * m});
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override
     {
         M_stepper.update(dt);
-        auto &particle = M_a->obj().particle();
-        if (particle.pos().y() < 0 * m)
+        auto &obj = M_a->obj();
+        if (obj.pos().y() < 0 * m)
         {
-            particle.pos().y(-particle.pos().y());
-            particle.vel().y(-particle.vel().y());
+            obj.pos().y(-obj.pos().y());
+            obj.vel().y(-obj.vel().y());
         }
     }
 

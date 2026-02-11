@@ -433,9 +433,9 @@ void test_mesh_volume()
     assert(approx_q(msh->volume(), 1.0 * m * m * m));
 }
 
-void test_mesh_ray_intersect_local()
+void test_mesh_ray_intersect()
 {
-    std::println("  mesh::ray_intersect_local");
+    std::println("  mesh::ray_intersect");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
@@ -444,7 +444,7 @@ void test_mesh_ray_intersect_local()
         .origin = vec3{-1.0, 0.5, 0.5} * m,
         .direction = {1.0, 0.0, 0.0},
     };
-    auto hit = msh->ray_intersect_local(r);
+    auto hit = msh->ray_intersect(r);
     assert(hit.has_value());
     assert(approx_q(hit->pos.x(), 0.0 * m));
     assert(approx_q(hit->pos.y(), 0.5 * m));
@@ -456,10 +456,10 @@ void test_mesh_ray_intersect_local()
         .origin = vec3{-1.0, 0.5, 0.5} * m,
         .direction = vec3{-1.0, 0.0, 0.0},
     };
-    assert(!msh->ray_intersect_local(away).has_value());
+    assert(!msh->ray_intersect(away).has_value());
 
     // Ray with max_distance that is too short
-    auto short_hit = msh->ray_intersect_local(r, 0.5 * m);
+    auto short_hit = msh->ray_intersect(r, 0.5 * m);
     assert(!short_hit.has_value());
 
     // Ray from inside - should still hit
@@ -467,51 +467,51 @@ void test_mesh_ray_intersect_local()
         .origin = vec3{0.5, 0.5, 0.5} * m,
         .direction = vec3{1.0, 0.0, 0.0},
     };
-    auto inside_hit = msh->ray_intersect_local(inside);
+    auto inside_hit = msh->ray_intersect(inside);
     assert(inside_hit.has_value());
     assert(approx_q(inside_hit->distance, 0.5 * m));
 }
 
-void test_mesh_contains_local()
+void test_mesh_contains()
 {
-    std::println("  mesh::contains_local");
+    std::println("  mesh::contains");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
     // Use points where y != z to avoid hitting the shared diagonal edge of each face pair,
     // which causes the ray-parity test to double-count crossings.
-    assert(msh->contains_local(vec3{0.3, 0.2, 0.4} * m));
+    assert(msh->contains(vec3{0.3, 0.2, 0.4} * m));
     // Use points where y != z to avoid hitting the shared diagonal edge of each face
-    assert(msh->contains_local(vec3{0.7, 0.2, 0.4} * m));
-    assert(msh->contains_local(vec3{0.3, 0.7, 0.4} * m));
+    assert(msh->contains(vec3{0.7, 0.2, 0.4} * m));
+    assert(msh->contains(vec3{0.3, 0.7, 0.4} * m));
 
     // Exterior points
-    assert(!msh->contains_local(vec3{-0.5, 0.2, 0.4} * m));
-    assert(!msh->contains_local(vec3{1.5, 0.2, 0.4} * m));
-    assert(!msh->contains_local(vec3{0.3, -0.5, 0.4} * m));
-    assert(!msh->contains_local(vec3{0.3, 0.2, 1.5} * m));
+    assert(!msh->contains(vec3{-0.5, 0.2, 0.4} * m));
+    assert(!msh->contains(vec3{1.5, 0.2, 0.4} * m));
+    assert(!msh->contains(vec3{0.3, -0.5, 0.4} * m));
+    assert(!msh->contains(vec3{0.3, 0.2, 1.5} * m));
 }
 
-void test_mesh_support_local()
+void test_mesh_support()
 {
-    std::println("  mesh::support_local");
+    std::println("  mesh::support");
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
     // Support in +x direction -> should be one of the x=1 vertices
-    auto sup_x = msh->support_local(vec3{1.0, 0.0, 0.0});
+    auto sup_x = msh->support(vec3{1.0, 0.0, 0.0});
     assert(approx_q(sup_x.x(), 1.0 * m));
 
     // Support in -x direction -> should be one of the x=0 vertices
-    auto sup_nx = msh->support_local(vec3{-1.0, 0.0, 0.0});
+    auto sup_nx = msh->support(vec3{-1.0, 0.0, 0.0});
     assert(approx_q(sup_nx.x(), 0.0 * m));
 
     // Support in +y direction -> y=1
-    auto sup_y = msh->support_local(vec3{0.0, 1.0, 0.0});
+    auto sup_y = msh->support(vec3{0.0, 1.0, 0.0});
     assert(approx_q(sup_y.y(), 1.0 * m));
 
     // Support in diagonal direction -> should be corner (1,1,1)
-    auto sup_diag = msh->support_local(vec3{1.0, 1.0, 1.0});
+    auto sup_diag = msh->support(vec3{1.0, 1.0, 1.0});
     assert(approx_vec(sup_diag, vec3{1.0, 1.0, 1.0} * m));
 }
 
@@ -538,7 +538,7 @@ void test_mesh_instance_world_bounds()
 
     // Translated by (5,0,0)
     auto inst = msh->at(vec3{5.0, 0.0, 0.0} * m);
-    auto wb = inst.world_bounds();
+    auto wb = inst.bounds();
     assert(approx_vec(wb.min, vec3{5.0, 0.0, 0.0} * m));
     assert(approx_vec(wb.max, vec3{6.0, 1.0, 1.0} * m));
 }
@@ -550,7 +550,7 @@ void test_mesh_instance_world_bsphere()
     auto msh = cube.make_mesh();
 
     auto inst = msh->at(vec3{5.0, 0.0, 0.0} * m);
-    auto ws = inst.world_bsphere();
+    auto ws = inst.bsphere();
     // Center should be translated
     auto local_center = msh->bsphere().center;
     assert(approx_vec(ws.center, local_center + vec3{5.0, 0.0, 0.0} * m));
@@ -621,7 +621,7 @@ void test_mesh_instance_rotated()
 
     // After rotating the unit cube [0,1]^3 by 90 degrees around Z,
     // the AABB becomes [-1,0] x [0,1] x [0,1]
-    auto wb = inst.world_bounds();
+    auto wb = inst.bounds();
     assert(approx_q(wb.min.x(), -1.0 * m));
     assert(approx_q(wb.max.x(), 0.0 * m));
 
@@ -684,9 +684,9 @@ int main()
     test_mesh_bounds();
     test_mesh_bsphere();
     test_mesh_volume();
-    test_mesh_ray_intersect_local();
-    test_mesh_contains_local();
-    test_mesh_support_local();
+    test_mesh_ray_intersect();
+    test_mesh_contains();
+    test_mesh_support();
 
     std::println("\n=== Mesh Instance Tests ===");
     test_mesh_instance_basic();
