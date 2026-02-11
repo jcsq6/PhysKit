@@ -12,21 +12,18 @@ class app : public graphics_app
 {
 public:
     static constexpr auto dt = 1.0 / 60.0f * s;
-    static constexpr auto initial_height = 15 * m;
-    static constexpr auto mass = 1 * kg;
-    static constexpr auto gravity = 9.8 * m / s / s;
     explicit app(const Arguments &arguments)
         : graphics_app{arguments,      {1280, 720},           45 * deg,
                        "PhysKit Demo", {0.0f, 10.0f, -25.0f}, {0.0f, 0.0f, 0.0f},
                        false}
     // NOLINT
     {
-        auto cube_mesh = mesh::box({1.0 * m, 1.0 * m, 1.0 * m});
+        auto cube_mesh = mesh::box(vec3{1, 1, 1} * m);
         M_a = add_object(M_world,
                          M_world.create_rigid(object_desc::dynam()
-                                                  .with_pos({0 * m, initial_height, 0 * m})
-                                                  .with_vel({0 * m / s, 0 * m / s, 0 * m / s})
-                                                  .with_mass(mass)
+                                                  .with_pos(vec3{0, 15, 0} * m)
+                                                  .with_vel(vec3{0, 0, 0} * m / s)
+                                                  .with_mass(1 * kg)
                                                   .with_mesh(cube_mesh)),
                          {0.8f, 0.2f, 0.2f});
 
@@ -52,7 +49,7 @@ public:
 
 private:
     world M_world{world_desc::make()
-                      .with_gravity({0 * m / s / s, -gravity, 0 * m / s / s})
+                      .with_gravity(vec3{0, -9.8, 0} * m / s / s)
                       .with_integrator(world_desc::semi_implicit_euler)};
     stepper M_stepper{M_world, dt};
     physics_obj *M_a;

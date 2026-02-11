@@ -86,14 +86,14 @@ void test_aabb_from_points()
     std::println("  aabb::from_points");
     cube_fixture cube;
     auto box = aabb::from_points(cube.vertices);
-    assert(approx_vec(box.min, {0.0 * m, 0.0 * m, 0.0 * m}));
-    assert(approx_vec(box.max, {1.0 * m, 1.0 * m, 1.0 * m}));
+    assert(approx_vec(box.min, vec3{0, 0, 0} * m));
+    assert(approx_vec(box.max, vec3{1, 1, 1} * m));
 }
 
 void test_aabb_size_center_extent()
 {
     std::println("  aabb::size/center/extent");
-    aabb box{.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {2.0 * m, 4.0 * m, 6.0 * m}};
+    aabb box{.min = vec3{0, 0, 0} * m, .max = vec3{2, 4, 6} * m};
     auto s = box.size();
     assert(approx_q(s.x(), 2.0 * m));
     assert(approx_q(s.y(), 4.0 * m));
@@ -113,54 +113,54 @@ void test_aabb_size_center_extent()
 void test_aabb_volume()
 {
     std::println("  aabb::volume");
-    aabb box{.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {2.0 * m, 3.0 * m, 4.0 * m}};
+    aabb box{.min = vec3{0, 0, 0} * m, .max = vec3{2, 3, 4} * m};
     assert(approx_q(box.volume(), 24.0 * m * m * m));
 }
 
 void test_aabb_point()
 {
     std::println("  aabb::point");
-    aabb box{.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {1.0 * m, 1.0 * m, 1.0 * m}};
+    aabb box{.min = vec3{0, 0, 0} * m, .max = vec3{1, 1, 1} * m};
     // index 0 = (min.x, min.y, min.z)
     assert(approx_vec(box.point(0), box.min));
     // index 7 = (max.x, max.y, max.z)
     assert(approx_vec(box.point(7), box.max));
     // index 1 = (max.x, min.y, min.z)
-    assert(approx_vec(box.point(1), {1.0 * m, 0.0 * m, 0.0 * m}));
+    assert(approx_vec(box.point(1), vec3{1, 0, 0} * m));
     // index 5 = (max.x, min.y, max.z)
-    assert(approx_vec(box.point(5), {1.0 * m, 0.0 * m, 1.0 * m}));
+    assert(approx_vec(box.point(5), vec3{1, 0, 1} * m));
 }
 
 void test_aabb_contains()
 {
     std::println("  aabb::contains");
-    aabb box{.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-    assert(box.contains({0.5 * m, 0.5 * m, 0.5 * m}));
-    assert(box.contains({0.0 * m, 0.0 * m, 0.0 * m})); // on boundary
-    assert(box.contains({1.0 * m, 1.0 * m, 1.0 * m})); // on boundary
-    assert(!box.contains({1.1 * m, 0.5 * m, 0.5 * m}));
-    assert(!box.contains({-0.1 * m, 0.5 * m, 0.5 * m}));
+    aabb box{.min = vec3{0, 0, 0} * m, .max = vec3{1, 1, 1} * m};
+    assert(box.contains(vec3{0.5, 0.5, 0.5} * m));
+    assert(box.contains(vec3{0, 0, 0} * m)); // on boundary
+    assert(box.contains(vec3{1, 1, 1} * m)); // on boundary
+    assert(!box.contains(vec3{1.1, 0.5, 0.5} * m));
+    assert(!box.contains(vec3{-0.1, 0.5, 0.5} * m));
 }
 
 void test_aabb_intersects()
 {
     std::println("  aabb::intersects");
-    aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-    aabb b{.min = {0.5 * m, 0.5 * m, 0.5 * m}, .max = {1.5 * m, 1.5 * m, 1.5 * m}};
-    aabb c{.min = {2.0 * m, 2.0 * m, 2.0 * m}, .max = {3.0 * m, 3.0 * m, 3.0 * m}};
+    aabb a{.min = vec3{0, 0, 0} * m, .max = vec3{1, 1, 1} * m};
+    aabb b{.min = vec3{0.5, 0.5, 0.5} * m, .max = vec3{1.5, 1.5, 1.5} * m};
+    aabb c{.min = vec3{2, 2, 2} * m, .max = vec3{3, 3, 3} * m};
     assert(a.intersects(b));
     assert(b.intersects(a));
     assert(!a.intersects(c));
     assert(!c.intersects(a));
     // Touching at a single corner counts as intersecting
-    aabb d{.min = {1.0 * m, 1.0 * m, 1.0 * m}, .max = {2.0 * m, 2.0 * m, 2.0 * m}};
+    aabb d{.min = vec3{1, 1, 1} * m, .max = vec3{2, 2, 2} * m};
     assert(a.intersects(d));
 }
 
 void test_aabb_translate()
 {
     std::println("  aabb::operator+/operator-");
-    aabb box{.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {1.0 * m, 1.0 * m, 1.0 * m}};
+    aabb box{.min = vec3{0, 0, 0} * m, .max = vec3{1, 1, 1} * m};
     auto shifted = box + vec3{2.0, 3.0, 4.0} * m;
     assert(approx_vec(shifted.min, vec3{2.0, 3.0, 4.0} * m));
     assert(approx_vec(shifted.max, vec3{3.0, 4.0, 5.0} * m));
@@ -173,31 +173,31 @@ void test_aabb_translate()
 void test_aabb_scale()
 {
     std::println("  aabb::operator*/operator/");
-    aabb box{.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {2.0 * m, 2.0 * m, 2.0 * m}};
+    aabb box{.min = vec3{0, 0, 0} * m, .max = vec3{2, 2, 2} * m};
     // Scaling by 2 doubles the size about center (1,1,1)
     auto scaled = box * 2.0;
-    assert(approx_vec(scaled.min, {-1.0 * m, -1.0 * m, -1.0 * m}));
-    assert(approx_vec(scaled.max, {3.0 * m, 3.0 * m, 3.0 * m}));
+    assert(approx_vec(scaled.min, vec3{-1, -1, -1} * m));
+    assert(approx_vec(scaled.max, vec3{3, 3, 3} * m));
 
     // Scaling by 0.5 halves the size
     auto halved = box / 2.0;
-    assert(approx_vec(halved.min, {0.5 * m, 0.5 * m, 0.5 * m}));
-    assert(approx_vec(halved.max, {1.5 * m, 1.5 * m, 1.5 * m}));
+    assert(approx_vec(halved.min, vec3{0.5, 0.5, 0.5} * m));
+    assert(approx_vec(halved.max, vec3{1.5, 1.5, 1.5} * m));
 
     // Quantity scale
     auto qscaled = box * (2.0 * one);
-    assert(approx_vec(qscaled.min, {-1.0 * m, -1.0 * m, -1.0 * m}));
-    assert(approx_vec(qscaled.max, {3.0 * m, 3.0 * m, 3.0 * m}));
+    assert(approx_vec(qscaled.min, vec3{-1.0, -1.0, -1.0} * m));
+    assert(approx_vec(qscaled.max, vec3{3.0, 3.0, 3.0} * m));
 
     auto qdiv = box / (2.0 * one);
-    assert(approx_vec(qdiv.min, {0.5 * m, 0.5 * m, 0.5 * m}));
-    assert(approx_vec(qdiv.max, {1.5 * m, 1.5 * m, 1.5 * m}));
+    assert(approx_vec(qdiv.min, vec3{0.5, 0.5, 0.5} * m));
+    assert(approx_vec(qdiv.max, vec3{1.5, 1.5, 1.5} * m));
 }
 
 void test_aabb_compound_assign()
 {
     std::println("  aabb::operator+=/operator-=/operator*=/operator/=");
-    aabb box{.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {2.0 * m, 2.0 * m, 2.0 * m}};
+    aabb box{.min = vec3{0, 0, 0} * m, .max = vec3{2, 2, 2} * m};
 
     box += vec3{1.0, 1.0, 1.0} * m;
     assert(approx_vec(box.min, vec3{1.0, 1.0, 1.0} * m));
@@ -212,18 +212,18 @@ void test_aabb_compound_assign()
     assert(approx_vec(box.max, vec3{3.0, 3.0, 3.0} * m));
 
     // Reset
-    box = {.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {2.0 * m, 2.0 * m, 2.0 * m}};
+    box = {.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
     box /= 2.0;
     assert(approx_vec(box.min, vec3{0.5, 0.5, 0.5} * m));
     assert(approx_vec(box.max, vec3{1.5, 1.5, 1.5} * m));
 
     // Quantity compound assign
-    box = {.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {2.0 * m, 2.0 * m, 2.0 * m}};
+    box = {.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
     box *= (2.0 * one);
     assert(approx_vec(box.min, vec3{-1.0, -1.0, -1.0} * m));
     assert(approx_vec(box.max, vec3{3.0, 3.0, 3.0} * m));
 
-    box = {.min = {0.0 * m, 0.0 * m, 0.0 * m}, .max = {2.0 * m, 2.0 * m, 2.0 * m}};
+    box = {.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
     box /= (2.0 * one);
     assert(approx_vec(box.min, vec3{0.5, 0.5, 0.5} * m));
     assert(approx_vec(box.max, vec3{1.5, 1.5, 1.5} * m));
@@ -251,8 +251,8 @@ void test_aabb_mat_transform()
     assert(approx_vec(rotated.min, vec3{-1.0, 0.0, 0.0} * m));
     assert(approx_vec(rotated.max, vec3{0.0, 1.0, 1.0} * m));
 
-    auto rot_q = uquat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian,
-                                             {0.0 * one, 0.0 * one, 1.0 * one});
+    auto rot_q =
+        uquat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3{0, 0, 1} * one);
     auto rotated_q = box * rot_q;
     assert(approx_vec(rotated_q.min, rotated.min));
     assert(approx_vec(rotated_q.max, rotated.max));
