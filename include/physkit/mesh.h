@@ -419,11 +419,11 @@ public:
         }
 
         /// @brief Compute the world-space AABB by rotating the local AABB and translating.
-        [[nodiscard]] aabb world_bounds() const;
+        [[nodiscard]] aabb bounds() const;
 
         /// @brief Compute the world-space bounding sphere. Rotation-invariant — only the
         /// center is translated.
-        [[nodiscard]] bounding_sphere world_bsphere() const
+        [[nodiscard]] bounding_sphere bsphere() const
         {
             auto local = M_mesh.bsphere();
             return {.center = M_orientation * local.center + M_position, .radius = local.radius};
@@ -445,7 +445,7 @@ public:
         /// @brief Compute the inertia tensor rotated into the world frame and shifted to the
         /// instance's position via the parallel axis theorem.
         [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
-        world_inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
+        inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
 
     private:
         const mesh &M_mesh; // NOLINT
@@ -497,16 +497,15 @@ public:
 
     /// @brief Ray intersection in local (model) space.
     [[nodiscard]] std::optional<ray_hit>
-    ray_intersect_local(const ray &r,
-                        quantity<si::metre> max_distance =
-                            std::numeric_limits<quantity<si::metre>>::infinity()) const;
+    ray_intersect(const ray &r, quantity<si::metre> max_distance =
+                                    std::numeric_limits<quantity<si::metre>>::infinity()) const;
     /// @brief Closest point on the mesh surface in local space.
-    [[nodiscard]] vec3<si::metre> closest_point_local(const vec3<si::metre> &point) const;
+    [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
     /// @brief Point containment test in local space.
-    [[nodiscard]] bool contains_local(const vec3<si::metre> &point) const;
+    [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
 
     /// @brief GJK support function in local space.
-    [[nodiscard]] vec3<si::metre> support_local(const vec3<one> &direction) const;
+    [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const;
     [[nodiscard]] bool is_convex() const;
 
     /// @brief Create an instance view of this mesh at the given position and orientation.
