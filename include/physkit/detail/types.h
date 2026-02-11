@@ -7,22 +7,19 @@ using namespace mp_units;
 
 using float_t = double;
 
-template <auto unit, typename Rep = float_t> using uvec3 = unit_mat<quantity<unit, Rep>, 3, 1>;
-template <auto unit, typename Rep = float_t> using umat3 = unit_mat<quantity<unit, Rep>, 3, 3>;
-template <auto unit, typename Rep = float_t> using umat4 = unit_mat<quantity<unit, Rep>, 4, 4>;
-template <int Size, auto unit, typename Rep = float_t>
-using uvec = unit_mat<quantity<unit, Rep>, Size, 1>;
+template <auto unit = one, typename Rep = float_t> using vec3 = unit_mat<quantity<unit, Rep>, 3, 1>;
+template <auto unit = one, typename Rep = float_t> using mat3 = unit_mat<quantity<unit, Rep>, 3, 3>;
+template <auto unit = one, typename Rep = float_t> using mat4 = unit_mat<quantity<unit, Rep>, 4, 4>;
+template <int Size, auto unit = one, typename Rep = float_t>
+using vec = unit_mat<quantity<unit, Rep>, Size, 1>;
 
-template <auto unit, typename Rep = float_t> using uquat = unit_quat<quantity<unit, Rep>>;
+template <auto unit = one, typename Rep = float_t> using quat = unit_quat<quantity<unit, Rep>>;
 
-template <typename Rep = float_t>
-using vec3 =
-    Eigen::Matrix<Rep, 3, 1, Eigen::ColMajor, 3, 1>; // explicitly type all template args for CTAD
-template <typename Rep = float_t> using mat3 = Eigen::Matrix<Rep, 3, 3, Eigen::ColMajor, 3, 3>;
-template <typename Rep = float_t> using mat4 = Eigen::Matrix<Rep, 4, 4, Eigen::ColMajor, 4, 4>;
-template <int Size, typename Rep = float_t>
-using vec = Eigen::Matrix<Rep, Size, 1, Eigen::ColMajor, Size, 1>;
+template <auto unit = one> using fvec3 = vec3<unit, float>;
+template <auto unit = one> using fmat3 = mat3<unit, float>;
+template <auto unit = one> using fmat4 = mat4<unit, float>;
+template <int Size, auto unit = one> using fvec = vec<Size, unit, float>;
 
-template <typename Rep = float_t> using quat = Eigen::Quaternion<Rep>;
+template <auto unit = one> using fquat = quat<unit, float>;
 
 } // namespace physkit

@@ -13,8 +13,8 @@ public:
                                  {1280, 720},
                                  45 * si::degree,
                                  "Solar System",
-                                 {0.0f, 30.0f, -50.0f},
-                                 {0.0f, -30.0f, 50.0f},
+                                 fvec3{0.0f, 30.0f, -50.0f} * si::metre,
+                                 fvec3{0.0f, -30.0f, 50.0f},
                                  true}
     // NOLINT
     {
@@ -67,7 +67,7 @@ public:
         M_neptune->scale({0.85f, 0.85f, 0.85f});
 
         // Camera track: tour the solar system
-        const auto origin = physkit::vec3<float>{0, 0, 0} * m;
+        const auto origin = physkit::fvec3{0, 0, 0} * m;
 
         cam().set_move_track(
             camera_track(

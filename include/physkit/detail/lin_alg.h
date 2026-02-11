@@ -26,97 +26,20 @@ template <Quantity Q> class unit_quat;
 
 namespace detail
 {
-template <typename T> constexpr bool is_eig_matrix_v = false;
-template <typename T, int Rows, int Cols, int Opt, int MaxRows, int MaxCols>
-constexpr bool is_eig_matrix_v<Eigen::Matrix<T, Rows, Cols, Opt, MaxRows, MaxCols>> = true;
+
 template <typename T> constexpr bool is_u_matrix_v = false;
 template <Quantity Q, int Rows, int Cols>
 constexpr bool is_u_matrix_v<unit_mat<Q, Rows, Cols>> = true;
 
 template <typename T>
-concept MatrixType =
-    is_eig_matrix_v<std::remove_cvref_t<T>> || is_u_matrix_v<std::remove_cvref_t<T>>;
-
-template <typename T> constexpr bool is_eig_quaternion_v = false;
-template <typename T, int Options>
-constexpr bool is_eig_quaternion_v<Eigen::Quaternion<T, Options>> = true;
+concept MatrixType = is_u_matrix_v<std::remove_cvref_t<T>>;
 
 template <typename T> constexpr bool is_u_quaternion_v = false;
 template <Quantity Q> constexpr bool is_u_quaternion_v<unit_quat<Q>> = true;
 
 template <typename T>
-concept QuaternionType =
-    is_eig_quaternion_v<std::remove_cvref_t<T>> || is_u_quaternion_v<std::remove_cvref_t<T>>;
+concept QuaternionType = is_u_quaternion_v<std::remove_cvref_t<T>>;
 
-template <typename T> struct rep_type
-{
-};
-template <Quantity Q, int Rows, int Cols> struct rep_type<unit_mat<Q, Rows, Cols>>
-{
-    using type = typename unit_mat<Q, Rows, Cols>::rep_type;
-};
-template <typename T, int Rows, int Cols, int Opt, int MaxRows, int MaxCols>
-struct rep_type<Eigen::Matrix<T, Rows, Cols, Opt, MaxRows, MaxCols>>
-{
-    using type = T;
-};
-template <Quantity Q> struct rep_type<unit_quat<Q>>
-{
-    using type = typename unit_quat<Q>::rep_type;
-};
-template <typename T, int Options> struct rep_type<Eigen::Quaternion<T, Options>>
-{
-    using type = T;
-};
-template <typename T> using rep_type_t = typename rep_type<T>::type;
-
-template <MatrixType T> consteval int rows(const T &mat)
-{
-    if constexpr (is_eig_matrix_v<std::remove_cvref_t<T>>)
-        return mat.RowsAtCompileTime;
-    else if constexpr (is_u_matrix_v<std::remove_cvref_t<T>>)
-        return mat.rows();
-    else
-        static_assert(false, "Not a matrix type");
-}
-
-template <MatrixType T> consteval int cols(const T &mat)
-{
-    if constexpr (is_eig_matrix_v<std::remove_cvref_t<T>>)
-        return mat.ColsAtCompileTime;
-    else if constexpr (is_u_matrix_v<std::remove_cvref_t<T>>)
-        return mat.cols();
-    else
-        static_assert(false, "Not a matrix type");
-}
-
-template <typename T>
-    requires(MatrixType<std::remove_cvref_t<T>> || QuaternionType<std::remove_cvref_t<T>>)
-constexpr auto &&base_ref(T &&obj)
-{
-    if constexpr (is_eig_matrix_v<std::remove_cvref_t<T>> ||
-                  is_eig_quaternion_v<std::remove_cvref_t<T>>)
-        return std::forward<T>(obj);
-    else if constexpr (is_u_matrix_v<std::remove_cvref_t<T>> ||
-                       is_u_quaternion_v<std::remove_cvref_t<T>>)
-        return std::forward<T>(obj).base();
-    else
-        static_assert(false, "Not a matrix or quaternion type");
-}
-
-template <typename T>
-    requires(MatrixType<std::remove_cvref_t<T>> || QuaternionType<std::remove_cvref_t<T>>)
-constexpr auto ref_of(T && /*unused*/)
-{
-    if constexpr (is_eig_matrix_v<std::remove_cvref_t<T>> ||
-                  is_eig_quaternion_v<std::remove_cvref_t<T>>)
-        return one;
-    else if constexpr (is_u_matrix_v<std::remove_cvref_t<T>> ||
-                       is_u_quaternion_v<std::remove_cvref_t<T>>)
-        return std::remove_cvref_t<T>::ref;
-    else
-        static_assert(false, "Not a matrix or quaternion type");
-}
 } // namespace detail
 
 template <Quantity Q, int _rows, int _cols> class unit_mat
@@ -157,21 +80,27 @@ public:
     constexpr unit_mat(const eigen_type &data, key /*secret*/) : M_data(data) {}
     constexpr unit_mat(eigen_type &&data, key /*secret*/) : M_data(std::move(data)) {}
 
+    constexpr unit_mat(const eigen_type &data)
+        requires(ref == one)
+        : M_data(data)
+    {
+    }
+    constexpr unit_mat(eigen_type &&data)
+        requires(ref == one)
+        : M_data(std::move(data))
+    {
+    }
+
     constexpr unit_mat(Eigen::Index dim) : M_data(dim) {}
     constexpr unit_mat(Eigen::Index rows, Eigen::Index cols) : M_data(rows, cols) {}
 
-    constexpr unit_mat(const Q &scalar) : M_data(scalar.numerical_value_in(ref)) {}
-    // constexpr unit_mat(const Q *data_ptr) : M_data(static_cast<rep_type *>(data_ptr)) {}
-
-    constexpr unit_mat(const Q &x, const Q &y)
-        : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref))
-    {
-    }
-    constexpr unit_mat(const Q &x, const Q &y, const Q &z)
+    constexpr unit_mat(Q scalar) : M_data(scalar.numerical_value_in(ref)) {}
+    constexpr unit_mat(Q x, Q y) : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref)) {}
+    constexpr unit_mat(Q x, Q y, Q z)
         : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref))
     {
     }
-    constexpr unit_mat(const Q &x, const Q &y, const Q &z, const Q &w)
+    constexpr unit_mat(Q x, Q y, Q z, Q w)
         : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref),
                  w.numerical_value_in(ref))
     {
@@ -192,21 +121,31 @@ public:
         }
     }
 
-    constexpr unit_mat &operator=(const eigen_type &other)
+    constexpr unit_mat(rep_type scalar)
+        requires(ref == one)
+        : M_data(scalar)
     {
-        M_data = other;
-        return *this;
+    }
+    constexpr unit_mat(rep_type x, rep_type y)
+        requires(ref == one)
+        : M_data(x, y)
+    {
+    }
+    constexpr unit_mat(rep_type x, rep_type y, rep_type z)
+        requires(ref == one)
+        : M_data(x, y, z)
+    {
+    }
+    constexpr unit_mat(rep_type x, rep_type y, rep_type z, rep_type w)
+        requires(ref == one)
+        : M_data(x, y, z, w)
+    {
     }
 
-    constexpr unit_mat &operator=(eigen_type &&other)
+    constexpr unit_mat(const std::initializer_list<std::initializer_list<rep_type>> &list)
+        requires(ref == one)
+        : M_data(list)
     {
-        M_data = std::move(other);
-        return *this;
-    }
-
-    constexpr decltype(auto) base(this auto &&self)
-    {
-        return std::forward_like<decltype(self)>(self.M_data);
     }
 
     constexpr Q x() const { return M_data.x() * ref; }
@@ -224,6 +163,7 @@ public:
     constexpr auto rows() const { return base().rows(); }
     constexpr auto cols() const { return base().cols(); }
 
+    // TODO: make quantity iterator wrappers
     // constexpr auto begin(this auto &&self)
     //     requires(eigen_type::IsVectorAtCompileTime == 1)
     // {
@@ -272,6 +212,12 @@ public:
     {
         using res_t = unit_mat<quantity<ref / ref, rep_type>, _rows, _cols>;
         return res_t{base().normalized(), typename res_t::key{}};
+    }
+
+    void normalize()
+        requires(ref == one)
+    {
+        M_data.normalize();
     }
 
     constexpr bool operator==(const unit_mat &other) const = default;
@@ -349,15 +295,15 @@ public:
         return *this;
     }
 
-    constexpr auto &operator*=(QuantityOf<dimensionless> auto scalar)
+    constexpr auto &operator*=(QuantityOf<one> auto scalar)
     {
-        base() *= scalar.numerical_value_in(dimensionless);
+        base() *= scalar.numerical_value_in(one);
         return *this;
     }
 
-    constexpr auto &operator/=(QuantityOf<dimensionless> auto scalar)
+    constexpr auto &operator/=(QuantityOf<one> auto scalar)
     {
-        base() /= scalar.numerical_value_in(dimensionless);
+        base() /= scalar.numerical_value_in(one);
         return *this;
     }
 
@@ -413,6 +359,11 @@ private:
 
     template <Quantity OQ, int R, int C> friend class unit_mat;
     template <Quantity OQ> friend class unit_quat;
+
+    constexpr decltype(auto) base(this auto &&self)
+    {
+        return std::forward_like<decltype(self)>(self.M_data);
+    }
 };
 
 template <typename T, Quantity Q, int Rows, int Cols>
@@ -460,6 +411,17 @@ public:
     constexpr unit_quat(const eigen_type &data, key /*secret*/) : M_data(data) {}
     constexpr unit_quat(eigen_type &&data, key /*secret*/) : M_data(std::move(data)) {}
 
+    constexpr unit_quat(const eigen_type &data)
+        requires(ref == one)
+        : M_data(data)
+    {
+    }
+    constexpr unit_quat(eigen_type &&data)
+        requires(ref == one)
+        : M_data(std::move(data))
+    {
+    }
+
     constexpr unit_quat(const Q &w, const Q &x, const Q &y, const Q &z)
         : M_data(w.numerical_value_in(ref), x.numerical_value_in(ref), y.numerical_value_in(ref),
                  z.numerical_value_in(ref))
@@ -468,6 +430,26 @@ public:
 
     constexpr unit_quat(const unit_mat<Q, 3, 3> &rotation_matrix) : M_data(rotation_matrix.base())
     {
+    }
+
+    constexpr unit_quat &operator=(const eigen_type &other)
+        requires(ref == one)
+    {
+        M_data = other;
+        return *this;
+    }
+
+    constexpr unit_quat &operator=(eigen_type &&other)
+        requires(ref == one)
+    {
+        M_data = std::move(other);
+        return *this;
+    }
+
+    constexpr operator eigen_type() const
+        requires(ref == one)
+    {
+        return M_data;
     }
 
     constexpr Q w() const { return M_data.w() * ref; }
@@ -492,11 +474,6 @@ public:
         return res_t{M_data.coeffs(), typename res_t::key{}};
     }
 
-    constexpr decltype(auto) base(this auto &&self)
-    {
-        return std::forward_like<decltype(self)>(self.M_data);
-    }
-
     template <Quantity OtherQ> auto operator*(const unit_quat<OtherQ> &other) const
     {
         using result_quantity = quantity<ref * OtherQ::reference, rep_type>;
@@ -514,7 +491,7 @@ public:
 
     template <Quantity VecQ>
     auto operator*(const unit_mat<VecQ, 3, 1> &v) const
-        requires(QuantityOf<Q, dimensionless>)
+        requires(ref == one)
     {
         using res_t = unit_mat<VecQ, 3, 1>;
         return res_t{M_data._transformVector(v.base()), typename res_t::key{}};
@@ -533,7 +510,7 @@ public:
     auto squared_norm() const { return M_data.squaredNorm() * ref * ref; }
 
     void normalize()
-        requires(QuantityOf<Q, dimensionless>)
+        requires(ref == one)
     {
         M_data.normalize();
     }
@@ -550,34 +527,35 @@ public:
     }
 
     auto angular_distance(const unit_quat &other) const
-        requires(QuantityOf<Q, dimensionless>)
+        requires(ref == one)
     {
         return M_data.angularDistance(other.M_data) * si::radian;
     }
 
     auto to_rotation_matrix() const
-        requires(QuantityOf<Q, dimensionless>)
+        requires(ref == one)
     {
         using res_t = unit_mat<Q, 3, 3>;
         return res_t{M_data.toRotationMatrix(), typename res_t::key{}};
     }
 
     auto slerp(rep_type t, const unit_quat &other) const
-        requires(QuantityOf<Q, dimensionless>)
+        requires(ref == one)
     {
         return unit_quat{M_data.slerp(t, other.M_data), key{}};
     }
 
     auto &set_identity()
-        requires(QuantityOf<Q, dimensionless>)
+        requires(ref == one)
     {
         M_data.setIdentity();
         return *this;
     }
 
     template <Quantity VecQ1, Quantity VecQ2>
+        requires(equivalent(ref, one))
     auto &set_from_two_vectors(const unit_mat<VecQ1, 3, 1> &a, const unit_mat<VecQ2, 3, 1> &b)
-        requires(QuantityOf<Q, dimensionless>)
+        requires(ref == one)
     {
         M_data.setFromTwoVectors(a.base(), b.base());
         return *this;
@@ -593,21 +571,13 @@ public:
 
     constexpr bool operator!=(const unit_quat &other) const { return !(*this == other); }
 
-    constexpr static auto identity()
-        requires(QuantityOf<Q, dimensionless>)
-    {
-        return unit_quat{eigen_type::Identity(), key{}};
-    }
+    constexpr static auto identity() { return unit_quat{eigen_type::Identity(), key{}}; }
 
-    static auto unit_random()
-        requires(QuantityOf<Q, dimensionless>)
-    {
-        return unit_quat{eigen_type::UnitRandom(), key{}};
-    }
+    static auto unit_random() { return unit_quat{eigen_type::UnitRandom(), key{}}; }
 
     template <Quantity AngleQ>
     static unit_quat from_angle_axis(const AngleQ &angle, const unit_mat<Q, 3, 1> &axis)
-        requires(QuantityOf<Q, dimensionless>)
+        requires(ref == one)
     {
         Eigen::AngleAxis<rep_type> aa(static_cast<rep_type>(angle.numerical_value_in(si::radian)),
                                       axis.base());
@@ -617,7 +587,7 @@ public:
     template <Quantity VecQ1, Quantity VecQ2>
     static unit_quat from_two_vectors(const unit_mat<VecQ1, 3, 1> &a,
                                       const unit_mat<VecQ2, 3, 1> &b)
-        requires(QuantityOf<Q, dimensionless>)
+        requires(ref == one)
     {
         return unit_quat{eigen_type::FromTwoVectors(a.base(), b.base()), key{}};
     }
@@ -635,6 +605,11 @@ private:
         requires(!mp_units::detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>);
 
     template <Quantity OQ> friend class unit_quat;
+
+    constexpr decltype(auto) base(this auto &&self)
+    {
+        return std::forward_like<decltype(self)>(self.M_data);
+    }
 };
 } // namespace physkit
 
@@ -642,44 +617,42 @@ namespace mp_units
 {
 template <physkit::detail::MatrixType MatrixT, Reference Ref,
           RepresentationOf<get_quantity_spec(Ref{})> Rep =
-              physkit::detail::rep_type_t<std::remove_cvref_t<MatrixT>>>
+              typename std::remove_cvref_t<MatrixT>::rep_type>
 constexpr auto operator*(MatrixT && mat, Ref ref)
     requires(!detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>)
 {
-    using res_t = physkit::unit_mat<quantity<Ref{} * physkit::detail::ref_of(mat), Rep>,
-                                    physkit::detail::rows(mat), physkit::detail::cols(mat)>;
-    return res_t{physkit::detail::base_ref(std::forward<MatrixT>(mat)), typename res_t::key{}};
+    using res_t = physkit::unit_mat<quantity<Ref{} * MatrixT::ref, Rep>, mat.rows(), mat.cols()>;
+    return res_t{std::forward<MatrixT>(mat).base(), typename res_t::key{}};
 }
 
 template <physkit::detail::MatrixType MatrixT, Reference Ref,
           RepresentationOf<get_quantity_spec(Ref{})> Rep =
-              physkit::detail::rep_type_t<std::remove_cvref_t<MatrixT>>>
+              typename std::remove_cvref_t<MatrixT>::rep_type>
 constexpr auto operator/(MatrixT && mat, Ref ref)
     requires(!detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>)
 {
-    using res_t = physkit::unit_mat<quantity<physkit::detail::ref_of(mat) / Ref{}, Rep>,
-                                    physkit::detail::rows(mat), physkit::detail::cols(mat)>;
-    return res_t{physkit::detail::base_ref(std::forward<MatrixT>(mat)), typename res_t::key{}};
+    using res_t = physkit::unit_mat<quantity<MatrixT::ref / Ref{}, Rep>, mat.rows(), mat.cols()>;
+    return res_t{std::forward<MatrixT>(mat).base(), typename res_t::key{}};
 }
 
-template <physkit::detail::QuaternionType QuatT, Reference Ref,
-          RepresentationOf<get_quantity_spec(Ref{})> Rep =
-              physkit::detail::rep_type_t<std::remove_cvref_t<QuatT>>>
+template <
+    physkit::detail::QuaternionType QuatT, Reference Ref,
+    RepresentationOf<get_quantity_spec(Ref{})> Rep = typename std::remove_cvref_t<QuatT>::rep_type>
 constexpr auto operator*(QuatT && quat, Ref ref)
     requires(!detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>)
 {
-    using res_t = physkit::unit_quat<quantity<Ref{} * physkit::detail::ref_of(quat), Rep>>;
-    return res_t{physkit::detail::base_ref(std::forward<QuatT>(quat)), typename res_t::key{}};
+    using res_t = physkit::unit_quat<quantity<Ref{} * QuatT::ref, Rep>>;
+    return res_t{std::forward<QuatT>(quat).base(), typename res_t::key{}};
 }
 
-template <physkit::detail::QuaternionType QuatT, Reference Ref,
-          RepresentationOf<get_quantity_spec(Ref{})> Rep =
-              physkit::detail::rep_type_t<std::remove_cvref_t<QuatT>>>
+template <
+    physkit::detail::QuaternionType QuatT, Reference Ref,
+    RepresentationOf<get_quantity_spec(Ref{})> Rep = typename std::remove_cvref_t<QuatT>::rep_type>
 constexpr auto operator/(QuatT && quat, Ref ref)
     requires(!detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>)
 {
-    using res_t = physkit::unit_quat<quantity<physkit::detail::ref_of(quat) / Ref{}, Rep>>;
-    return res_t{physkit::detail::base_ref(std::forward<QuatT>(quat)), typename res_t::key{}};
+    using res_t = physkit::unit_quat<quantity<QuatT::ref / Ref{}, Rep>>;
+    return res_t{std::forward<QuatT>(quat).base(), typename res_t::key{}};
 }
 } // namespace mp_units
 

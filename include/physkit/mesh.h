@@ -18,10 +18,10 @@ namespace physkit
 class aabb
 {
 public:
-    uvec3<si::metre> min;
-    uvec3<si::metre> max;
+    vec3<si::metre> min;
+    vec3<si::metre> max;
 
-    static aabb from_points(std::span<const uvec3<si::metre>> points)
+    static aabb from_points(std::span<const vec3<si::metre>> points)
     {
         assert(!points.empty());
         aabb box;
@@ -51,12 +51,12 @@ public:
     [[nodiscard]] constexpr auto point(unsigned int index) const
     {
         assert(index < 8);
-        return uvec3<si::metre>{((index & 1) != 0u) ? max.x() : min.x(),
-                                ((index & 2) != 0u) ? max.y() : min.y(),
-                                ((index & 4) != 0u) ? max.z() : min.z()};
+        return vec3<si::metre>{((index & 1) != 0u) ? max.x() : min.x(),
+                               ((index & 2) != 0u) ? max.y() : min.y(),
+                               ((index & 4) != 0u) ? max.z() : min.z()};
     }
 
-    [[nodiscard]] constexpr bool contains(const uvec3<si::metre> &point) const
+    [[nodiscard]] constexpr bool contains(const vec3<si::metre> &point) const
     {
         return (point.x() >= min.x() && point.x() <= max.x()) &&
                (point.y() >= min.y() && point.y() <= max.y()) &&
@@ -70,12 +70,12 @@ public:
                (min.z() <= other.max.z() && max.z() >= other.min.z());
     }
 
-    [[nodiscard]] constexpr aabb operator+(const uvec3<si::metre> &offset) const
+    [[nodiscard]] constexpr aabb operator+(const vec3<si::metre> &offset) const
     {
         return {.min = min + offset, .max = max + offset};
     }
 
-    [[nodiscard]] constexpr aabb operator-(const uvec3<si::metre> &offset) const
+    [[nodiscard]] constexpr aabb operator-(const vec3<si::metre> &offset) const
     {
         return {.min = min - offset, .max = max - offset};
     }
@@ -144,14 +144,14 @@ public:
         return {.min = center - half_size, .max = center + half_size};
     }
 
-    constexpr auto &operator+=(const uvec3<si::metre> &offset)
+    constexpr auto &operator+=(const vec3<si::metre> &offset)
     {
         min += offset;
         max += offset;
         return *this;
     }
 
-    constexpr auto &operator-=(const uvec3<si::metre> &offset)
+    constexpr auto &operator-=(const vec3<si::metre> &offset)
     {
         min -= offset;
         max -= offset;
@@ -199,11 +199,11 @@ public:
 class bounding_sphere
 {
 public:
-    uvec3<si::metre> center;
+    vec3<si::metre> center;
     quantity<si::metre> radius;
 
     /// @brief Ritter's bounding-sphere algorithm.
-    [[nodiscard]] static bounding_sphere from_points(std::span<const uvec3<si::metre>> points)
+    [[nodiscard]] static bounding_sphere from_points(std::span<const vec3<si::metre>> points)
     {
         assert(!points.empty());
 
@@ -293,7 +293,7 @@ public:
         return (4.0 / 3.0) * std::numbers::pi * radius * radius * radius;
     }
 
-    [[nodiscard]] bool contains(const uvec3<si::metre> &point) const
+    [[nodiscard]] bool contains(const vec3<si::metre> &point) const
     {
         return (point - center).squared_norm() <= radius * radius;
     }
@@ -310,12 +310,12 @@ public:
         return (closest - center).squared_norm() <= radius * radius;
     }
 
-    [[nodiscard]] constexpr bounding_sphere operator+(const uvec3<si::metre> &offset) const
+    [[nodiscard]] constexpr bounding_sphere operator+(const vec3<si::metre> &offset) const
     {
         return {.center = center + offset, .radius = radius};
     }
 
-    [[nodiscard]] constexpr bounding_sphere operator-(const uvec3<si::metre> &offset) const
+    [[nodiscard]] constexpr bounding_sphere operator-(const vec3<si::metre> &offset) const
     {
         return {.center = center - offset, .radius = radius};
     }
@@ -330,13 +330,13 @@ public:
         return {.center = center, .radius = radius * scale};
     }
 
-    constexpr auto &operator+=(const uvec3<si::metre> &offset)
+    constexpr auto &operator+=(const vec3<si::metre> &offset)
     {
         center += offset;
         return *this;
     }
 
-    constexpr auto &operator-=(const uvec3<si::metre> &offset)
+    constexpr auto &operator-=(const vec3<si::metre> &offset)
     {
         center -= offset;
         return *this;
@@ -355,7 +355,7 @@ public:
     }
 
 private:
-    [[nodiscard]] uvec3<si::metre> closest_point_on_aabb(const aabb &box) const
+    [[nodiscard]] vec3<si::metre> closest_point_on_aabb(const aabb &box) const
     {
         auto cx = std::clamp(center.x(), box.min.x(), box.max.x());
         auto cy = std::clamp(center.y(), box.min.y(), box.max.y());
@@ -379,20 +379,20 @@ public:
             return (v1 - v0).cross(v2 - v0).normalized();
         }
 
-        [[nodiscard]] uvec3<one> normal(const instance &inst) const;
+        [[nodiscard]] vec3<one> normal(const instance &inst) const;
     };
 
     struct ray_hit
     {
-        uvec3<si::metre> pos;
-        uvec3<one> normal;
+        vec3<si::metre> pos;
+        vec3<one> normal;
         quantity<si::metre> distance;
     };
 
     struct ray
     {
-        uvec3<si::metre> origin;
-        uvec3<one> direction;
+        vec3<si::metre> origin;
+        vec3<one> direction;
     };
 
     /// @brief A lightweight view of a mesh placed in world space.
@@ -402,15 +402,15 @@ public:
     class instance
     {
     public:
-        instance(const mesh &msh, const uvec3<si::metre> &position,
-                 const uquat<one> &orientation = uquat<one>::identity())
+        instance(const mesh &msh, const vec3<si::metre> &position,
+                 const quat<one> &orientation = quat<one>::identity())
             : M_mesh{msh}, M_position{position}, M_orientation{orientation}
         {
         }
 
         [[nodiscard]] const mesh &geometry() const { return M_mesh; }
-        [[nodiscard]] const uvec3<si::metre> &position() const { return M_position; }
-        [[nodiscard]] const uquat<one> &orientation() const { return M_orientation; }
+        [[nodiscard]] const vec3<si::metre> &position() const { return M_position; }
+        [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
 
         [[nodiscard]] auto vertex(unsigned int index) const
         {
@@ -433,24 +433,24 @@ public:
         ray_intersect(const ray &r, quantity<si::metre> max_distance =
                                         std::numeric_limits<quantity<si::metre>>::infinity()) const;
 
-        [[nodiscard]] uvec3<si::metre> closest_point(const uvec3<si::metre> &point) const;
+        [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
 
         /// @brief Point containment test in world space.
-        [[nodiscard]] bool contains(const uvec3<si::metre> &point) const;
+        [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
 
         /// @brief GJK support function in world space. Rotates the direction into
         /// local frame, queries the mesh, and transforms the result back.
-        [[nodiscard]] uvec3<si::metre> support(const uvec3<one> &direction) const;
+        [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const;
 
         /// @brief Compute the inertia tensor rotated into the world frame and shifted to the
         /// instance's position via the parallel axis theorem.
-        [[nodiscard]] umat3<si::kilogram * pow<2>(si::metre)>
+        [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
         world_inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
 
     private:
         const mesh &M_mesh; // NOLINT
-        uvec3<si::metre> M_position;
-        uquat<one> M_orientation;
+        vec3<si::metre> M_position;
+        quat<one> M_orientation;
     };
 
     mesh() = default;
@@ -460,11 +460,11 @@ public:
     mesh &operator=(mesh &&) = default;
     ~mesh() = default;
 
-    static std::shared_ptr<mesh> make(std::span<const uvec3<si::metre>> vertices,
+    static std::shared_ptr<mesh> make(std::span<const vec3<si::metre>> vertices,
                                       std::span<const triangle_t> triangles);
 
     /// @brief Create a box mesh centered at the origin with the given half-extents.
-    static std::shared_ptr<mesh> box(const uvec3<si::metre> &half_extents);
+    static std::shared_ptr<mesh> box(const vec3<si::metre> &half_extents);
 
     /// @brief Create a UV-sphere mesh centered at the origin.
     /// @param radius Sphere radius.
@@ -479,7 +479,7 @@ public:
     /// @param height Height from base to apex.
     static std::shared_ptr<mesh> pyramid(quantity<si::metre> base_half, quantity<si::metre> height);
 
-    [[nodiscard]] std::span<const uvec3<si::metre>> vertices() const { return M_vertices; }
+    [[nodiscard]] std::span<const vec3<si::metre>> vertices() const { return M_vertices; }
     [[nodiscard]] std::span<const triangle_t> triangles() const { return M_triangles; }
     [[nodiscard]] const auto &vertex(unsigned int index) const
     {
@@ -491,8 +491,8 @@ public:
     [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const;
-    [[nodiscard]] uvec3<si::metre> mass_center() const;
-    [[nodiscard]] umat3<si::kilogram * pow<2>(si::metre)>
+    [[nodiscard]] vec3<si::metre> mass_center() const;
+    [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
 
     /// @brief Ray intersection in local (model) space.
@@ -501,17 +501,17 @@ public:
                         quantity<si::metre> max_distance =
                             std::numeric_limits<quantity<si::metre>>::infinity()) const;
     /// @brief Closest point on the mesh surface in local space.
-    [[nodiscard]] uvec3<si::metre> closest_point_local(const uvec3<si::metre> &point) const;
+    [[nodiscard]] vec3<si::metre> closest_point_local(const vec3<si::metre> &point) const;
     /// @brief Point containment test in local space.
-    [[nodiscard]] bool contains_local(const uvec3<si::metre> &point) const;
+    [[nodiscard]] bool contains_local(const vec3<si::metre> &point) const;
 
     /// @brief GJK support function in local space.
-    [[nodiscard]] uvec3<si::metre> support_local(const uvec3<one> &direction) const;
+    [[nodiscard]] vec3<si::metre> support_local(const vec3<one> &direction) const;
     [[nodiscard]] bool is_convex() const;
 
     /// @brief Create an instance view of this mesh at the given position and orientation.
-    [[nodiscard]] instance at(const uvec3<si::metre> &position,
-                              const uquat<one> &orientation = uquat<one>::identity()) const
+    [[nodiscard]] instance at(const vec3<si::metre> &position,
+                              const quat<one> &orientation = quat<one>::identity()) const
     {
         return {*this, position, orientation};
     }
@@ -519,11 +519,11 @@ public:
 private:
     aabb M_bounds;
     bounding_sphere M_bsphere;
-    std::vector<uvec3<si::metre>> M_vertices;
+    std::vector<vec3<si::metre>> M_vertices;
     std::vector<triangle_t> M_triangles;
 };
 
-inline uvec3<one> mesh::triangle_t::normal(const mesh::instance &inst) const
+inline vec3<one> mesh::triangle_t::normal(const mesh::instance &inst) const
 {
     return inst.orientation() * this->normal(inst.geometry());
 }

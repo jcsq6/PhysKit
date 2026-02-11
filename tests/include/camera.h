@@ -47,28 +47,28 @@ struct kf
     /// @brief Look-at orientation: camera points toward a target position.
     struct look_at_t
     {
-        physkit::uvec3<physkit::si::metre, float> target;
+        physkit::vec3<physkit::si::metre, float> target;
     };
     /// @brief Explicit quaternion orientation.
     struct orient_t
     {
-        Magnum::Quaternion rot;
+        physkit::quat<physkit::one, float> rot;
     };
     /// @brief Direction orientation: camera faces a normalized direction vector.
     struct facing_t
     {
-        physkit::uvec3<physkit::one, float> dir;
+        physkit::vec3<physkit::one, float> dir;
     };
 
     /// @brief Create a keyframe with a facing direction.
     /// @param d The direction the camera should face (will be normalized).
     /// @return A keyframe configured to face the specified direction.
-    static kf make_dir(const physkit::uvec3<physkit::one, float> &d) { return kf{facing_t{d}}; }
+    static kf make_dir(const physkit::vec3<physkit::one, float> &d) { return kf{facing_t{d}}; }
 
     /// @brief Create a keyframe that looks at a specific target position.
     /// @param target The world-space position to look at.
     /// @return A keyframe configured to look at the target.
-    static kf make_look_at(const physkit::uvec3<physkit::si::metre, float> &target)
+    static kf make_look_at(const physkit::vec3<physkit::si::metre, float> &target)
     {
         return kf{look_at_t{target}};
     }
@@ -76,17 +76,20 @@ struct kf
     /// @brief Create a keyframe with an explicit quaternion orientation.
     /// @param rot The quaternion representing the camera's orientation.
     /// @return A keyframe with the specified orientation.
-    static kf make_orient(const Magnum::Quaternion &rot) { return kf{orient_t{rot}}; }
+    static kf make_orient(const physkit::quat<physkit::one, float> &rot)
+    {
+        return kf{orient_t{rot}};
+    }
 
     /// @brief Create a keyframe with a position.
     /// @param p The world-space position for the camera.
     /// @return A keyframe at the specified position.
-    static kf make_pos(const physkit::uvec3<physkit::si::metre, float> &p) { return kf{p}; }
+    static kf make_pos(const physkit::vec3<physkit::si::metre, float> &p) { return kf{p}; }
 
     /// @brief Set the camera direction for this keyframe (builder pattern).
     /// @param d The direction vector (will be normalized).
     /// @return Reference to this keyframe for method chaining.
-    auto &&dir(this auto &&self, const physkit::uvec3<physkit::one, float> &d)
+    auto &&dir(this auto &&self, const physkit::vec3<physkit::one, float> &d)
     {
         self.M_orient = facing_t{d};
         return std::forward<decltype(self)>(self);
@@ -95,7 +98,7 @@ struct kf
     /// @brief Set the camera position for this keyframe (builder pattern).
     /// @param p The world-space position.
     /// @return Reference to this keyframe for method chaining.
-    auto &&pos(this auto &&self, const physkit::uvec3<physkit::si::metre, float> &p)
+    auto &&pos(this auto &&self, const physkit::vec3<physkit::si::metre, float> &p)
     {
         self.M_point = p;
         return std::forward<decltype(self)>(self);
@@ -104,7 +107,7 @@ struct kf
     /// @brief Set an explicit quaternion orientation for this keyframe (builder pattern).
     /// @param rot The quaternion orientation.
     /// @return Reference to this keyframe for method chaining.
-    auto &&orient(this auto &&self, const Magnum::Quaternion &rot)
+    auto &&orient(this auto &&self, const physkit::quat<physkit::one, float> &rot)
     {
         self.M_orient = orient_t{rot};
         return std::forward<decltype(self)>(self);
@@ -124,7 +127,7 @@ struct kf
     /// @brief Set the camera to look at a target position (builder pattern).
     /// @param target The world-space position to look at.
     /// @return Reference to this keyframe for method chaining.
-    auto &&look_at(this auto &&self, const physkit::uvec3<physkit::si::metre, float> &target)
+    auto &&look_at(this auto &&self, const physkit::vec3<physkit::si::metre, float> &target)
     {
         self.M_orient = look_at_t{target};
         return std::forward<decltype(self)>(self);
@@ -137,11 +140,11 @@ struct kf
     [[nodiscard]] auto &transition() const { return M_dt; }
 
 private:
-    std::optional<physkit::uvec3<physkit::si::metre, float>> M_point;
+    std::optional<physkit::vec3<physkit::si::metre, float>> M_point;
     std::optional<std::variant<facing_t, orient_t, look_at_t>> M_orient;
     physkit::quantity<physkit::si::second, float> M_dt{0.0f * physkit::si::second};
 
-    kf(physkit::uvec3<physkit::si::metre, float> point) : M_point{point} {}
+    kf(physkit::vec3<physkit::si::metre, float> point) : M_point{point} {}
     kf(look_at_t dir) : M_orient{dir} {}
     kf(orient_t orient) : M_orient{orient} {}
     kf(facing_t facing) : M_orient{facing} {}
@@ -235,8 +238,8 @@ public:
     /// @brief Camera pose (position and orientation).
     struct pose
     {
-        Vector3 pos;            ///< Camera position in world space
-        Magnum::Quaternion rot; ///< Camera orientation as a quaternion
+        physkit::vec3<physkit::si::metre, float> pos; ///< Camera position in world space
+        physkit::quat<physkit::one, float> rot;       ///< Camera orientation as a quaternion
     };
 
     /// @brief Sample the camera track at a specific time.
@@ -265,8 +268,10 @@ public:
             }
         }
 
-        return {.pos = M_pos_track.at(time.numerical_value_in(physkit::si::second)),
-                .rot = M_orient_track.at(time.numerical_value_in(physkit::si::second))};
+        return {.pos = to_physkit_vector<physkit::si::metre, float>(
+                    M_pos_track.at(time.numerical_value_in(physkit::si::second))),
+                .rot = to_physkit_quaternion<physkit::one, float>(
+                    M_orient_track.at(time.numerical_value_in(physkit::si::second)))};
     }
 
     /// @brief Check if the camera should be released at a certain time.
@@ -512,7 +517,7 @@ private:
             {
                 using T = std::decay_t<decltype(o)>;
                 if constexpr (std::same_as<T, kf::orient_t>)
-                    return o.rot.normalized();
+                    return to_magnum_quaternion<physkit::one, float>(o.rot).normalized();
                 else if constexpr (std::same_as<T, kf::facing_t>)
                     return look_rotation(to_magnum_vector<physkit::one, float>(o.dir));
                 else if constexpr (std::same_as<T, kf::look_at_t>)
@@ -535,11 +540,14 @@ public:
 
     template <class Transform>
     explicit camera(SceneGraph::Scene<Transform> &scene,
-                    physkit::quantity<physkit::si::degree, float> fov, const Vector3 &position,
-                    const Vector3 &dir, const Vector2i &window_size, const Vector2i &viewport_size,
+                    physkit::quantity<physkit::si::degree, float> fov,
+                    const physkit::vec3<physkit::si::metre, float> &position,
+                    const physkit::vec3<physkit::one, float> &dir, const Vector2i &window_size,
+                    const Vector2i &viewport_size,
                     physkit::quantity<physkit::si::metre / physkit::si::second, float> speed =
                         4.0f * physkit::si::metre / physkit::si::second)
-        : M_fov{fov}, M_window_size{window_size}, M_pos{position}, M_speed{speed}
+        : M_fov{fov}, M_window_size{window_size},
+          M_pos{to_magnum_vector<physkit::si::metre, float>(position)}, M_speed{speed}
     {
         auto *obj = new SceneGraph::Object<Transform>{&scene};
         M_obj = obj;
@@ -553,8 +561,9 @@ public:
         set_view(dir);
     }
 
-    void set_view(const Vector3 &dir)
+    void set_view(const physkit::vec3<physkit::one, float> &d)
     {
+        const Vector3 dir = to_magnum_vector<physkit::one, float>(d);
         if (Math::isInf(dir).any() || dir.isZero()) return;
 
         Vector3 f = dir.normalized();
@@ -574,11 +583,6 @@ public:
         mark_dirty();
     }
 
-    [[nodiscard]] DualQuaternion transformation() const noexcept
-    {
-        return DualQuaternion::from(M_rot, M_pos);
-    }
-
     void resize(const Vector2i &window_size, const Vector2i &viewport_size)
     {
         M_window_size = window_size;
@@ -589,16 +593,14 @@ public:
             .setViewport(viewport_size);
     }
 
-    void look_at(const physkit::uvec3<physkit::si::metre, float> &pos)
+    void look_at(const physkit::vec3<physkit::si::metre, float> &pos)
     {
-        const Vector3 target = to_magnum_vector<physkit::si::metre, float>(pos);
-        const Vector3 dir = target - M_pos;
-        set_view(dir);
+        set_view((pos - to_physkit_vector<physkit::si::metre, float>(M_pos)) / physkit::si::metre);
     }
 
     auto pos() const { return to_physkit_vector<physkit::si::metre, float>(M_pos); }
 
-    void move(const physkit::uvec3<physkit::si::metre, float> &delta)
+    void move(const physkit::vec3<physkit::si::metre, float> &delta)
     {
         M_pos += to_magnum_vector<physkit::si::metre, float>(delta);
         mark_dirty();
@@ -700,8 +702,8 @@ public:
         if ((M_track.duration() > 0.0f * physkit::si::second) && !M_track.released(t))
         {
             auto [pos, rot] = M_track.at(t);
-            M_pos = pos;
-            if (!M_track.freelook()) M_rot = rot;
+            M_pos = to_magnum_vector<physkit::si::metre, float>(pos);
+            if (!M_track.freelook()) M_rot = to_magnum_quaternion<physkit::one, float>(rot);
             return update(), true;
         }
 
@@ -718,6 +720,11 @@ public:
     auto projection_matrix() const { return M_cam->projectionMatrix(); }
 
 private:
+    [[nodiscard]] DualQuaternion transformation() const noexcept
+    {
+        return DualQuaternion::from(M_rot, M_pos);
+    }
+
     SceneGraph::Camera3D *M_cam{};
     SceneGraph::AbstractTranslationRotation3D *M_obj{};
 

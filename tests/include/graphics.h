@@ -48,7 +48,7 @@ public:
     using SceneGraph::Object<SceneGraph::MatrixTransformation3D>::Object;
 
     void rotate(physkit::quantity<physkit::si::radian, float> angle,
-                const physkit::uvec3<physkit::one> &axis)
+                const physkit::vec3<physkit::one> &axis)
     {
         Quaternion rot =
             Quaternion::rotation(Rad(angle.numerical_value_in(physkit::si::radian)),
@@ -253,9 +253,11 @@ public:
     graphics_app(const Arguments &arguments, const Vector2i &window_size,
                  physkit::quantity<physkit::si::degree> fov,
                  std::string_view title = "PhysKit Graphics Demo",
-                 const Vector3 &initial_cam_pos = {0.0f, 0.0f, -5.0f},
-                 const Vector3 &initial_cam_dir = {0.0f, 0.0f, 1.0f}, bool drag = false,
-                 bool vsync = true)
+                 const physkit::fvec3<physkit::si::metre> &initial_cam_pos =
+                     physkit::fvec3{0.0f, 0.0f, -5.0f} * physkit::si::metre,
+                 const physkit::fvec3<physkit::one> &initial_cam_dir = physkit::fvec3{0.0f, 0.0f,
+                                                                                      1.0f},
+                 bool drag = false, bool vsync = true)
         : Magnum::Platform::Application{arguments, Configuration{}
                                                        .setTitle(Containers::StringView{
                                                            title.data(), title.size()})

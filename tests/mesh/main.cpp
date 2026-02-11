@@ -32,7 +32,7 @@ bool approx_q(quantity<pow<3>(si::metre)> a, quantity<pow<3>(si::metre)> b)
     return approx(a.numerical_value_in(pow<3>(si::metre)), b.numerical_value_in(pow<3>(si::metre)));
 }
 
-bool approx_vec(const uvec3<si::metre> &a, const uvec3<si::metre> &b)
+bool approx_vec(const vec3<si::metre> &a, const vec3<si::metre> &b)
 {
     return approx_q(a.x(), b.x()) && approx_q(a.y(), b.y()) && approx_q(a.z(), b.z());
 }
@@ -41,7 +41,7 @@ bool approx_vec(const uvec3<si::metre> &a, const uvec3<si::metre> &b)
 /// Winding order is counter-clockwise when viewed from outside.
 struct cube_fixture
 {
-    std::array<uvec3<m>, 8> vertices = {{
+    std::array<vec3<m>, 8> vertices = {{
         vec3{0.0, 0.0, 0.0} * m, // 0
         vec3{1.0, 0.0, 0.0} * m, // 1
         vec3{1.0, 1.0, 0.0} * m, // 2
@@ -185,11 +185,11 @@ void test_aabb_scale()
     assert(approx_vec(halved.max, vec3{1.5, 1.5, 1.5} * m));
 
     // Quantity scale
-    auto qscaled = box * (2.0 * one);
+    auto qscaled = box * 2.0;
     assert(approx_vec(qscaled.min, vec3{-1.0, -1.0, -1.0} * m));
     assert(approx_vec(qscaled.max, vec3{3.0, 3.0, 3.0} * m));
 
-    auto qdiv = box / (2.0 * one);
+    auto qdiv = box / 2.0;
     assert(approx_vec(qdiv.min, vec3{0.5, 0.5, 0.5} * m));
     assert(approx_vec(qdiv.max, vec3{1.5, 1.5, 1.5} * m));
 }
@@ -219,12 +219,12 @@ void test_aabb_compound_assign()
 
     // Quantity compound assign
     box = {.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
-    box *= (2.0 * one);
+    box *= 2.0;
     assert(approx_vec(box.min, vec3{-1.0, -1.0, -1.0} * m));
     assert(approx_vec(box.max, vec3{3.0, 3.0, 3.0} * m));
 
     box = {.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
-    box /= (2.0 * one);
+    box /= 2.0;
     assert(approx_vec(box.min, vec3{0.5, 0.5, 0.5} * m));
     assert(approx_vec(box.max, vec3{1.5, 1.5, 1.5} * m));
 }
@@ -235,24 +235,23 @@ void test_aabb_mat_transform()
     aabb box{.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
 
     // Identity transform should leave bounds unchanged
-    auto identity = umat3<one>::identity();
+    auto identity = mat3<one>::identity();
     auto result = box * identity;
     assert(approx_vec(result.min, box.min));
     assert(approx_vec(result.max, box.max));
 
     // 90-degree rotation around Z: (x,y,z) -> (-y,x,z)
     // cos(90)=0, sin(90)=1
-    auto rot_z = umat3<one>{
-        {0.0 * one, -1.0 * one, 0.0 * one},
-        {1.0 * one, 0.0 * one, 0.0 * one},
-        {0.0 * one, 0.0 * one, 1.0 * one},
+    auto rot_z = mat3<one>{
+        {0.0, -1.0, 0.0},
+        {1.0, 0.0, 0.0},
+        {0.0, 0.0, 1.0},
     };
     auto rotated = box * rot_z;
     assert(approx_vec(rotated.min, vec3{-1.0, 0.0, 0.0} * m));
     assert(approx_vec(rotated.max, vec3{0.0, 1.0, 1.0} * m));
 
-    auto rot_q =
-        uquat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3{0, 0, 1} * one);
+    auto rot_q = quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3{0, 0, 1});
     auto rotated_q = box * rot_q;
     assert(approx_vec(rotated_q.min, rotated.min));
     assert(approx_vec(rotated_q.max, rotated.max));
@@ -369,7 +368,7 @@ void test_bsphere_scale()
     assert(approx_q(scaled.radius, 3.0 * m));
     assert(approx_vec(scaled.center, s.center)); // center unchanged
 
-    auto qscaled = s * (2.0 * one);
+    auto qscaled = s * 2.0;
     assert(approx_q(qscaled.radius, 2.0 * m));
 }
 
@@ -387,7 +386,7 @@ void test_bsphere_compound_assign()
     assert(approx_q(s.radius, 5.0 * m));
 
     s = {.center = vec3{0.0, 0.0, 0.0} * m, .radius = 1.0 * m};
-    s *= (3.0 * one);
+    s *= 3.0;
     assert(approx_q(s.radius, 3.0 * m));
 }
 
@@ -442,8 +441,8 @@ void test_mesh_ray_intersect_local()
 
     // Ray from outside hitting the cube
     mesh::ray r{
-        .origin = {-1.0 * m, 0.5 * m, 0.5 * m},
-        .direction = {1.0 * one, 0.0 * one, 0.0 * one},
+        .origin = vec3{-1.0, 0.5, 0.5} * m,
+        .direction = {1.0, 0.0, 0.0},
     };
     auto hit = msh->ray_intersect_local(r);
     assert(hit.has_value());
@@ -455,7 +454,7 @@ void test_mesh_ray_intersect_local()
     // Ray pointing away - no hit
     mesh::ray away{
         .origin = vec3{-1.0, 0.5, 0.5} * m,
-        .direction = vec3{-1.0, 0.0, 0.0} * one,
+        .direction = vec3{-1.0, 0.0, 0.0},
     };
     assert(!msh->ray_intersect_local(away).has_value());
 
@@ -466,7 +465,7 @@ void test_mesh_ray_intersect_local()
     // Ray from inside - should still hit
     mesh::ray inside{
         .origin = vec3{0.5, 0.5, 0.5} * m,
-        .direction = vec3{1.0, 0.0, 0.0} * one,
+        .direction = vec3{1.0, 0.0, 0.0},
     };
     auto inside_hit = msh->ray_intersect_local(inside);
     assert(inside_hit.has_value());
@@ -500,19 +499,19 @@ void test_mesh_support_local()
     auto msh = cube.make_mesh();
 
     // Support in +x direction -> should be one of the x=1 vertices
-    auto sup_x = msh->support_local(vec3{1.0, 0.0, 0.0} * one);
+    auto sup_x = msh->support_local(vec3{1.0, 0.0, 0.0});
     assert(approx_q(sup_x.x(), 1.0 * m));
 
     // Support in -x direction -> should be one of the x=0 vertices
-    auto sup_nx = msh->support_local(vec3{-1.0, 0.0, 0.0} * one);
+    auto sup_nx = msh->support_local(vec3{-1.0, 0.0, 0.0});
     assert(approx_q(sup_nx.x(), 0.0 * m));
 
     // Support in +y direction -> y=1
-    auto sup_y = msh->support_local(vec3{0.0, 1.0, 0.0} * one);
+    auto sup_y = msh->support_local(vec3{0.0, 1.0, 0.0});
     assert(approx_q(sup_y.y(), 1.0 * m));
 
     // Support in diagonal direction -> should be corner (1,1,1)
-    auto sup_diag = msh->support_local(vec3{1.0, 1.0, 1.0} * one);
+    auto sup_diag = msh->support_local(vec3{1.0, 1.0, 1.0});
     assert(approx_vec(sup_diag, vec3{1.0, 1.0, 1.0} * m));
 }
 
@@ -570,7 +569,7 @@ void test_mesh_instance_ray_intersect()
 
     mesh::ray r{
         .origin = vec3{3.0, 0.5, 0.5} * m,
-        .direction = vec3{1.0, 0.0, 0.0} * one,
+        .direction = vec3{1.0, 0.0, 0.0},
     };
     auto hit = inst.ray_intersect(r);
     assert(hit.has_value());
@@ -580,7 +579,7 @@ void test_mesh_instance_ray_intersect()
     // Miss
     mesh::ray miss{
         .origin = vec3{3.0, 5.0, 0.5} * m,
-        .direction = vec3{1.0, 0.0, 0.0} * one,
+        .direction = vec3{1.0, 0.0, 0.0},
     };
     assert(!inst.ray_intersect(miss).has_value());
 }
@@ -604,7 +603,7 @@ void test_mesh_instance_support()
 
     auto inst = msh->at(vec3{5.0, 0.0, 0.0} * m);
     // Support in +x should be x = 5 + 1 = 6
-    auto sup = inst.support(vec3{1.0, 0.0, 0.0} * one);
+    auto sup = inst.support(vec3{1.0, 0.0, 0.0});
     assert(approx_q(sup.x(), 6.0 * m));
 }
 
@@ -615,8 +614,8 @@ void test_mesh_instance_rotated()
     auto msh = cube.make_mesh();
 
     // 90-degree rotation around Z: (x,y,z) -> (-y,x,z)
-    auto rot_z = uquat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian,
-                                             vec3{0.0, 0.0, 1.0} * one);
+    auto rot_z =
+        quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3{0.0, 0.0, 1.0});
 
     auto inst = msh->at(vec3{0.0, 0.0, 0.0} * m, rot_z);
 
@@ -629,7 +628,7 @@ void test_mesh_instance_rotated()
     // Ray in +x should hit at x = -1
     mesh::ray r{
         .origin = vec3{-3.0, 0.5, 0.5} * m,
-        .direction = vec3{1.0, 0.0, 0.0} * one,
+        .direction = vec3{1.0, 0.0, 0.0},
     };
     auto hit = inst.ray_intersect(r);
     assert(hit.has_value());

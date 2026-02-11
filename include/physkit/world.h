@@ -21,7 +21,7 @@ public:
     static world_desc make() { return {}; }
 
     [[nodiscard]] auto gravity() const { return M_gravity; }
-    auto &&with_gravity(this auto &&self, const uvec3<si::metre / si::second / si::second> &gravity)
+    auto &&with_gravity(this auto &&self, const vec3<si::metre / si::second / si::second> &gravity)
     {
         self.M_gravity = gravity;
         return std::forward<decltype(self)>(self);
@@ -42,7 +42,7 @@ public:
     }
 
 private:
-    uvec3<si::metre / si::second / si::second> M_gravity = {
+    vec3<si::metre / si::second / si::second> M_gravity = {
         0.0 * si::metre / si::second / si::second,
         -9.81 * si::metre / si::second / si::second,
         0.0 * si::metre / si::second / si::second,
@@ -159,7 +159,7 @@ private:
 
     std::unique_ptr<integrator> M_int;
     arena<object> M_rigid;
-    uvec3<si::metre / si::second / si::second> M_gravity;
+    vec3<si::metre / si::second / si::second> M_gravity;
     std::size_t M_iters;
 };
 

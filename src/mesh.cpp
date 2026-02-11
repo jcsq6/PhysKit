@@ -13,7 +13,7 @@ using namespace mp_units::si::unit_symbols;
 ----------------------------------------------
 */
 
-std::shared_ptr<mesh> mesh::make(std::span<const uvec3<si::metre>> vertices,
+std::shared_ptr<mesh> mesh::make(std::span<const vec3<si::metre>> vertices,
                                  std::span<const triangle_t> triangles)
 {
     assert(!vertices.empty());
@@ -29,21 +29,21 @@ std::shared_ptr<mesh> mesh::make(std::span<const uvec3<si::metre>> vertices,
     return m;
 }
 
-std::shared_ptr<mesh> mesh::box(const uvec3<si::metre> &half_extents)
+std::shared_ptr<mesh> mesh::box(const vec3<si::metre> &half_extents)
 {
     auto hx = half_extents.x();
     auto hy = half_extents.y();
     auto hz = half_extents.z();
 
     std::array vertices{
-        uvec3{-hx, -hy, -hz}, // 0
-        uvec3{+hx, -hy, -hz}, // 1
-        uvec3{+hx, +hy, -hz}, // 2
-        uvec3{-hx, +hy, -hz}, // 3
-        uvec3{-hx, -hy, +hz}, // 4
-        uvec3{+hx, -hy, +hz}, // 5
-        uvec3{+hx, +hy, +hz}, // 6
-        uvec3{-hx, +hy, +hz}, // 7
+        vec3{-hx, -hy, -hz}, // 0
+        vec3{+hx, -hy, -hz}, // 1
+        vec3{+hx, +hy, -hz}, // 2
+        vec3{-hx, +hy, -hz}, // 3
+        vec3{-hx, -hy, +hz}, // 4
+        vec3{+hx, -hy, +hz}, // 5
+        vec3{+hx, +hy, +hz}, // 6
+        vec3{-hx, +hy, +hz}, // 7
     };
 
     std::array<triangle_t, 12> triangles{{
@@ -70,7 +70,7 @@ std::shared_ptr<mesh> mesh::sphere(quantity<si::metre> radius, unsigned int stac
     assert(stacks >= 2);
     assert(sectors >= 3);
 
-    std::vector<uvec3<si::metre>> vertices;
+    std::vector<vec3<si::metre>> vertices;
     std::vector<triangle_t> triangles;
 
     vertices.reserve(2 + ((stacks - 1) * sectors));
@@ -126,11 +126,11 @@ std::shared_ptr<mesh> mesh::pyramid(quantity<si::metre> base_half, quantity<si::
 {
     // clang-format off
     std::array vertices{
-        uvec3{-base_half, 0.0 * m, -base_half}, // 0
-        uvec3{+base_half, 0.0 * m, -base_half}, // 1
-        uvec3{+base_half, 0.0 * m, +base_half}, // 2
-        uvec3{-base_half, 0.0 * m, +base_half}, // 3
-        uvec3{    0.0 * m,  height,     0.0 * m}, // 4 (apex)
+        vec3{-base_half, 0.0 * m, -base_half}, // 0
+        vec3{+base_half, 0.0 * m, -base_half}, // 1
+        vec3{+base_half, 0.0 * m, +base_half}, // 2
+        vec3{-base_half, 0.0 * m, +base_half}, // 3
+        vec3{    0.0 * m,  height,     0.0 * m}, // 4 (apex)
     };
 
     std::array<triangle_t, 6> triangles{{
@@ -160,20 +160,20 @@ quantity<pow<3>(si::metre)> mesh::volume() const
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-uvec3<si::metre> mesh::mass_center() const
+vec3<si::metre> mesh::mass_center() const
 {
     // TODO: implement volume-weighted centroid via divergence theorem
     assert(false && "mesh::mass_center not yet implemented");
-    return uvec3<si::metre>::zero();
+    return vec3<si::metre>::zero();
 }
 
-umat3<si::kilogram * pow<2>(si::metre)>
+mat3<si::kilogram * pow<2>(si::metre)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 mesh::inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> /*density*/) const
 {
     // TODO: implement inertia tensor via canonical tetrahedron integrals
     assert(false && "mesh::inertia_tensor not yet implemented");
-    return umat3<si::kilogram * pow<2>(si::metre)>::zero();
+    return mat3<si::kilogram * pow<2>(si::metre)>::zero();
 }
 
 // Moeller–Trumbore
@@ -227,17 +227,17 @@ std::optional<mesh::ray_hit> mesh::ray_intersect_local(const ray &r,
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-uvec3<si::metre> mesh::closest_point_local(const uvec3<si::metre> & /*point*/) const
+vec3<si::metre> mesh::closest_point_local(const vec3<si::metre> & /*point*/) const
 {
     // TODO: implement closest-point-on-mesh (project onto each triangle, take closest)
     assert(false && "mesh::closest_point_local not yet implemented");
-    return uvec3<si::metre>::zero();
+    return vec3<si::metre>::zero();
 }
 
-bool mesh::contains_local(const uvec3<si::metre> &point) const
+bool mesh::contains_local(const vec3<si::metre> &point) const
 {
     // Ray-casting parity test: cast a ray in +x and count crossings.
-    auto dir = vec3{1.0, 0.0, 0.0} * one;
+    auto dir = vec3{1.0, 0.0, 0.0};
     int crossings = 0;
 
     constexpr auto eps = 1e-12;
@@ -271,7 +271,7 @@ bool mesh::contains_local(const uvec3<si::metre> &point) const
     return (crossings % 2) == 1;
 }
 
-uvec3<si::metre> mesh::support_local(const uvec3<one> &direction) const
+vec3<si::metre> mesh::support_local(const vec3<one> &direction) const
 {
     assert(!M_vertices.empty());
     std::size_t best_idx = 0;
@@ -325,7 +325,7 @@ std::optional<mesh::ray_hit> mesh::instance::ray_intersect(const mesh::ray &r,
     return hit;
 }
 
-uvec3<si::metre> mesh::instance::closest_point(const uvec3<si::metre> &point) const
+vec3<si::metre> mesh::instance::closest_point(const vec3<si::metre> &point) const
 {
     auto inv_orient = M_orientation.conjugate();
     auto local_point = inv_orient * (point - M_position);
@@ -333,14 +333,14 @@ uvec3<si::metre> mesh::instance::closest_point(const uvec3<si::metre> &point) co
     return M_orientation * local_closest + M_position;
 }
 
-bool mesh::instance::contains(const uvec3<si::metre> &point) const
+bool mesh::instance::contains(const vec3<si::metre> &point) const
 {
     auto inv_orient = M_orientation.conjugate();
     auto local_point = inv_orient * (point - M_position);
     return M_mesh.contains_local(local_point);
 }
 
-uvec3<si::metre> mesh::instance::support(const uvec3<one> &direction) const
+vec3<si::metre> mesh::instance::support(const vec3<one> &direction) const
 {
     auto inv_orient = M_orientation.conjugate();
     auto local_dir = inv_orient * direction;
@@ -348,13 +348,13 @@ uvec3<si::metre> mesh::instance::support(const uvec3<one> &direction) const
     return M_orientation * local_support + M_position;
 }
 
-umat3<si::kilogram * pow<2>(si::metre)>
+mat3<si::kilogram * pow<2>(si::metre)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 mesh::instance::world_inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
 {
     // TODO: rotate local inertia tensor into world frame and apply parallel axis theorem
     assert(false && "mesh::instance::world_inertia_tensor not yet implemented");
-    return umat3<si::kilogram * pow<2>(si::metre)>::zero();
+    return mat3<si::kilogram * pow<2>(si::metre)>::zero();
 }
 
 } // namespace physkit

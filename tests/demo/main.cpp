@@ -13,8 +13,12 @@ class app : public graphics_app
 public:
     static constexpr auto dt = 1.0 / 60.0f * s;
     explicit app(const Arguments &arguments)
-        : graphics_app{arguments,      {1280, 720},           45 * deg,
-                       "PhysKit Demo", {0.0f, 10.0f, -25.0f}, {0.0f, 0.0f, 0.0f},
+        : graphics_app{arguments,
+                       {1280, 720},
+                       45 * deg,
+                       "PhysKit Demo",
+                       fvec3{0.0f, 10.0f, -25.0f} * m,
+                       fvec3{0.0f, 0.0f, 0.0f},
                        false}
     // NOLINT
     {
