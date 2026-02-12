@@ -30,19 +30,25 @@ include(${CMAKE_SOURCE_DIR}/cmake/EnsureClang.cmake)
 
 
 # ----- PhysKit Library -----
-set(PHYSKIT_SOURCES 
+set(PHYSKIT_SOURCES
 	src/world.cpp
 	src/mesh.cpp
+	src/sat.cpp
+	src/gjk.cpp
 )
 
 set(PHYSKIT_HEADERS
+	accum.h
+	gjk.h
+	integrator.h
+	math_utils.h
+	mesh.h
+	obb.h
 	object.h
 	particle.h
-	world.h
-	integrator.h
-	mesh.h
-	accum.h
 	physkit.h
+	sat.h
+	world.h
 	detail/eigen_format.h
 	detail/lin_alg.h
 	detail/types.h

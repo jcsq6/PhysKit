@@ -171,7 +171,7 @@ mat3<si::kilogram * pow<2>(si::metre)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 mesh::inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> /*density*/) const
 {
-    // TODO: implement inertia tensor via canonical tetrahedron integrals
+    // TODO: implement inertia tensor via canonical tetrahedron integrals -> Isaac Abella
     assert(false && "mesh::inertia_tensor not yet implemented");
     return mat3<si::kilogram * pow<2>(si::metre)>::zero();
 }
