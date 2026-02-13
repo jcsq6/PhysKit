@@ -23,7 +23,18 @@ target_sources(phys_graphics
       include/dep/argparse.hpp
 )
 
+add_library(phys_testing INTERFACE)
+target_sources(phys_testing
+  INTERFACE
+    FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+    FILES
+      include/test.h
+)
+
 target_link_libraries(phys_graphics INTERFACE ${TEST_LIBRARIES} physkit)
+target_link_libraries(phys_testing INTERFACE physkit)
+
 
 add_subdirectory(demo)
 add_subdirectory(mesh)

@@ -611,6 +611,8 @@ public:
     }
     [[nodiscard]] auto &args() const { return M_args; }
 
+    [[nodiscard]] auto testing() const { return M_testing; }
+
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     g_config(Magnum::Platform::Application::Arguments args, bool read_config = true) : M_args(args)
     {
@@ -651,6 +653,7 @@ public:
             .default_value(static_cast<double>(default_time_step.numerical_value_in(s)))
             .help("Time step in seconds")
             .scan<'g', double>();
+        parser.add_argument("--testing").flag().help("Enable testing mode");
         if (read_config)
             parser.add_argument("--config", "-c")
                 .help("Path to JSON config file for the world (CLI arguments will override JSON "
@@ -718,39 +721,16 @@ public:
             auto drag_val = parser.get<bool>("--drag");
             auto vsync_val = parser.get<bool>("--vsync");
             auto time_step_val = parser.get<double>("--time-step") * s;
+            M_testing = parser.get<bool>("--testing");
 
-            if (parser.is_used("--fov"))
-                fov(fov_val);
-            else
-                fov_or(fov_val);
-            if (parser.is_used("--cam-pos"))
-                cam_pos(cam_pos_val);
-            else
-                cam_pos_or(cam_pos_val);
-            if (parser.is_used("--cam-dir"))
-                cam_dir(cam_dir_val);
-            else
-                cam_dir_or(cam_dir_val);
-            if (parser.is_used("--title"))
-                title(title_val);
-            else
-                title_or(title_val);
-            if (parser.is_used("--window-size"))
-                window_size(window_size_val);
-            else
-                window_size_or(window_size_val);
-            if (parser.is_used("--drag"))
-                drag(drag_val);
-            else
-                drag_or(drag_val);
-            if (parser.is_used("--vsync"))
-                vsync(vsync_val);
-            else
-                vsync_or(vsync_val);
-            if (parser.is_used("--time-step"))
-                time_step(time_step_val);
-            else
-                time_step_or(time_step_val);
+            if (parser.is_used("--fov")) fov(fov_val);
+            if (parser.is_used("--cam-pos")) cam_pos(cam_pos_val);
+            if (parser.is_used("--cam-dir")) cam_dir(cam_dir_val);
+            if (parser.is_used("--title")) title(title_val);
+            if (parser.is_used("--window-size")) window_size(window_size_val);
+            if (parser.is_used("--drag")) drag(drag_val);
+            if (parser.is_used("--vsync")) vsync(vsync_val);
+            if (parser.is_used("--time-step")) time_step(time_step_val);
 
             if (auto look_at_str = parser.present("--look-at"))
                 look_at(read_vec(*look_at_str, std::integral_constant<int, 3>{}) * m);
@@ -778,6 +758,7 @@ private:
     std::optional<physkit::world_desc::integ_t> M_integrator;
     std::optional<std::size_t> M_solver_iterations;
     std::optional<physkit::quantity<physkit::si::second>> M_time_step;
+    bool M_testing{false};
 };
 
 class graphics_app : public Magnum::Platform::Application
@@ -903,7 +884,7 @@ public:
                                             .setSize(config.window_size())},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
-          M_drag(config.drag()), M_world(config.world_desc())
+          M_drag(config.drag()), M_world(config.world_desc()), M_testing(config.testing())
     {
         using namespace Math::Literals::ColorLiterals;
 
@@ -932,7 +913,10 @@ public:
         M_stepper = physkit::stepper(M_world, config.time_step());
     }
 
-    virtual ~graphics_app() = default;
+    virtual ~graphics_app()
+    {
+        if (M_testing) prompt_results();
+    }
 
 protected:
     // called every frame to update the scene, before drawing. stepper::update() is called after
@@ -1077,6 +1061,21 @@ private:
         pointer_move(event);
     }
 
+    static void prompt_results()
+    {
+#if defined(_WIN32)
+        int result = MessageBoxA(nullptr, "Success?", "Test Result", MB_YESNO | MB_ICONQUESTION);
+#elif defined(__APPLE__)
+        int result =
+            std::system("osascript -e 'display dialog \"Success?\" buttons {\"No\", \"Yes\"} "
+                        "default button \"Yes\" with title \"Test Result\"' >/dev/null 2>&1");
+#else
+        int result =
+            std::system(R"(zenity --question --text="Success?" --title="Test Result" 2>/dev/null)");
+#endif
+        std::exit(result == 0 ? 0 : 1);
+    }
+
     SceneGraph::Scene<SceneGraph::MatrixTransformation3D> M_scene;
     Shaders::PhongGL M_shader{NoCreate};
     SceneGraph::DrawableGroup3D M_shaded;
@@ -1093,6 +1092,7 @@ private:
     physkit::quantity<physkit::si::second> M_frame_limit{};
     bool M_debug = false;
     bool M_drag = false;
+    bool M_testing = false;
 };
 
 namespace mesh_objs
