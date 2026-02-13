@@ -49,6 +49,8 @@ Adjust the compiler paths to match your MSYS2 installation.
 
 # Usage
 
+> **See the [Graphics & Demo Framework documentation](tests/README.md)** for a comprehensive guide covering the configuration API (JSON + CLI + builder), the `graphics_app` base class, camera controls, animation tracks, scene objects, and mesh helpers.
+
 ## Camera Animation Tracks
 
 The graphics testing framework includes a camera animation system for creating smooth camera movements through keyframes.

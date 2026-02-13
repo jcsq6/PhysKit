@@ -18,6 +18,8 @@ public:
 
     [[nodiscard]] static object_desc stat() { return {body_type::stat}; }
 
+    object_desc(body_type type) : M_type(type) {}
+
     auto &&with_pos(this auto &&self, const vec3<si::metre> &pos)
     {
         self.M_pos = pos;
@@ -59,8 +61,6 @@ public:
     [[nodiscard]] body_type type() const { return M_type; }
 
 private:
-    object_desc(body_type type) : M_type(type) {}
-
     body_type M_type;
     vec3<si::metre> M_pos = vec3<si::metre>::zero();
     vec3<si::metre / si::second> M_vel = vec3<si::metre / si::second>::zero();
