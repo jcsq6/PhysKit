@@ -305,10 +305,11 @@ public:
         };
 
         world_config config;
-        auto ez = glz::read_file_json(config, path, std::string{});
-        if (ez)
+        std::string buffer;
+        if (auto ez = glz::read_file_json(config, path, buffer))
         {
-            std::println(std::cerr, "Error reading JSON config: \"{}\"", glz::format_error(ez));
+            std::println(std::cerr, "Error reading JSON config:\n{}",
+                         glz::format_error(ez, buffer));
             std::cerr.flush();
             return std::forward<decltype(self)>(self);
         }
