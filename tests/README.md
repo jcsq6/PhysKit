@@ -158,6 +158,9 @@ Pass a JSON file with `--config` / `-c`. The file is deserialized with [Glaze](h
         {
             "pos": [0.0, 5.0, 0.0],                    // metres (required)
             "vel": [0.0, 0.0, 0.0],                    // m/s, default [0,0,0]
+            "orientation": [1.0, 0.0, 0.0, 0.0],       // quaternion [w,x,y,z], default identity
+            "angular_velocity": [0.0, 0.0, 1.0],       // rad/s, default [0,0,0]
+            "inertia_tensor": [1.0, 1.0, 1.0],         // diagonal [Ixx,Iyy,Izz] kg·m², default [1,1,1]
             "mass": 1.0,                                // kg (required)
             "type": "dynam",                            // "dynam" | "stat"
             "color": [1.0, 0.0, 0.0, 1.0],             // RGBA floats 0-1, default white

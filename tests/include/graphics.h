@@ -249,8 +249,8 @@ public:
     static constexpr bool default_vsync = true;
     static constexpr auto default_time_step = 1.0f / 60.0f * physkit::si::second;
 
-    auto &&read_file(this auto &&self,
-                     std::string_view path) // NOLINT(readability-function-cognitive-complexity)
+    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
+    auto &&read_file(this auto &&self, std::string_view path)
     {
         using namespace physkit::si::unit_symbols;
         struct box_type // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -274,11 +274,13 @@ public:
             unsigned int sectors = 32;
         };
 
-        // TODO: orientation + angualar velocity
         struct obj // NOLINT(cppcoreguidelines-pro-type-member-init)
         {
             std::array<double, 3> pos;
             std::array<double, 3> vel = {0.0, 0.0, 0.0};
+            std::array<double, 4> orientation = {1.0, 0.0, 0.0, 0.0}; // [w, x, y, z]
+            std::array<double, 3> angular_velocity = {0.0, 0.0, 0.0}; // rad/s
+            std::array<double, 3> inertia_tensor = {1.0, 1.0, 1.0};   // diagonal [Ixx, Iyy, Izz]
             physkit::body_type type = physkit::body_type::dynam;
             std::variant<box_type, pyramid_type, sphere_type> mesh =
                 box_type{"box", {0.5f, 0.5f, 0.5f}};
@@ -342,11 +344,23 @@ public:
                     });
             }
 
+            auto inertia = physkit::mat3<kg * m * m>::zero();
+            inertia.set(0, 0, obj.inertia_tensor[0] * kg * m * m);
+            inertia.set(1, 1, obj.inertia_tensor[1] * kg * m * m);
+            inertia.set(2, 2, obj.inertia_tensor[2] * kg * m * m);
+
             self.M_objects.emplace_back(
                 physkit::object_desc{obj.type}
                     .with_pos(physkit::vec3{obj.pos[0], obj.pos[1], obj.pos[2]} * m)
                     .with_vel(physkit::vec3{obj.vel[0], obj.vel[1], obj.vel[2]} * m / s)
-                    .with_mass(obj.mass * physkit::si::kilogram)
+                    .with_orientation(
+                        physkit::quat<physkit::one>{obj.orientation[0], obj.orientation[1],
+                                                    obj.orientation[2], obj.orientation[3]})
+                    .with_ang_vel(physkit::vec3{obj.angular_velocity[0], obj.angular_velocity[1],
+                                                obj.angular_velocity[2]} *
+                                  rad / s)
+                    .with_inertia_tensor(inertia)
+                    .with_mass(obj.mass * kg)
                     .with_mesh(mesh_map.at(mesh_name)),
                 Color3{obj.color[0], obj.color[1], obj.color[2]});
         }
@@ -399,8 +413,8 @@ public:
 
         std::println("  Gravity: {}", *self.M_gravity);
         std::println("  Integrator: {}",
-                     glz::reflect<physkit::world_desc::integ_t>::keys[static_cast<int>(
-                         config.integrator)]); // NOLINT
+                     glz::reflect<physkit::world_desc::integ_t>::keys[static_cast<int>( // NOLINT
+                         config.integrator)]);
         std::println("  Solver iterations: {}", config.solver_iterations);
         std::println("  Objects: {}", config.objects.size());
         for (std::size_t i = 0; i < self.M_objects.size(); ++i)
@@ -409,6 +423,10 @@ public:
             std::println("    Object [{}]:", i);
             std::println("      Position: {}", o.pos());
             std::println("      Velocity: {}", o.vel());
+            std::println("      Orientation: {}", o.orientation());
+            std::println("      Angular velocity: {}", o.ang_vel());
+            std::println("      Inertia tensor (diag): [{}, {}, {}]", o.inertia_tensor()[0, 0],
+                         o.inertia_tensor()[1, 1], o.inertia_tensor()[2, 2]);
             std::println("      Mass: {}", o.mass());
             std::println(
                 "      Type: {}",
@@ -592,8 +610,8 @@ public:
     }
     [[nodiscard]] auto &args() const { return M_args; }
 
-    g_config(Magnum::Platform::Application::Arguments args, bool read_config = true)
-        : M_args(args) // NOLINT(readability-function-cognitive-complexity)
+    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
+    g_config(Magnum::Platform::Application::Arguments args, bool read_config = true) : M_args(args)
     {
         using namespace physkit::si::unit_symbols;
         using namespace physkit;

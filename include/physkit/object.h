@@ -44,6 +44,19 @@ public:
         return std::forward<decltype(self)>(self);
     }
 
+    auto &&with_ang_vel(this auto &&self, const vec3<si::radian / si::second> &ang_vel)
+    {
+        self.M_ang_vel = ang_vel;
+        return std::forward<decltype(self)>(self);
+    }
+
+    auto &&with_inertia_tensor(this auto &&self,
+                               const mat3<si::kilogram * si::metre * si::metre> &inertia)
+    {
+        self.M_inertia = inertia;
+        return std::forward<decltype(self)>(self);
+    }
+
     auto &&with_mesh(this auto &&self, std::shared_ptr<const physkit::mesh> msh)
     {
         self.M_mesh = std::move(msh);
@@ -54,6 +67,11 @@ public:
     [[nodiscard]] const vec3<si::metre / si::second> &vel() const { return M_vel; }
     [[nodiscard]] quantity<si::kilogram> mass() const { return M_mass; }
     [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
+    [[nodiscard]] const vec3<si::radian / si::second> &ang_vel() const { return M_ang_vel; }
+    [[nodiscard]] const mat3<si::kilogram * si::metre * si::metre> &inertia_tensor() const
+    {
+        return M_inertia;
+    }
     [[nodiscard]] auto &&mesh(this auto &&self)
     {
         return std::forward_like<decltype(self)>(self.M_mesh);
@@ -66,6 +84,9 @@ private:
     vec3<si::metre / si::second> M_vel = vec3<si::metre / si::second>::zero();
     quantity<si::kilogram> M_mass = 1.0 * si::kilogram;
     quat<one> M_orientation = quat<one>::identity();
+    vec3<si::radian / si::second> M_ang_vel = vec3<si::radian / si::second>::zero();
+    mat3<si::kilogram * si::metre * si::metre> M_inertia =
+        mat3<si::kilogram * si::metre * si::metre>::identity();
     std::shared_ptr<const physkit::mesh> M_mesh;
 };
 
@@ -73,8 +94,9 @@ class object : public particle
 {
 public:
     explicit object(object_desc desc)
-        : particle(desc.pos(), desc.vel(), desc.mass(), desc.orientation()), M_type(desc.type()),
-          M_mesh(std::move(desc).mesh())
+        : particle(desc.pos(), desc.vel(), desc.mass(), desc.orientation(), desc.ang_vel(),
+                   desc.inertia_tensor()),
+          M_type(desc.type()), M_mesh(std::move(desc).mesh())
     {
     }
 

@@ -9,8 +9,12 @@ class particle
 {
 public:
     particle(const vec3<si::metre> &pos, const vec3<si::metre / si::second> &vel,
-             quantity<si::kilogram> mass, const quat<one> &orientation = quat<one>::identity())
-        : M_pos(pos), M_vel(vel), M_mass(mass), M_orientation(orientation)
+             quantity<si::kilogram> mass, const quat<one> &orientation = quat<one>::identity(),
+             const vec3<si::radian / si::second> &ang_vel = vec3<si::radian / si::second>::zero(),
+             const mat3<si::kilogram * si::metre * si::metre> &inertia =
+                 mat3<si::kilogram * si::metre * si::metre>::identity())
+        : M_pos(pos), M_vel(vel), M_mass(mass), M_orientation(orientation), M_ang_vel(ang_vel),
+          M_inertia_tensor(inertia), M_inv_inertia_tensor(inertia.inverse())
     {
     }
 
