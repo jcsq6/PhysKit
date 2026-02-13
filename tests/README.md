@@ -9,6 +9,7 @@ This directory contains a self-contained graphics and configuration framework fo
 | [`graphics.h`](include/graphics.h) | Application base class, scene objects, config loader, mesh helpers |
 | [`camera.h`](include/camera.h) | FPS-style camera, keyframe animation tracks |
 | [`convert.h`](include/convert.h) | Conversion utilities between PhysKit and Magnum types |
+| [`test.h`](include/test.h) | Lightweight test runner, assertion macros, approximate comparisons |
 
 ---
 
@@ -41,6 +42,12 @@ This directory contains a self-contained graphics and configuration framework fo
 - [Scene Objects](#scene-objects)
 - [Mesh Helpers (`mesh_objs`)](#mesh-helpers-mesh_objs)
 - [Type Conversions (`convert.h`)](#type-conversions-converth)
+- [Testing Framework](#testing-framework)
+  - [Writing Tests](#writing-tests)
+  - [Assertion Macros](#assertion-macros)
+  - [Approximate Comparison](#approximate-comparison)
+  - [CMake Integration](#cmake-integration)
+  - [Graphical Tests (`--testing` mode)](#graphical-tests---testing-mode)
 
 ---
 
@@ -558,6 +565,136 @@ auto pq = to_physkit_quaternion<physkit::one, float>(magnum_quat);
 // PhysKit mesh → Magnum GL::Mesh
 Magnum::GL::Mesh m = to_magnum_mesh(phys_mesh);
 ```
+
+---
+
+## Testing Framework
+
+PhysKit includes a lightweight, header-only testing framework in [`test.h`](include/test.h). It provides a simple test runner with grouped test suites, approximate comparisons for quantities and geometric types, and clear PASS/FAIL output.
+
+### Headers
+
+| Header | Purpose |
+|--------|---------|
+| [`test.h`](include/test.h) | Test runner, assertion macros, approximate comparison utilities |
+
+### Writing Tests
+
+Tests are plain `void` functions registered on a `testing::suite`. Group related tests under named sections:
+
+```cpp
+#include "test.h"
+
+using namespace testing;
+
+void test_something()
+{
+    CHECK(1 + 1 == 2);
+}
+
+void test_approx_value()
+{
+    auto v = vec3{1.0, 2.0, 3.0} * m;
+    CHECK_APPROX(v.x(), 1.0 * m);
+}
+
+int main()
+{
+    suite tests;
+
+    tests.group("My Group")
+        .test("something", test_something)
+        .test("approx value", test_approx_value);
+
+    return tests.run();
+}
+```
+
+If no `.group()` is called before `.test()`, tests are placed in a default `"Tests"` group.
+
+### Assertion Macros
+
+| Macro | Description |
+|-------|-------------|
+| `CHECK(expr)` | Asserts that `expr` is truthy. Throws `check_failure` on failure with file/line info. |
+| `CHECK_APPROX(a, b)` | Asserts that `a` and `b` are approximately equal (within `eps = 1e-9`). |
+| `FAIL(msg)` | Unconditionally fails with the given message. |
+
+All macros capture the source location and report it on failure.
+
+### Approximate Comparison
+
+`CHECK_APPROX` dispatches to overloaded `approx()` functions that support:
+
+| Type | Comparison |
+|------|------------|
+| `float` / `double` | `std::abs(a - b) < eps` |
+| `mp_units::Quantity` | Compares numerical values in the quantity's reference unit |
+| `unit_mat<Q, R, C>` | Norm of the difference matrix < `eps` |
+| `unit_quat<Q>` | Angular distance < `eps` |
+| `aabb` | Component-wise approximate comparison of `min` and `max` |
+| `bounding_sphere` | Approximate comparison of `center` and `radius` |
+| `mesh::ray_hit` | Approximate comparison of `pos`, `normal`, and `distance` |
+
+### Test Output
+
+The runner prints grouped results to stdout/stderr:
+
+```
+=== AABB Tests ===
+  PASS: from_points
+  PASS: size/center/extent
+  FAIL: volume - approx(box.volume(), 25.0 * m * m * m) (main.cpp:85)
+
+=== Mesh Tests ===
+  PASS: make
+  PASS: bounds
+  ...
+
+5 out of 6 tests passed!
+```
+
+The process exits with code `0` if all tests pass, `1` otherwise. This makes it compatible with CTest and CI pipelines.
+
+### CMake Integration
+
+Test executables link against `phys_testing` (for non-graphical tests) or `phys_graphics` (for graphical tests) and are registered with `add_test()`:
+
+```cmake
+# Non-graphical tests (test.h only)
+add_executable(mesh_tests main.cpp)
+target_link_libraries(mesh_tests PRIVATE phys_testing)
+add_test(NAME mesh_tests COMMAND mesh_tests)
+```
+
+Run all tests with:
+
+```sh
+cd build/Debug && ctest
+```
+
+### Graphical Tests (`--testing` mode)
+
+Graphical demos built with `graphics_app` can also be registered as CTest tests by passing the `--testing` flag. When `--testing` is set:
+
+1. The demo launches and renders normally, allowing visual inspection.
+2. When the application window is closed, a **platform-native dialog** pops up asking "Success?" with Yes/No buttons.
+3. The process exits with code `0` (Yes) or `1` (No), which CTest interprets as pass/fail.
+
+This enables manual visual verification of rendering correctness within an automated test harness.
+
+```cmake
+# Graphical test with --testing flag
+add_executable(bounce_demo bounce_demo.cpp)
+target_link_libraries(bounce_demo PRIVATE phys_graphics)
+add_test(NAME bounce_demo COMMAND bounce_demo --testing)
+```
+
+The dialog is implemented per-platform: `osascript` on macOS, `MessageBox` on Windows, and `zenity` on Linux.
+
+| Flag | Purpose |
+|------|---------|
+| `--testing` | Enables the exit-dialog prompt after the window closes |
 
 ---
 
