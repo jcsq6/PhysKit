@@ -1,10 +1,13 @@
-if (PHYSKIT_BUILD_GRAPHICS OR NOT DEFINED PHYSKIT_BUILD_GRAPHICS)
-    message(STATUS "PhysKit: Including graphical tests.")
-    add_compile_definitions(PHYSKIT_BUILD_GRAPHICS)
-    include(${CMAKE_SOURCE_DIR}/cmake/FetchMagnum.cmake)
+if (PHYSKIT_BUILD_TESTS)
+  message(STATUS "PhysKit: Including graphical tests.")
+  add_compile_definitions(PHYSKIT_BUILD_TESTS)
+  include(${CMAKE_SOURCE_DIR}/cmake/FetchMagnum.cmake)
+
+  find_package(glaze REQUIRED)
+  list(APPEND TEST_LIBRARIES "glaze::glaze")
 else()
     message(STATUS "PhysKit: Skipping graphical tests.")
-    set(MAGNUM_LIBRARIES "")
+    set(TEST_LIBRARIES "")
 endif()
 
 add_library(phys_graphics INTERFACE)
@@ -17,9 +20,10 @@ target_sources(phys_graphics
       include/graphics.h
       include/camera.h
       include/convert.h
+      include/dep/argparse.hpp
 )
 
-target_link_libraries(phys_graphics INTERFACE ${MAGNUM_LIBRARIES} physkit)
+target_link_libraries(phys_graphics INTERFACE ${TEST_LIBRARIES} physkit)
 
 add_subdirectory(demo)
 add_subdirectory(mesh)

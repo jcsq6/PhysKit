@@ -39,7 +39,7 @@ set(MAGNUM_BUILD_STATIC ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(magnum)
 
-set(MAGNUM_LIBRARIES
+set(TEST_LIBRARIES
     glfw
     Magnum::GL
     Magnum::Primitives

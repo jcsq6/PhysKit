@@ -9,13 +9,12 @@ class app : public graphics::graphics_app
 {
 public:
     explicit app(const Arguments &arguments)
-        : graphics::graphics_app{arguments,
-                                 {1280, 720},
-                                 45 * si::degree,
-                                 "Solar System",
-                                 fvec3{0.0f, 30.0f, -50.0f} * si::metre,
-                                 fvec3{0.0f, -30.0f, 50.0f},
-                                 true}
+        : graphics_app{g_config(arguments, false)
+                           .window_size({1280, 720})
+                           .title("Solar System")
+                           .cam_pos(fvec3{0.0f, 30.0f, -50.0f} * si::metre)
+                           .cam_dir(fvec3{0.0f, -0.6f, 1.0f} * physkit::one)
+                           .drag(true)}
     // NOLINT
     {
         using namespace si::unit_symbols;

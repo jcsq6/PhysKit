@@ -14,6 +14,7 @@ Checks: |
   -readability-magic-numbers,
   -readability-braces-around-statements,
   -readability-uppercase-literal-suffix,
+  -readability-avoid-nested-conditional-operator,
   clang-analyzer-*,
 WarningsAsErrors: 'readability-identifier-naming'
 
