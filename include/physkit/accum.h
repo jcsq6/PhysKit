@@ -32,6 +32,7 @@ private:
 class stepper
 {
 public:
+    stepper() : M_accum(1.0 / 60.0 * si::second), M_w{} {}
     stepper(world &w, quantity<si::second> dt) : M_accum(dt), M_w(&w) {}
 
     void update(quantity<si::second> dt)
@@ -43,6 +44,13 @@ public:
     [[nodiscard]] auto accum() const { return M_accum; }
     [[nodiscard]] auto step_size() const { return M_accum.step_size(); }
     [[nodiscard]] auto alpha() const { return M_accum.alpha(); }
+
+    // resets accumulator and sets world
+    void reset(world &w, quantity<si::second> dt)
+    {
+        M_w = &w;
+        M_accum = fixed_accum{dt};
+    }
 
 private:
     fixed_accum M_accum;

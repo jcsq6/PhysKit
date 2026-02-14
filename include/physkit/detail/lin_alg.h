@@ -364,6 +364,8 @@ private:
     {
         return std::forward_like<decltype(self)>(self.M_data);
     }
+
+    template <typename T, typename CharT> friend class std::formatter;
 };
 
 template <typename T, Quantity Q, int Rows, int Cols>
@@ -605,6 +607,8 @@ private:
         requires(!mp_units::detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>);
 
     template <Quantity OQ> friend class unit_quat;
+
+    template <typename T, typename CharT> friend class std::formatter;
 
     constexpr decltype(auto) base(this auto &&self)
     {

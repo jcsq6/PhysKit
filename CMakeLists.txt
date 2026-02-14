@@ -83,7 +83,11 @@ add_library(physkit::physkit ALIAS physkit)
 
 set(PHYSKIT_LIBRARIES physkit)
 
-add_subdirectory(tests)
+option(PHYSKIT_BUILD_TESTS "Build tests and demos" OFF)
+if (PHYSKIT_BUILD_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake/FilterCompileCommands.cmake)
 
