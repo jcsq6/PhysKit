@@ -24,7 +24,7 @@ struct gjk_result
     quantity<si::metre> distance{}; // Minimum distance between shapes
 };
 
-/// @brief implement algorithm for the following:
+/// @brief implement algorithm for the following possible collision possibilities.
 /// obb - obb | aabb - aabb | aabb - obb |
 [[nodiscard]] gjk_result gjk_obb_obb(const obb &a, const obb &b);
 

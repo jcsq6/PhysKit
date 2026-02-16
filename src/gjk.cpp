@@ -15,7 +15,7 @@ using namespace physkit;
 namespace physkit
 {
 ///@brief support function for GJK to take two collides and a direction - returns minkowski
-///difference
+/// difference
 template <typename ShapeA, typename ShapeB>
 vec3<si::metre> minkowski_difference_support(const ShapeA &shape_a, const ShapeB &shape_b,
                                              const vec3<one> &direction)
