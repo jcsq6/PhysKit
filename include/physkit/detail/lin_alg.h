@@ -204,6 +204,12 @@ public:
         return res_t{base().cross(other.base()), typename res_t::key{}};
     }
 
+    template <Quantity OtherQ> auto cwise_product(const unit_mat<OtherQ, _rows, _cols> &other) const
+    {
+        using res_t = unit_mat<quantity<ref * OtherQ::reference, rep_type>, _rows, _cols>;
+        return res_t{base().cwiseProduct(other.base()), typename res_t::key{}};
+    }
+
     auto squared_norm() const { return base().squaredNorm() * ref * ref; }
 
     auto norm() const { return base().norm() * ref; }
@@ -218,6 +224,13 @@ public:
         requires(ref == one)
     {
         M_data.normalize();
+    }
+
+    auto as_diagonal() const
+        requires(_rows == 1 || _cols == 1)
+    {
+        using res_t = unit_mat<Q, std::max(_rows, _cols), std::max(_rows, _cols)>;
+        return res_t{M_data.asDiagonal(), typename res_t::key{}};
     }
 
     constexpr bool operator==(const unit_mat &other) const = default;
