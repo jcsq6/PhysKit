@@ -227,11 +227,67 @@ std::optional<mesh::ray_hit> mesh::ray_intersect(const ray &r,
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-vec3<si::metre> mesh::closest_point(const vec3<si::metre> & /*point*/) const
+vec3<si::metre> mesh::closest_point(const vec3<si::metre> &p) const
 {
-    // TODO: implement closest-point-on-mesh (project onto each triangle, take closest)
-    assert(false && "mesh::closest_point not yet implemented");
-    return vec3<si::metre>::zero();
+    assert(!M_triangles.empty() && "empty mesh");
+    vec3<si::metre> closest = M_vertices[0];
+    for (const auto &tri : M_triangles)
+    {
+        //get points and vectors
+        std::array<vec3<si::metre>, 3> vertices = {
+            M_vertices.at(tri[0]),
+            M_vertices.at(tri[1]),
+            M_vertices.at(tri[2])
+        };
+        std::array<vec3<si::metre>, 3> sides = {
+            M_vertices.at(tri[1]) - M_vertices.at(tri[0]),
+            M_vertices.at(tri[2]) - M_vertices.at(tri[1]),
+            M_vertices.at(tri[0]) - M_vertices.at(tri[2])
+        };
+        auto n = tri.normal(*this);
+
+        //get planar projection of the point
+        vec3<si::metre> projected = p - (((p-vertices[0]).dot(n))*n);
+
+        //project planar point onto the lines of the triangle, and clamp them to the line segment
+        //compare the distance to the point
+        //was the point within the triangle?
+        bool bound = true;
+        for (int i = 0; i < 3; i++)
+        {
+            //projection
+            vec3<si::metre> v = (projected-vertices.at(i));
+            v = vertices.at(i) + ((v.dot(sides.at(i))/sides.at(i).dot(sides.at(i))) * sides.at(i));
+
+            //clamp
+            auto x = v.x();
+            auto y = v.y();
+            auto z = v.z();
+
+            auto less = sides.at(i).x()+vertices.at(i).x() < vertices.at(i).x()? sides.at(i).x()+vertices.at(i).x() : vertices.at(i).x();
+            auto more = sides.at(i).x()+vertices.at(i).x() > vertices.at(i).x()? sides.at(i).x()+vertices.at(i).x() : vertices.at(i).x();
+            x = std::clamp(v.x(), less, more);
+            if (x != v.x()) bound = false;
+
+            less = sides.at(i).y()+vertices.at(i).y() < vertices.at(i).y()? sides.at(i).y()+vertices.at(i).y() : vertices.at(i).y();
+            more = sides.at(i).y()+vertices.at(i).y() > vertices.at(i).y()? sides.at(i).y()+vertices.at(i).y() : vertices.at(i).y();
+            y = std::clamp(v.y(), less, more);
+            if (y != v.y()) bound = false;
+
+            less = sides.at(i).z()+vertices.at(i).z() < vertices.at(i).z()? sides.at(i).z()+vertices.at(i).z() : vertices.at(i).z();
+            more = sides.at(i).z()+vertices.at(i).z() > vertices.at(i).z()? sides.at(i).z()+vertices.at(i).z() : vertices.at(i).z();
+            z = std::clamp(v.z(), less, more);
+            if (z != v.z()) bound = false;
+
+            //compare
+            if ((vec3<m>{x,y,z} - p).norm() < (closest - p).norm())
+                closest = vec3<m>{x,y,z};
+        }
+        //compare planar point
+        if (((projected - p).norm() < (closest - p).norm()) && bound)
+            closest = projected;
+    }
+    return closest;
 }
 
 bool mesh::contains(const vec3<si::metre> &point) const

@@ -425,6 +425,29 @@ void test_mesh_support()
     CHECK_APPROX(msh->support(vec3{1.0, 1.0, 1.0}), vec3{1.0, 1.0, 1.0} * m);
 }
 
+void test_mesh_closest_point()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    //on the corner, edge and face of the cube
+    CHECK_APPROX(msh->closest_point(vec3{1.0*m, 1.0*m, 1.0*m}), vec3{1.0*m, 1.0*m, 1.0*m})
+    CHECK_APPROX(msh->closest_point(vec3{1.0*m, 0.5*m, 1.0*m}), vec3{1.0*m, 0.5*m, 1.0*m})
+    CHECK_APPROX(msh->closest_point(vec3{0.0*m, 0.5*m, 0.5*m}), vec3{0.0*m, 0.5*m, 0.5*m})
+
+    //close to a corner, edge, and face of the cube
+    CHECK_APPROX(msh->closest_point(vec3{1.5*m, 1.5*m, 1.5*m}), vec3{1.0*m, 1.0*m, 1.0*m});
+    CHECK_APPROX(msh->closest_point(vec3{1.5*m, 1.5*m, 0.5*m}), vec3{1.0*m, 1.0*m, 0.5*m});
+    CHECK_APPROX(msh->closest_point(vec3{0.5*m, 0.5*m, 1.5*m}), vec3{0.5*m, 0.5*m, 1.0*m});
+
+    CHECK_APPROX(msh->closest_point(vec3{-0.5*m, -0.5*m, -0.5*m}), vec3{0.0*m, 0.0*m, 0.0*m});
+    CHECK_APPROX(msh->closest_point(vec3{-0.5*m, -0.5*m, 0.5*m}), vec3{0.0*m, 0.0*m, 0.5*m});
+    CHECK_APPROX(msh->closest_point(vec3{0.5*m, 0.5*m, -0.5*m}), vec3{0.5*m, 0.5*m, 0.0*m});
+
+    //inside of the cube
+    CHECK_APPROX(msh->closest_point(vec3{0.5*m, 0.5*m, 0.4*m}), vec3{0.5*m, 0.5*m, 0.0*m});
+
+}
 // ---------------------------------------------------------------------------
 // Mesh instance tests
 // ---------------------------------------------------------------------------
@@ -578,7 +601,8 @@ int main()
         .test("volume", test_mesh_volume)
         .test("ray_intersect", test_mesh_ray_intersect)
         .test("contains", test_mesh_contains)
-        .test("support", test_mesh_support);
+        .test("support", test_mesh_support)
+        .test("closest_point", test_mesh_closest_point);
 
     tests.group("Mesh Instance Tests")
         .test("basic construction", test_mesh_instance_basic)
