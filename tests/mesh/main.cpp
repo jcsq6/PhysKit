@@ -430,23 +430,32 @@ void test_mesh_closest_point()
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
-    //on the corner, edge and face of the cube
-    CHECK_APPROX(msh->closest_point(vec3{1.0*m, 1.0*m, 1.0*m}), vec3{1.0*m, 1.0*m, 1.0*m})
-    CHECK_APPROX(msh->closest_point(vec3{1.0*m, 0.5*m, 1.0*m}), vec3{1.0*m, 0.5*m, 1.0*m})
-    CHECK_APPROX(msh->closest_point(vec3{0.0*m, 0.5*m, 0.5*m}), vec3{0.0*m, 0.5*m, 0.5*m})
+    // on the corner, edge and face of the cube
+    CHECK_APPROX(msh->closest_point(vec3{1.0 * m, 1.0 * m, 1.0 * m}),
+                 vec3{1.0 * m, 1.0 * m, 1.0 * m})
+    CHECK_APPROX(msh->closest_point(vec3{1.0 * m, 0.5 * m, 1.0 * m}),
+                 vec3{1.0 * m, 0.5 * m, 1.0 * m})
+    CHECK_APPROX(msh->closest_point(vec3{0.0 * m, 0.5 * m, 0.5 * m}),
+                 vec3{0.0 * m, 0.5 * m, 0.5 * m})
 
-    //close to a corner, edge, and face of the cube
-    CHECK_APPROX(msh->closest_point(vec3{1.5*m, 1.5*m, 1.5*m}), vec3{1.0*m, 1.0*m, 1.0*m});
-    CHECK_APPROX(msh->closest_point(vec3{1.5*m, 1.5*m, 0.5*m}), vec3{1.0*m, 1.0*m, 0.5*m});
-    CHECK_APPROX(msh->closest_point(vec3{0.5*m, 0.5*m, 1.5*m}), vec3{0.5*m, 0.5*m, 1.0*m});
+    // close to a corner, edge, and face of the cube
+    CHECK_APPROX(msh->closest_point(vec3{1.5 * m, 1.5 * m, 1.5 * m}),
+                 vec3{1.0 * m, 1.0 * m, 1.0 * m});
+    CHECK_APPROX(msh->closest_point(vec3{1.5 * m, 1.5 * m, 0.5 * m}),
+                 vec3{1.0 * m, 1.0 * m, 0.5 * m});
+    CHECK_APPROX(msh->closest_point(vec3{0.5 * m, 0.5 * m, 1.5 * m}),
+                 vec3{0.5 * m, 0.5 * m, 1.0 * m});
 
-    CHECK_APPROX(msh->closest_point(vec3{-0.5*m, -0.5*m, -0.5*m}), vec3{0.0*m, 0.0*m, 0.0*m});
-    CHECK_APPROX(msh->closest_point(vec3{-0.5*m, -0.5*m, 0.5*m}), vec3{0.0*m, 0.0*m, 0.5*m});
-    CHECK_APPROX(msh->closest_point(vec3{0.5*m, 0.5*m, -0.5*m}), vec3{0.5*m, 0.5*m, 0.0*m});
+    CHECK_APPROX(msh->closest_point(vec3{-0.5 * m, -0.5 * m, -0.5 * m}),
+                 vec3{0.0 * m, 0.0 * m, 0.0 * m});
+    CHECK_APPROX(msh->closest_point(vec3{-0.5 * m, -0.5 * m, 0.5 * m}),
+                 vec3{0.0 * m, 0.0 * m, 0.5 * m});
+    CHECK_APPROX(msh->closest_point(vec3{0.5 * m, 0.5 * m, -0.5 * m}),
+                 vec3{0.5 * m, 0.5 * m, 0.0 * m});
 
-    //inside of the cube
-    CHECK_APPROX(msh->closest_point(vec3{0.5*m, 0.5*m, 0.4*m}), vec3{0.5*m, 0.5*m, 0.0*m});
-
+    // inside of the cube
+    CHECK_APPROX(msh->closest_point(vec3{0.5 * m, 0.5 * m, 0.4 * m}),
+                 vec3{0.5 * m, 0.5 * m, 0.0 * m});
 }
 // ---------------------------------------------------------------------------
 // Mesh instance tests
