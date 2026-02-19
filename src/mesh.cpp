@@ -226,72 +226,57 @@ std::optional<mesh::ray_hit> mesh::ray_intersect(const ray &r,
     return best;
 }
 
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+// Use barrycentric coordinates to find closest point on triangle, then pick closest among all
+// triangles.
 vec3<si::metre> mesh::closest_point(const vec3<si::metre> &p) const
 {
     assert(!M_triangles.empty() && "empty mesh");
-    vec3<si::metre> closest = M_vertices[0];
+    auto closest = M_vertices[0];
     for (const auto &tri : M_triangles)
     {
-        // get points and vectors
-        std::array<vec3<si::metre>, 3> vertices = {M_vertices.at(tri[0]), M_vertices.at(tri[1]),
-                                                   M_vertices.at(tri[2])};
-        std::array<vec3<si::metre>, 3> sides = {M_vertices.at(tri[1]) - M_vertices.at(tri[0]),
-                                                M_vertices.at(tri[2]) - M_vertices.at(tri[1]),
-                                                M_vertices.at(tri[0]) - M_vertices.at(tri[2])};
-        auto n = tri.normal(*this);
+        const auto &a = M_vertices[tri[0]];
+        const auto &b = M_vertices[tri[1]];
+        const auto &c = M_vertices[tri[2]];
 
-        // get planar projection of the point
-        vec3<si::metre> projected = p - (((p - vertices[0]).dot(n)) * n);
+        auto ab = b - a;
+        auto ac = c - a;
+        auto ap = p - a;
 
-        // project planar point onto the lines of the triangle, and clamp them to the line segment
-        // compare the distance to the point
-        // was the point within the triangle?
-        bool bound = true;
-        for (int i = 0; i < 3; i++)
+        auto d00 = ab.dot(ab);
+        auto d01 = ab.dot(ac);
+        auto d11 = ac.dot(ac);
+        auto d20 = ap.dot(ab);
+        auto d21 = ap.dot(ac);
+
+        auto denom = d00 * d11 - d01 * d01;
+        if (abs(denom) < 1e-12 * pow<4>(m)) continue;
+
+        auto v = (d11 * d20 - d01 * d21) / denom;
+        auto w = (d00 * d21 - d01 * d20) / denom;
+        auto u = 1.0 - v - w;
+
+        vec3<si::metre> candidate;
+        if (u < 0.0 || v < 0.0 || w < 0.0)
         {
-            // projection
-            vec3<si::metre> v = (projected - vertices.at(i));
-            v = vertices.at(i) +
-                ((v.dot(sides.at(i)) / sides.at(i).dot(sides.at(i))) * sides.at(i));
-
-            // clamp
-            auto x = v.x();
-            auto y = v.y();
-            auto z = v.z();
-
-            auto less = sides.at(i).x() + vertices.at(i).x() < vertices.at(i).x()
-                            ? sides.at(i).x() + vertices.at(i).x()
-                            : vertices.at(i).x();
-            auto more = sides.at(i).x() + vertices.at(i).x() > vertices.at(i).x()
-                            ? sides.at(i).x() + vertices.at(i).x()
-                            : vertices.at(i).x();
-            x = std::clamp(v.x(), less, more);
-            if (x != v.x()) bound = false;
-
-            less = sides.at(i).y() + vertices.at(i).y() < vertices.at(i).y()
-                       ? sides.at(i).y() + vertices.at(i).y()
-                       : vertices.at(i).y();
-            more = sides.at(i).y() + vertices.at(i).y() > vertices.at(i).y()
-                       ? sides.at(i).y() + vertices.at(i).y()
-                       : vertices.at(i).y();
-            y = std::clamp(v.y(), less, more);
-            if (y != v.y()) bound = false;
-
-            less = sides.at(i).z() + vertices.at(i).z() < vertices.at(i).z()
-                       ? sides.at(i).z() + vertices.at(i).z()
-                       : vertices.at(i).z();
-            more = sides.at(i).z() + vertices.at(i).z() > vertices.at(i).z()
-                       ? sides.at(i).z() + vertices.at(i).z()
-                       : vertices.at(i).z();
-            z = std::clamp(v.z(), less, more);
-            if (z != v.z()) bound = false;
-
-            // compare
-            if ((vec3<m>{x, y, z} - p).norm() < (closest - p).norm()) closest = vec3<m>{x, y, z};
+            // project onto each edge and pick the closest
+            candidate = a;
+            auto check_edge = [&p, &candidate](const vec3<si::metre> &e0, const vec3<si::metre> &e1)
+            {
+                auto edge = e1 - e0;
+                auto t = std::clamp(static_cast<double>((p - e0).dot(edge) / edge.squared_norm()),
+                                    0.0, 1.0);
+                auto attempt = e0 + t * edge;
+                if ((attempt - p).squared_norm() < (candidate - p).squared_norm())
+                    candidate = attempt;
+            };
+            check_edge(a, b);
+            check_edge(b, c);
+            check_edge(c, a);
         }
-        // compare planar point
-        if (((projected - p).norm() < (closest - p).norm()) && bound) closest = projected;
+        else // point projects inside the triangle
+            candidate = u * a + v * b + w * c;
+
+        if ((candidate - p).squared_norm() < (closest - p).squared_norm()) closest = candidate;
     }
     return closest;
 }

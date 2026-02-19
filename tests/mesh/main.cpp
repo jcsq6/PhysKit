@@ -431,31 +431,318 @@ void test_mesh_closest_point()
     auto msh = cube.make_mesh();
 
     // on the corner, edge and face of the cube
-    CHECK_APPROX(msh->closest_point(vec3{1.0 * m, 1.0 * m, 1.0 * m}),
-                 vec3{1.0 * m, 1.0 * m, 1.0 * m})
-    CHECK_APPROX(msh->closest_point(vec3{1.0 * m, 0.5 * m, 1.0 * m}),
-                 vec3{1.0 * m, 0.5 * m, 1.0 * m})
-    CHECK_APPROX(msh->closest_point(vec3{0.0 * m, 0.5 * m, 0.5 * m}),
-                 vec3{0.0 * m, 0.5 * m, 0.5 * m})
+    CHECK_APPROX(msh->closest_point(vec3{1.0, 1.0, 1.0} * m), vec3{1.0, 1.0, 1.0} * m)
+    CHECK_APPROX(msh->closest_point(vec3{1.0, 0.5, 1.0} * m), vec3{1.0, 0.5, 1.0} * m)
+    CHECK_APPROX(msh->closest_point(vec3{0.0, 0.5, 0.5} * m), vec3{0.0, 0.5, 0.5} * m)
 
     // close to a corner, edge, and face of the cube
-    CHECK_APPROX(msh->closest_point(vec3{1.5 * m, 1.5 * m, 1.5 * m}),
-                 vec3{1.0 * m, 1.0 * m, 1.0 * m});
-    CHECK_APPROX(msh->closest_point(vec3{1.5 * m, 1.5 * m, 0.5 * m}),
-                 vec3{1.0 * m, 1.0 * m, 0.5 * m});
-    CHECK_APPROX(msh->closest_point(vec3{0.5 * m, 0.5 * m, 1.5 * m}),
-                 vec3{0.5 * m, 0.5 * m, 1.0 * m});
+    CHECK_APPROX(msh->closest_point(vec3{1.5, 1.5, 1.5} * m), vec3{1.0, 1.0, 1.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{1.5, 1.5, 0.5} * m), vec3{1.0, 1.0, 0.5} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, 1.5} * m), vec3{0.5, 0.5, 1.0} * m);
 
-    CHECK_APPROX(msh->closest_point(vec3{-0.5 * m, -0.5 * m, -0.5 * m}),
-                 vec3{0.0 * m, 0.0 * m, 0.0 * m});
-    CHECK_APPROX(msh->closest_point(vec3{-0.5 * m, -0.5 * m, 0.5 * m}),
-                 vec3{0.0 * m, 0.0 * m, 0.5 * m});
-    CHECK_APPROX(msh->closest_point(vec3{0.5 * m, 0.5 * m, -0.5 * m}),
-                 vec3{0.5 * m, 0.5 * m, 0.0 * m});
+    CHECK_APPROX(msh->closest_point(vec3{-0.5, -0.5, -0.5} * m), vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{-0.5, -0.5, 0.5} * m), vec3{0.0, 0.0, 0.5} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, -0.5} * m), vec3{0.5, 0.5, 0.0} * m);
 
     // inside of the cube
-    CHECK_APPROX(msh->closest_point(vec3{0.5 * m, 0.5 * m, 0.4 * m}),
-                 vec3{0.5 * m, 0.5 * m, 0.0 * m});
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, 0.4} * m), vec3{0.5, 0.5, 0.0} * m);
+}
+
+// Exterior point projects onto each of the 6 cube faces
+void test_closest_point_all_faces()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // +X face: point outside at x=2, should project to x=1
+    CHECK_APPROX(msh->closest_point(vec3{2.0, 0.5, 0.5} * m), vec3{1.0, 0.5, 0.5} * m);
+    // -X face: point outside at x=-1, should project to x=0
+    CHECK_APPROX(msh->closest_point(vec3{-1.0, 0.5, 0.5} * m), vec3{0.0, 0.5, 0.5} * m);
+    // +Y face: point outside at y=2, should project to y=1
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 2.0, 0.5} * m), vec3{0.5, 1.0, 0.5} * m);
+    // -Y face: point outside at y=-1, should project to y=0
+    CHECK_APPROX(msh->closest_point(vec3{0.5, -1.0, 0.5} * m), vec3{0.5, 0.0, 0.5} * m);
+    // +Z face: point outside at z=2, should project to z=1
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, 2.0} * m), vec3{0.5, 0.5, 1.0} * m);
+    // -Z face: point outside at z=-1, should project to z=0
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, -1.0} * m), vec3{0.5, 0.5, 0.0} * m);
+}
+
+// Exterior points closest to each of the 12 edges of the unit cube
+void test_closest_point_all_edges()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Edges parallel to X-axis (4 edges)
+    // y=0,z=0 edge
+    CHECK_APPROX(msh->closest_point(vec3{0.5, -1.0, -1.0} * m), vec3{0.5, 0.0, 0.0} * m);
+    // y=1,z=0 edge
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 2.0, -1.0} * m), vec3{0.5, 1.0, 0.0} * m);
+    // y=0,z=1 edge
+    CHECK_APPROX(msh->closest_point(vec3{0.5, -1.0, 2.0} * m), vec3{0.5, 0.0, 1.0} * m);
+    // y=1,z=1 edge
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 2.0, 2.0} * m), vec3{0.5, 1.0, 1.0} * m);
+
+    // Edges parallel to Y-axis (4 edges)
+    // x=0,z=0 edge
+    CHECK_APPROX(msh->closest_point(vec3{-1.0, 0.5, -1.0} * m), vec3{0.0, 0.5, 0.0} * m);
+    // x=1,z=0 edge
+    CHECK_APPROX(msh->closest_point(vec3{2.0, 0.5, -1.0} * m), vec3{1.0, 0.5, 0.0} * m);
+    // x=0,z=1 edge
+    CHECK_APPROX(msh->closest_point(vec3{-1.0, 0.5, 2.0} * m), vec3{0.0, 0.5, 1.0} * m);
+    // x=1,z=1 edge
+    CHECK_APPROX(msh->closest_point(vec3{2.0, 0.5, 2.0} * m), vec3{1.0, 0.5, 1.0} * m);
+
+    // Edges parallel to Z-axis (4 edges)
+    // x=0,y=0 edge
+    CHECK_APPROX(msh->closest_point(vec3{-1.0, -1.0, 0.5} * m), vec3{0.0, 0.0, 0.5} * m);
+    // x=1,y=0 edge
+    CHECK_APPROX(msh->closest_point(vec3{2.0, -1.0, 0.5} * m), vec3{1.0, 0.0, 0.5} * m);
+    // x=0,y=1 edge
+    CHECK_APPROX(msh->closest_point(vec3{-1.0, 2.0, 0.5} * m), vec3{0.0, 1.0, 0.5} * m);
+    // x=1,y=1 edge
+    CHECK_APPROX(msh->closest_point(vec3{2.0, 2.0, 0.5} * m), vec3{1.0, 1.0, 0.5} * m);
+}
+
+// Exterior points closest to each of the 8 corners of the unit cube
+void test_closest_point_all_corners()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Each corner approached from a diagonal direction
+    CHECK_APPROX(msh->closest_point(vec3{-1.0, -1.0, -1.0} * m), vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{2.0, -1.0, -1.0} * m), vec3{1.0, 0.0, 0.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{2.0, 2.0, -1.0} * m), vec3{1.0, 1.0, 0.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{-1.0, 2.0, -1.0} * m), vec3{0.0, 1.0, 0.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{-1.0, -1.0, 2.0} * m), vec3{0.0, 0.0, 1.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{2.0, -1.0, 2.0} * m), vec3{1.0, 0.0, 1.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{2.0, 2.0, 2.0} * m), vec3{1.0, 1.0, 1.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{-1.0, 2.0, 2.0} * m), vec3{0.0, 1.0, 1.0} * m);
+}
+
+// Interior points nearest to each face
+void test_closest_point_interior_all_faces()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Closest to -X face (x=0)
+    CHECK_APPROX(msh->closest_point(vec3{0.1, 0.5, 0.5} * m), vec3{0.0, 0.5, 0.5} * m);
+    // Closest to +X face (x=1)
+    CHECK_APPROX(msh->closest_point(vec3{0.9, 0.5, 0.5} * m), vec3{1.0, 0.5, 0.5} * m);
+    // Closest to -Y face (y=0)
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.1, 0.5} * m), vec3{0.5, 0.0, 0.5} * m);
+    // Closest to +Y face (y=1)
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.9, 0.5} * m), vec3{0.5, 1.0, 0.5} * m);
+    // Closest to -Z face (z=0)
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, 0.1} * m), vec3{0.5, 0.5, 0.0} * m);
+    // Closest to +Z face (z=1)
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, 0.9} * m), vec3{0.5, 0.5, 1.0} * m);
+}
+
+// Points very far from the mesh
+void test_closest_point_far_away()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Very far along +X axis -> projects to +X face
+    CHECK_APPROX(msh->closest_point(vec3{1000.0, 0.5, 0.5} * m), vec3{1.0, 0.5, 0.5} * m);
+    // Very far diagonally -> projects to corner
+    CHECK_APPROX(msh->closest_point(vec3{100.0, 100.0, 100.0} * m), vec3{1.0, 1.0, 1.0} * m);
+    // Very far along -Y axis -> projects to -Y face
+    CHECK_APPROX(msh->closest_point(vec3{0.3, -500.0, 0.7} * m), vec3{0.3, 0.0, 0.7} * m);
+}
+
+// Points very close to the surface (just barely inside/outside)
+void test_closest_point_near_surface()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+    constexpr auto delta = 0.001;
+
+    // Just outside +Z face
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, (1.0 + delta)} * m), vec3{0.5, 0.5, 1.0} * m);
+    // Just inside +Z face -> closest is +Z face
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, (1.0 - delta)} * m), vec3{0.5, 0.5, 1.0} * m);
+    // Just outside -X face
+    CHECK_APPROX(msh->closest_point(vec3{-delta, 0.5, 0.5} * m), vec3{0.0, 0.5, 0.5} * m);
+    // Just inside -X face -> closest is -X face
+    CHECK_APPROX(msh->closest_point(vec3{delta, 0.5, 0.5} * m), vec3{0.0, 0.5, 0.5} * m);
+}
+
+// Points exactly on surface features
+void test_closest_point_on_surface()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Exact face center on each face
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, 0.0} * m), vec3{0.5, 0.5, 0.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.5, 1.0} * m), vec3{0.5, 0.5, 1.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.0, 0.5} * m), vec3{0.5, 0.0, 0.5} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 1.0, 0.5} * m), vec3{0.5, 1.0, 0.5} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.0, 0.5, 0.5} * m), vec3{0.0, 0.5, 0.5} * m);
+    CHECK_APPROX(msh->closest_point(vec3{1.0, 0.5, 0.5} * m), vec3{1.0, 0.5, 0.5} * m);
+
+    // Edge midpoints
+    CHECK_APPROX(msh->closest_point(vec3{0.5, 0.0, 0.0} * m), vec3{0.5, 0.0, 0.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.0, 0.5, 0.0} * m), vec3{0.0, 0.5, 0.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.0, 0.0, 0.5} * m), vec3{0.0, 0.0, 0.5} * m);
+
+    // All 8 vertices
+    for (const auto &v : cube.vertices) CHECK_APPROX(msh->closest_point(v), v);
+}
+
+// Non-axis-aligned exterior: approach from arbitrary diagonal
+void test_closest_point_diagonal_approach()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Point at (2, 0.5, 0.5): directly outside +X face
+    CHECK_APPROX(msh->closest_point(vec3{2.0, 0.5, 0.5} * m), vec3{1.0, 0.5, 0.5} * m);
+
+    // Point at (1.5, 0.5, 1.5): outside the +X/+Z edge region
+    // Closest is on the edge at x=1, z=1
+    CHECK_APPROX(msh->closest_point(vec3{1.5, 0.5, 1.5} * m), vec3{1.0, 0.5, 1.0} * m);
+
+    // Point at (1.3, -0.3, 0.5): outside in the +X/-Y edge region
+    CHECK_APPROX(msh->closest_point(vec3{1.3, -0.3, 0.5} * m), vec3{1.0, 0.0, 0.5} * m);
+}
+
+// Verify distance is minimized: the returned closest point should be
+// nearer than other surface sample points for various query points.
+void test_closest_point_distance_property()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Various query points (interior, exterior face, exterior edge, exterior corner)
+    std::array<vec3<si::metre>, 5> queries = {{
+        vec3{0.3, 0.3, 0.2} * m,    // interior
+        vec3{2.0, 0.5, 0.5} * m,    // outside face
+        vec3{1.5, -0.5, 0.5} * m,   // outside edge
+        vec3{-1.0, -1.0, -1.0} * m, // outside corner
+        vec3{0.5, 0.5, 0.5} * m,    // center
+    }};
+
+    // Sample surface points to compare against
+    std::array<vec3<si::metre>, 6> surface_samples = {{
+        vec3{0.5, 0.5, 0.0} * m, // -Z face center
+        vec3{0.5, 0.5, 1.0} * m, // +Z face center
+        vec3{0.0, 0.5, 0.5} * m, // -X face center
+        vec3{1.0, 0.5, 0.5} * m, // +X face center
+        vec3{0.5, 0.0, 0.5} * m, // -Y face center
+        vec3{0.5, 1.0, 0.5} * m, // +Y face center
+    }};
+
+    for (const auto &q : queries)
+    {
+        auto cp = msh->closest_point(q);
+        auto best_dist_sq = (cp - q).squared_norm();
+        for (const auto &sp : surface_samples)
+        {
+            auto sp_dist_sq = (sp - q).squared_norm();
+            CHECK(best_dist_sq <= sp_dist_sq + 1e-9 * m * m);
+        }
+    }
+}
+
+// Test closest_point on a centered box (symmetric about origin)
+void test_closest_point_centered_box()
+{
+    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m); // half-extents -> [-1,1]^3
+
+    // Exterior: face projections
+    CHECK_APPROX(msh->closest_point(vec3{3.0, 0.0, 0.0} * m), vec3{1.0, 0.0, 0.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.0, -3.0, 0.0} * m), vec3{0.0, -1.0, 0.0} * m);
+
+    // Exterior: corner
+    CHECK_APPROX(msh->closest_point(vec3{2.0, 2.0, 2.0} * m), vec3{1.0, 1.0, 1.0} * m);
+
+    // Interior: nearest face
+    CHECK_APPROX(msh->closest_point(vec3{0.0, 0.0, 0.9} * m), vec3{0.0, 0.0, 1.0} * m);
+    CHECK_APPROX(msh->closest_point(vec3{0.0, -0.9, 0.0} * m), vec3{0.0, -1.0, 0.0} * m);
+}
+
+// Test closest_point on a sphere mesh with known geometry
+void test_closest_point_sphere_mesh()
+{
+    auto msh = mesh::sphere(2.0 * m, 32, 32);
+
+    // Point far along +X axis: closest point should be near (2,0,0)
+    auto cp = msh->closest_point(vec3{5.0, 0.0, 0.0} * m);
+    CHECK(std::abs(cp.x().numerical_value_in(si::metre) - 2.0) < 0.1);
+    CHECK(std::abs(cp.y().numerical_value_in(si::metre)) < 0.1);
+    CHECK(std::abs(cp.z().numerical_value_in(si::metre)) < 0.1);
+
+    // Point at origin (center of sphere): closest should be on surface
+    auto cp_center = msh->closest_point(vec3{0.0, 0.0, 0.0} * m);
+    auto dist = cp_center.norm();
+    CHECK(std::abs(dist.numerical_value_in(si::metre) - 2.0) < 0.15);
+
+    // Point far along -Y: closest near (0,-2,0)
+    auto cp_ny = msh->closest_point(vec3{0.0, -10.0, 0.0} * m);
+    CHECK(std::abs(cp_ny.y().numerical_value_in(si::metre) - (-2.0)) < 0.01);
+}
+
+// Test closest_point on a pyramid mesh
+void test_closest_point_pyramid()
+{
+    auto msh = mesh::pyramid(1.0 * m, 2.0 * m); // base half=1, height=2
+    // Base is at y=0, apex at y=2, base corners at (±1, 0, ±1)
+
+    // Point below base center -> projects to base
+    auto cp = msh->closest_point(vec3{0.0, -1.0, 0.0} * m);
+    CHECK_APPROX(cp.y(), 0.0 * m);
+
+    // Point above apex -> projects to apex (0, 2, 0)
+    auto cp_top = msh->closest_point(vec3{0.0, 5.0, 0.0} * m);
+    CHECK_APPROX(cp_top, vec3{0.0, 2.0, 0.0} * m);
+
+    // Point at base corner far away projects to base corner
+    CHECK_APPROX(msh->closest_point(vec3{3.0, -1.0, 3.0} * m), vec3{1.0, 0.0, 1.0} * m);
+}
+
+// Test closest_point via mesh::instance (transformed mesh)
+void test_closest_point_instance()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Translated instance at (5, 0, 0)
+    auto inst = msh->at(vec3{5.0, 0.0, 0.0} * m);
+    CHECK_APPROX(inst.closest_point(vec3{7.0, 0.5, 0.5} * m), vec3{6.0, 0.5, 0.5} * m);
+    CHECK_APPROX(inst.closest_point(vec3{4.0, 0.5, 0.5} * m), vec3{5.0, 0.5, 0.5} * m);
+
+    // Interior of translated instance
+    CHECK_APPROX(inst.closest_point(vec3{5.5, 0.5, 0.1} * m), vec3{5.5, 0.5, 0.0} * m);
+}
+
+// Test closest_point via rotated mesh::instance
+void test_closest_point_instance_rotated()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // 90-degree rotation around Z: (x,y,z) -> (-y,x,z)
+    // Unit cube [0,1]^3 becomes [-1,0] x [0,1] x [0,1]
+    auto rot_z =
+        quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3{0.0, 0.0, 1.0});
+    auto inst = msh->at(vec3{0.0, 0.0, 0.0} * m, rot_z);
+
+    // Point outside at x=-2: should project to x=-1 face
+    auto cp = inst.closest_point(vec3{-2.0, 0.5, 0.5} * m);
+    CHECK_APPROX(cp.x(), -1.0 * m);
+    CHECK_APPROX(cp.y(), 0.5 * m);
+    CHECK_APPROX(cp.z(), 0.5 * m);
+
+    // Point outside at y=2: should project to y=1 face
+    auto cp2 = inst.closest_point(vec3{-0.5, 2.0, 0.5} * m);
+    CHECK_APPROX(cp2.y(), 1.0 * m);
 }
 // ---------------------------------------------------------------------------
 // Mesh instance tests
@@ -612,6 +899,22 @@ int main()
         .test("contains", test_mesh_contains)
         .test("support", test_mesh_support)
         .test("closest_point", test_mesh_closest_point);
+
+    tests.group("Closest Point Tests")
+        .test("all faces exterior", test_closest_point_all_faces)
+        .test("all 12 edges", test_closest_point_all_edges)
+        .test("all 8 corners", test_closest_point_all_corners)
+        .test("interior near each face", test_closest_point_interior_all_faces)
+        .test("far-away points", test_closest_point_far_away)
+        .test("near surface (epsilon)", test_closest_point_near_surface)
+        .test("on surface features", test_closest_point_on_surface)
+        .test("diagonal approach", test_closest_point_diagonal_approach)
+        .test("distance minimality", test_closest_point_distance_property)
+        .test("centered box mesh", test_closest_point_centered_box)
+        .test("sphere mesh", test_closest_point_sphere_mesh)
+        .test("pyramid mesh", test_closest_point_pyramid)
+        .test("translated instance", test_closest_point_instance)
+        .test("rotated instance", test_closest_point_instance_rotated);
 
     tests.group("Mesh Instance Tests")
         .test("basic construction", test_mesh_instance_basic)

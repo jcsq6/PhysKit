@@ -380,6 +380,13 @@ public:
         }
 
         [[nodiscard]] vec3<one> normal(const instance &inst) const;
+
+        [[nodiscard]] std::array<vec3<si::metre>, 3> vertices(const mesh &m) const
+        {
+            return {m.M_vertices[(*this)[0]], m.M_vertices[(*this)[1]], m.M_vertices[(*this)[2]]};
+        }
+
+        [[nodiscard]] std::array<vec3<si::metre>, 3> vertices(const instance &inst) const;
     };
 
     struct ray_hit
@@ -525,5 +532,12 @@ private:
 inline vec3<one> mesh::triangle_t::normal(const mesh::instance &inst) const
 {
     return inst.orientation() * this->normal(inst.geometry());
+}
+inline std::array<vec3<si::metre>, 3> mesh::triangle_t::vertices(const instance &inst) const
+{
+    auto local = this->vertices(inst.geometry());
+    return {inst.orientation() * local[0] + inst.position(),
+            inst.orientation() * local[1] + inst.position(),
+            inst.orientation() * local[2] + inst.position()};
 }
 } // namespace physkit
