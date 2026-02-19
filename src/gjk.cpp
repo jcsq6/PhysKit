@@ -30,42 +30,46 @@ vec3<si::metre> minkowski_difference_support(const ShapeA &shape_a, const ShapeB
 class Simplex
 {
 public:
-    Simplex() : count_(0) {}
+    Simplex() : default {}
     void add_point(const vec3<si::metre> &point)
     {
-        if (count_ < 4)
+        if (M_count < 4)
         {
-            points_[count_] = point;
-            count_++;
+            M_points[M_count] = point;
+            M_count++;
         }
     }
 
-    size_t size() const { return count_; }
+    [[nodiscard]] size_t size() const { return M_count; }
 
-    vec3<si::metre> &operator[](size_t i) { return points_[i]; }
+    vec3<si::metre> &operator[](size_t i) { return M_points[i]; }
     const vec3<si::metre> &operator[](size_t i) const
     {
-        return points_[i];
+        return M_points[i];
     } // Fixed: was returning pointer, should return reference
 
     // remove points at index i and shift all points after
     void remove_point(size_t i)
     {
-        for (size_t j = i; j < count_ - 1; ++j)
+        for (size_t j = i; j < M_count - 1; ++j)
         { // Fixed: extra space in expression
-            points_[j] = points_[j + 1];
+            M_points[j] = M_points[j + 1];
         }
-        count_--;
+        M_count--;
     }
 
     // find the last point in the simplex
     const vec3<si::metre> &last() const
     {
-        return points_[count_ - 1];
+        return M_points[M_count - 1];
     } // Fixed: return const reference
 private:
-    std::array<vec3<si::metre>, 4> points_;
-    size_t count_;
+    std::array<vec3<si::metre>, 4> M_points;
+    [[nodiscard]] size_t M_count{};
+
+    // Create support functions before creating the iteration loop
+
+    vec
 };
 
 } // namespace physkit
