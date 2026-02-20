@@ -134,20 +134,12 @@ void test_aabb_scale()
 {
     aabb box{.min = vec3{0, 0, 0} * m, .max = vec3{2, 2, 2} * m};
     auto scaled = box * 2.0;
-    CHECK_APPROX(scaled.min, vec3{-1, -1, -1} * m);
-    CHECK_APPROX(scaled.max, vec3{3, 3, 3} * m);
+    CHECK_APPROX(scaled.min, vec3{0, 0, 0} * m);
+    CHECK_APPROX(scaled.max, vec3{4, 4, 4} * m);
 
     auto halved = box / 2.0;
-    CHECK_APPROX(halved.min, vec3{0.5, 0.5, 0.5} * m);
-    CHECK_APPROX(halved.max, vec3{1.5, 1.5, 1.5} * m);
-
-    auto qscaled = box * 2.0;
-    CHECK_APPROX(qscaled.min, vec3{-1.0, -1.0, -1.0} * m);
-    CHECK_APPROX(qscaled.max, vec3{3.0, 3.0, 3.0} * m);
-
-    auto qdiv = box / 2.0;
-    CHECK_APPROX(qdiv.min, vec3{0.5, 0.5, 0.5} * m);
-    CHECK_APPROX(qdiv.max, vec3{1.5, 1.5, 1.5} * m);
+    CHECK_APPROX(halved.min, vec3{0, 0, 0} * m);
+    CHECK_APPROX(halved.max, vec3{1, 1, 1} * m);
 }
 
 void test_aabb_compound_assign()
@@ -163,23 +155,23 @@ void test_aabb_compound_assign()
     CHECK_APPROX(box.max, vec3{2.0, 2.0, 2.0} * m);
 
     box *= 2.0;
-    CHECK_APPROX(box.min, vec3{-1.0, -1.0, -1.0} * m);
-    CHECK_APPROX(box.max, vec3{3.0, 3.0, 3.0} * m);
+    CHECK_APPROX(box.min, vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(box.max, vec3{4.0, 4.0, 4.0} * m);
 
     box = {.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
     box /= 2.0;
-    CHECK_APPROX(box.min, vec3{0.5, 0.5, 0.5} * m);
-    CHECK_APPROX(box.max, vec3{1.5, 1.5, 1.5} * m);
+    CHECK_APPROX(box.min, vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(box.max, vec3{1.0, 1.0, 1.0} * m);
 
     box = {.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
     box *= 2.0;
-    CHECK_APPROX(box.min, vec3{-1.0, -1.0, -1.0} * m);
-    CHECK_APPROX(box.max, vec3{3.0, 3.0, 3.0} * m);
+    CHECK_APPROX(box.min, vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(box.max, vec3{4.0, 4.0, 4.0} * m);
 
     box = {.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
     box /= 2.0;
-    CHECK_APPROX(box.min, vec3{0.5, 0.5, 0.5} * m);
-    CHECK_APPROX(box.max, vec3{1.5, 1.5, 1.5} * m);
+    CHECK_APPROX(box.min, vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(box.max, vec3{1.0, 1.0, 1.0} * m);
 }
 
 void test_aabb_mat_transform()
@@ -396,22 +388,118 @@ void test_mesh_ray_intersect()
     CHECK_APPROX(inside_hit->distance, 0.5 * m);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_mesh_contains()
 {
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
-    // Use points where y != z to avoid hitting the shared diagonal edge of each face pair,
-    // which causes the ray-parity test to double-count crossings.
+    // --- Interior points ---
+    // The winding-number implementation handles all interior points correctly,
+    // including those along mesh diagonals that would confuse a ray-parity test.
+
+    // Center
+    CHECK(msh->contains(vec3{0.5, 0.5, 0.5} * m));
+
+    // General interior points
     CHECK(msh->contains(vec3{0.3, 0.2, 0.4} * m));
     CHECK(msh->contains(vec3{0.7, 0.2, 0.4} * m));
     CHECK(msh->contains(vec3{0.3, 0.7, 0.4} * m));
 
-    // Exterior points
-    CHECK(!msh->contains(vec3{-0.5, 0.2, 0.4} * m));
-    CHECK(!msh->contains(vec3{1.5, 0.2, 0.4} * m));
-    CHECK(!msh->contains(vec3{0.3, -0.5, 0.4} * m));
-    CHECK(!msh->contains(vec3{0.3, 0.2, 1.5} * m));
+    // Points along mesh face diagonals (y == z triggers the shared edge that broke ray-casting)
+    CHECK(msh->contains(vec3{0.5, 0.3, 0.3} * m)); // y == z
+    CHECK(msh->contains(vec3{0.5, 0.6, 0.6} * m)); // y == z
+    CHECK(msh->contains(vec3{0.2, 0.4, 0.4} * m)); // y == z
+
+    // Points along the space diagonal (x == y == z)
+    CHECK(msh->contains(vec3{0.2, 0.2, 0.2} * m));
+    CHECK(msh->contains(vec3{0.8, 0.8, 0.8} * m));
+
+    // Near each face (just inside)
+    constexpr auto eps = 0.01;
+    CHECK(msh->contains(vec3{eps, 0.5, 0.5} * m));       // near -X face
+    CHECK(msh->contains(vec3{1.0 - eps, 0.5, 0.5} * m)); // near +X face
+    CHECK(msh->contains(vec3{0.5, eps, 0.5} * m));       // near -Y face
+    CHECK(msh->contains(vec3{0.5, 1.0 - eps, 0.5} * m)); // near +Y face
+    CHECK(msh->contains(vec3{0.5, 0.5, eps} * m));       // near -Z face
+    CHECK(msh->contains(vec3{0.5, 0.5, 1.0 - eps} * m)); // near +Z face
+
+    // Near corners (just inside)
+    CHECK(msh->contains(vec3{eps, eps, eps} * m));
+    CHECK(msh->contains(vec3{1.0 - eps, 1.0 - eps, 1.0 - eps} * m));
+    CHECK(msh->contains(vec3{eps, 1.0 - eps, eps} * m));
+    CHECK(msh->contains(vec3{1.0 - eps, eps, 1.0 - eps} * m));
+
+    // --- Exterior points ---
+
+    // One side of each face
+    CHECK(!msh->contains(vec3{-0.5, 0.2, 0.4} * m)); // -X side
+    CHECK(!msh->contains(vec3{1.5, 0.2, 0.4} * m));  // +X side
+    CHECK(!msh->contains(vec3{0.3, -0.5, 0.4} * m)); // -Y side
+    CHECK(!msh->contains(vec3{0.3, 1.5, 0.4} * m));  // +Y side
+    CHECK(!msh->contains(vec3{0.3, 0.2, -0.5} * m)); // -Z side
+    CHECK(!msh->contains(vec3{0.3, 0.2, 1.5} * m));  // +Z side
+
+    // Just outside each face
+    CHECK(!msh->contains(vec3{-eps, 0.5, 0.5} * m));
+    CHECK(!msh->contains(vec3{1.0 + eps, 0.5, 0.5} * m));
+    CHECK(!msh->contains(vec3{0.5, -eps, 0.5} * m));
+    CHECK(!msh->contains(vec3{0.5, 1.0 + eps, 0.5} * m));
+    CHECK(!msh->contains(vec3{0.5, 0.5, -eps} * m));
+    CHECK(!msh->contains(vec3{0.5, 0.5, 1.0 + eps} * m));
+
+    // Outside corner and edge regions
+    CHECK(!msh->contains(vec3{-0.5, -0.5, -0.5} * m)); // corner region
+    CHECK(!msh->contains(vec3{1.5, 1.5, 1.5} * m));    // corner region
+    CHECK(!msh->contains(vec3{1.5, -0.5, 0.5} * m));   // edge region
+    CHECK(!msh->contains(vec3{-0.5, 0.5, 1.5} * m));   // edge region
+
+    // Far exterior
+    CHECK(!msh->contains(vec3{-10.0, 0.5, 0.5} * m));
+    CHECK(!msh->contains(vec3{10.0, 0.5, 0.5} * m));
+    CHECK(!msh->contains(vec3{0.5, 0.5, -10.0} * m));
+    CHECK(!msh->contains(vec3{0.5, 0.5, 10.0} * m));
+
+    // --- Factory mesh: mesh::box (half-extents = 1 → range [-1, 1]^3) ---
+    {
+        auto box_msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
+
+        CHECK(box_msh->contains(vec3{0.0, 0.0, 0.0} * m)); // center
+        CHECK(box_msh->contains(vec3{0.5, 0.5, 0.5} * m));
+        CHECK(box_msh->contains(vec3{-0.5, -0.5, 0.0} * m));
+        CHECK(box_msh->contains(vec3{0.0, 0.0, 0.9} * m));  // near +Z face
+        CHECK(box_msh->contains(vec3{0.0, -0.9, 0.0} * m)); // near -Y face
+
+        CHECK(!box_msh->contains(vec3{1.5, 0.0, 0.0} * m));    // outside +X
+        CHECK(!box_msh->contains(vec3{0.0, -1.5, 0.0} * m));   // outside -Y
+        CHECK(!box_msh->contains(vec3{-2.0, -2.0, -2.0} * m)); // far corner
+    }
+
+    // --- Factory mesh: mesh::sphere ---
+    {
+        auto sph_msh = mesh::sphere(1.0 * m, 32, 32);
+
+        CHECK(sph_msh->contains(vec3{0.0, 0.0, 0.0} * m)); // center
+        CHECK(sph_msh->contains(vec3{0.5, 0.0, 0.0} * m));
+        CHECK(sph_msh->contains(vec3{0.0, 0.5, 0.5} * m));
+
+        CHECK(!sph_msh->contains(vec3{2.0, 0.0, 0.0} * m));  // outside
+        CHECK(!sph_msh->contains(vec3{0.8, 0.8, 0.8} * m));  // outside (diagonal)
+        CHECK(!sph_msh->contains(vec3{-5.0, 0.0, 0.0} * m)); // far outside
+    }
+
+    // --- Translated instance ---
+    {
+        auto inst = msh->at(vec3{5.0, 0.0, 0.0} * m);
+
+        CHECK(inst.contains(vec3{5.5, 0.5, 0.5} * m));       // center of translated cube
+        CHECK(inst.contains(vec3{5.0 + eps, 0.5, 0.5} * m)); // just inside -X face
+        CHECK(inst.contains(vec3{5.5, 0.3, 0.3} * m));       // along diagonal
+
+        CHECK(!inst.contains(vec3{0.5, 0.5, 0.5} * m)); // original location
+        CHECK(!inst.contains(vec3{4.5, 0.5, 0.5} * m)); // just outside -X face
+        CHECK(!inst.contains(vec3{6.5, 0.5, 0.5} * m)); // just outside +X face
+    }
 }
 
 void test_mesh_support()

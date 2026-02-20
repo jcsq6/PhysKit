@@ -80,25 +80,16 @@ public:
         return {.min = min - offset, .max = max - offset};
     }
 
-    [[nodiscard]] constexpr aabb operator*(float_t scale) const
+    [[nodiscard]] constexpr aabb operator*(quantity<one> scale) const
     {
-        auto center = this->center();
-        auto half_size = size() * (scale / 2.0f);
-        return {.min = center - half_size, .max = center + half_size};
-    }
-
-    [[nodiscard]] constexpr aabb operator*(QuantityOf<dimensionless> auto scale) const
-    {
-        auto center = this->center();
-        auto half_size = size() * (scale / 2.0f);
-        return {.min = center - half_size, .max = center + half_size};
+        return {.min = min * scale, .max = max * scale};
     }
 
     template <Quantity Q>
         requires(QuantityOf<Q, dimensionless>)
     [[nodiscard]] aabb operator*(const unit_mat<Q, 3, 3> &transform) const
     {
-        aabb result{.min = transform * min, .max = transform * min};
+        aabb result{.min = transform * min, .max = transform * min}; // initialize to point(0)
         for (unsigned int i = 1; i < 8; ++i)
         {
             auto pt = transform * point(i);
@@ -116,7 +107,7 @@ public:
         requires(QuantityOf<Q, dimensionless>)
     [[nodiscard]] aabb operator*(const unit_quat<Q> &transform) const
     {
-        aabb result{.min = transform * min, .max = transform * min};
+        aabb result{.min = transform * min, .max = transform * min}; // initialize to point(0)
         for (unsigned int i = 1; i < 8; ++i)
         {
             auto pt = transform * point(i);
@@ -130,18 +121,9 @@ public:
         return result;
     }
 
-    [[nodiscard]] constexpr aabb operator/(float_t scale) const
+    [[nodiscard]] constexpr aabb operator/(quantity<one> scale) const
     {
-        auto center = this->center();
-        auto half_size = size() * (.5f / scale);
-        return {.min = center - half_size, .max = center + half_size};
-    }
-
-    [[nodiscard]] constexpr aabb operator/(QuantityOf<dimensionless> auto scale) const
-    {
-        auto center = this->center();
-        auto half_size = size() * (.5f / scale);
-        return {.min = center - half_size, .max = center + half_size};
+        return {.min = min / scale, .max = max / scale};
     }
 
     constexpr auto &operator+=(const vec3<si::metre> &offset)
@@ -158,39 +140,17 @@ public:
         return *this;
     }
 
-    constexpr auto &operator*=(float_t scale)
+    constexpr auto &operator*=(quantity<one> scale)
     {
-        auto c = center();
-        auto h = size() * (scale / 2.0f);
-        min = c - h;
-        max = c + h;
+        min *= scale;
+        max *= scale;
         return *this;
     }
 
-    constexpr auto &operator*=(QuantityOf<dimensionless> auto scale)
+    constexpr auto &operator/=(quantity<one> scale)
     {
-        auto c = center();
-        auto h = size() * (scale / 2.0f);
-        min = c - h;
-        max = c + h;
-        return *this;
-    }
-
-    constexpr auto &operator/=(float_t scale)
-    {
-        auto c = center();
-        auto h = size() * (.5f / scale);
-        min = c - h;
-        max = c + h;
-        return *this;
-    }
-
-    constexpr auto &operator/=(QuantityOf<dimensionless> auto scale)
-    {
-        auto c = center();
-        auto h = size() * (.5f / scale);
-        min = c - h;
-        max = c + h;
+        min /= scale;
+        max /= scale;
         return *this;
     }
 };
@@ -320,12 +280,7 @@ public:
         return {.center = center - offset, .radius = radius};
     }
 
-    [[nodiscard]] constexpr bounding_sphere operator*(float_t scale) const
-    {
-        return {.center = center, .radius = radius * scale};
-    }
-
-    [[nodiscard]] constexpr bounding_sphere operator*(QuantityOf<dimensionless> auto scale) const
+    [[nodiscard]] constexpr bounding_sphere operator*(quantity<one> scale) const
     {
         return {.center = center, .radius = radius * scale};
     }
@@ -342,14 +297,9 @@ public:
         return *this;
     }
 
-    constexpr auto &operator*=(float_t scale)
+    constexpr auto &operator*=(quantity<one> scale)
     {
-        radius = radius * scale;
-        return *this;
-    }
-
-    constexpr auto &operator*=(QuantityOf<dimensionless> auto scale)
-    {
+        center *= scale;
         radius = radius * scale;
         return *this;
     }

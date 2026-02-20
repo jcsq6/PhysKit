@@ -163,8 +163,7 @@ quantity<pow<3>(si::metre)> mesh::volume() const
 vec3<si::metre> mesh::mass_center() const
 {
     // TODO: implement volume-weighted centroid via divergence theorem
-    assert(false && "mesh::mass_center not yet implemented");
-    return vec3<si::metre>::zero();
+    throw std::runtime_error("mesh::mass_center not yet implemented");
 }
 
 mat3<si::kilogram * pow<2>(si::metre)>
@@ -172,8 +171,7 @@ mat3<si::kilogram * pow<2>(si::metre)>
 mesh::inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> /*density*/) const
 {
     // TODO: implement inertia tensor via canonical tetrahedron integrals
-    assert(false && "mesh::inertia_tensor not yet implemented");
-    return mat3<si::kilogram * pow<2>(si::metre)>::zero();
+    throw std::runtime_error("mesh::inertia_tensor not yet implemented");
 }
 
 // Moeller–Trumbore
@@ -283,39 +281,30 @@ vec3<si::metre> mesh::closest_point(const vec3<si::metre> &p) const
 
 bool mesh::contains(const vec3<si::metre> &point) const
 {
-    // Ray-casting parity test: cast a ray in +x and count crossings.
-    auto dir = vec3{1.0, 0.0, 0.0};
-    int crossings = 0;
+    if (!M_bounds.contains(point)) return false; // early out
 
-    constexpr auto eps = 1e-12;
-
+    double winding_number = 0.0;
     for (const auto &tri : M_triangles)
     {
-        const auto &v0 = M_vertices[tri[0]];
-        const auto &v1 = M_vertices[tri[1]];
-        const auto &v2 = M_vertices[tri[2]];
+        auto a = M_vertices[tri[0]] - point;
+        auto b = M_vertices[tri[1]] - point;
+        auto c = M_vertices[tri[2]] - point;
 
-        auto edge1 = v1 - v0;
-        auto edge2 = v2 - v0;
-        auto h = dir.cross(edge2);
-        auto a = edge1.dot(h);
+        auto a_norm = a.norm();
+        auto b_norm = b.norm();
+        auto c_norm = c.norm();
 
-        if (a > -eps * m * m && a < eps * m * m) continue;
+        auto numerator = a.dot(b.cross(c)); // Scalar triple product (signed volume * 6)
+        auto denominator = (a_norm * b_norm * c_norm) + (a.dot(b) * c_norm) + (b.dot(c) * a_norm) +
+                           (c.dot(a) * b_norm);
 
-        auto f = 1.0 / a;
-        auto s = point - v0;
-        auto u = f * s.dot(h);
-        if (u < 0.0 || u > 1.0) continue;
-
-        auto q = s.cross(edge1);
-        auto v = f * dir.dot(q);
-        if (v < 0.0 || u + v > 1.0) continue;
-
-        auto t = f * edge2.dot(q);
-        if (t > 0.0 * m) ++crossings;
+        winding_number += 2 * std::atan2(numerator.numerical_value_in(pow<3>(m)),
+                                         denominator.numerical_value_in(pow<3>(m)));
     }
 
-    return (crossings % 2) == 1;
+    winding_number /= 4 * std::numbers::pi;
+
+    return std::abs(winding_number) >= 0.5; // allow some numerical tolerance
 }
 
 vec3<si::metre> mesh::support(const vec3<one> &direction) const
@@ -342,8 +331,7 @@ bool mesh::is_convex() const
 {
     // TODO: implement convexity test (check all edges, verify all vertices on same side of each
     // face)
-    assert(false && "mesh::is_convex not yet implemented");
-    return false;
+    throw std::runtime_error("mesh::is_convex not yet implemented");
 }
 
 /*
@@ -400,8 +388,7 @@ mat3<si::kilogram * pow<2>(si::metre)>
 mesh::instance::inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
 {
     // TODO: rotate local inertia tensor into world frame and apply parallel axis theorem
-    assert(false && "mesh::instance::inertia_tensor not yet implemented");
-    return mat3<si::kilogram * pow<2>(si::metre)>::zero();
+    throw std::runtime_error("mesh::instance::inertia_tensor not yet implemented");
 }
 
 } // namespace physkit
