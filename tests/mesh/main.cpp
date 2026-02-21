@@ -395,8 +395,6 @@ void test_mesh_contains()
     auto msh = cube.make_mesh();
 
     // --- Interior points ---
-    // The winding-number implementation handles all interior points correctly,
-    // including those along mesh diagonals that would confuse a ray-parity test.
 
     // Center
     CHECK(msh->contains(vec3{0.5, 0.5, 0.5} * m));
@@ -406,7 +404,7 @@ void test_mesh_contains()
     CHECK(msh->contains(vec3{0.7, 0.2, 0.4} * m));
     CHECK(msh->contains(vec3{0.3, 0.7, 0.4} * m));
 
-    // Points along mesh face diagonals (y == z triggers the shared edge that broke ray-casting)
+    // Points along mesh face diagonals (y == z lands on shared triangle edges)
     CHECK(msh->contains(vec3{0.5, 0.3, 0.3} * m)); // y == z
     CHECK(msh->contains(vec3{0.5, 0.6, 0.6} * m)); // y == z
     CHECK(msh->contains(vec3{0.2, 0.4, 0.4} * m)); // y == z
@@ -500,6 +498,402 @@ void test_mesh_contains()
         CHECK(!inst.contains(vec3{4.5, 0.5, 0.5} * m)); // just outside -X face
         CHECK(!inst.contains(vec3{6.5, 0.5, 0.5} * m)); // just outside +X face
     }
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_ray_intersect_all_faces()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Hit each face from outside along the corresponding axis
+    struct face_case
+    {
+        vec3<m> origin;
+        vec3<one> dir;
+        vec3<m> expected_pos;
+        quantity<m> expected_dist;
+    };
+
+    std::array cases{
+        // -X face
+        face_case{.origin = vec3{-2.0, 0.5, 0.5} * m,
+                  .dir = {1, 0, 0},
+                  .expected_pos = vec3{0.0, 0.5, 0.5} * m,
+                  .expected_dist = 2.0 * m},
+        // +X face
+        face_case{.origin = vec3{3.0, 0.5, 0.5} * m,
+                  .dir = {-1, 0, 0},
+                  .expected_pos = vec3{1.0, 0.5, 0.5} * m,
+                  .expected_dist = 2.0 * m},
+        // -Y face
+        face_case{.origin = vec3{0.5, -2.0, 0.5} * m,
+                  .dir = {0, 1, 0},
+                  .expected_pos = vec3{0.5, 0.0, 0.5} * m,
+                  .expected_dist = 2.0 * m},
+        // +Y face
+        face_case{.origin = vec3{0.5, 3.0, 0.5} * m,
+                  .dir = {0, -1, 0},
+                  .expected_pos = vec3{0.5, 1.0, 0.5} * m,
+                  .expected_dist = 2.0 * m},
+        // -Z face
+        face_case{.origin = vec3{0.5, 0.5, -2.0} * m,
+                  .dir = {0, 0, 1},
+                  .expected_pos = vec3{0.5, 0.5, 0.0} * m,
+                  .expected_dist = 2.0 * m},
+        // +Z face
+        face_case{.origin = vec3{0.5, 0.5, 3.0} * m,
+                  .dir = {0, 0, -1},
+                  .expected_pos = vec3{0.5, 0.5, 1.0} * m,
+                  .expected_dist = 2.0 * m},
+    };
+
+    for (const auto &[origin, dir, expected_pos, expected_dist] : cases)
+    {
+        auto hit = msh->ray_intersect({.origin = origin, .direction = dir});
+        CHECK(hit.has_value());
+        CHECK_APPROX(hit->pos, expected_pos);
+        CHECK_APPROX(hit->distance, expected_dist);
+    }
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_ray_intersect_diagonal()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Diagonal ray aimed at the cube center from a corner direction
+    auto origin = vec3{-1.0, -1.0, -1.0} * m;
+    auto dir = vec3{1.0, 1.0, 1.0}.normalized();
+    auto hit = msh->ray_intersect({.origin = origin, .direction = dir});
+    CHECK(hit.has_value());
+    // Should hit the corner region; distance from origin to (0,0,0) is sqrt(3)
+    CHECK_APPROX(hit->distance, std::sqrt(3.0) * m);
+
+    // Diagonal from opposite corner
+    auto origin2 = vec3{2.0, 2.0, 2.0} * m;
+    auto dir2 = vec3{-1.0, -1.0, -1.0}.normalized();
+    auto hit2 = msh->ray_intersect({.origin = origin2, .direction = dir2});
+    CHECK(hit2.has_value());
+    CHECK_APPROX(hit2->distance, std::sqrt(3.0) * m);
+}
+
+void test_ray_intersect_miss_parallel()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Ray parallel to +X face, passing just outside
+    CHECK(!msh->ray_intersect({.origin = vec3{0.5, 1.1, 0.5} * m, .direction = {1, 0, 0}})
+               .has_value());
+    CHECK(!msh->ray_intersect({.origin = vec3{0.5, -0.1, 0.5} * m, .direction = {1, 0, 0}})
+               .has_value());
+
+    // Ray parallel to Z axis, passing outside in X
+    CHECK(!msh->ray_intersect({.origin = vec3{1.5, 0.5, -2.0} * m, .direction = {0, 0, 1}})
+               .has_value());
+
+    // Ray parallel to Y axis, passing outside in Z
+    CHECK(!msh->ray_intersect({.origin = vec3{0.5, -2.0, 1.5} * m, .direction = {0, 1, 0}})
+               .has_value());
+}
+
+void test_ray_intersect_miss_wrong_direction()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Ray pointing away from cube on each axis
+    CHECK(!msh->ray_intersect({.origin = vec3{-1.0, 0.5, 0.5} * m, .direction = {-1, 0, 0}})
+               .has_value());
+    CHECK(!msh->ray_intersect({.origin = vec3{0.5, -1.0, 0.5} * m, .direction = {0, -1, 0}})
+               .has_value());
+    CHECK(!msh->ray_intersect({.origin = vec3{0.5, 0.5, -1.0} * m, .direction = {0, 0, -1}})
+               .has_value());
+    CHECK(!msh->ray_intersect({.origin = vec3{2.0, 0.5, 0.5} * m, .direction = {1, 0, 0}})
+               .has_value());
+}
+
+void test_ray_intersect_from_inside()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // From center, should hit at distance 0.5 along each axis
+    auto center = vec3{0.5, 0.5, 0.5} * m;
+    for (const auto &dir : {vec3<one>{1, 0, 0}, vec3<one>{-1, 0, 0}, vec3<one>{0, 1, 0},
+                            vec3<one>{0, -1, 0}, vec3<one>{0, 0, 1}, vec3<one>{0, 0, -1}})
+    {
+        auto hit = msh->ray_intersect({.origin = center, .direction = dir});
+        CHECK(hit.has_value());
+        CHECK_APPROX(hit->distance, 0.5 * m);
+    }
+
+    // From off-center interior point
+    auto hit = msh->ray_intersect({.origin = vec3{0.2, 0.5, 0.5} * m, .direction = {-1, 0, 0}});
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->distance, 0.2 * m);
+    CHECK_APPROX(hit->pos.x(), 0.0 * m);
+
+    auto hit2 = msh->ray_intersect({.origin = vec3{0.2, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    CHECK(hit2.has_value());
+    CHECK_APPROX(hit2->distance, 0.8 * m);
+    CHECK_APPROX(hit2->pos.x(), 1.0 * m);
+}
+
+void test_ray_intersect_max_distance()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    mesh::ray r{.origin = vec3{-5.0, 0.5, 0.5} * m, .direction = {1, 0, 0}};
+
+    // Too short to reach
+    CHECK(!msh->ray_intersect(r, 4.0 * m).has_value());
+
+    // Exactly at the boundary
+    CHECK(msh->ray_intersect(r, 5.0 * m).has_value());
+
+    // Well past the cube
+    CHECK(msh->ray_intersect(r, 100.0 * m).has_value());
+
+    // From closer, restricting to first face only (should not reach back face)
+    mesh::ray r2{.origin = vec3{-1.0, 0.5, 0.5} * m, .direction = {1, 0, 0}};
+    auto hit = msh->ray_intersect(r2, 1.5 * m);
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos.x(), 0.0 * m); // front face, not back face
+}
+
+void test_ray_intersect_hit_normal()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Hit -X face: normal should point in -X
+    auto hit_nx = msh->ray_intersect({.origin = vec3{-2.0, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    CHECK(hit_nx.has_value());
+    CHECK_APPROX(hit_nx->normal, vec3<one>{-1, 0, 0});
+
+    // Hit +X face: normal should point in +X
+    auto hit_px = msh->ray_intersect({.origin = vec3{3.0, 0.5, 0.5} * m, .direction = {-1, 0, 0}});
+    CHECK(hit_px.has_value());
+    CHECK_APPROX(hit_px->normal, vec3<one>{1, 0, 0});
+
+    // Hit +Z face: normal should point in +Z
+    auto hit_pz = msh->ray_intersect({.origin = vec3{0.5, 0.5, 3.0} * m, .direction = {0, 0, -1}});
+    CHECK(hit_pz.has_value());
+    CHECK_APPROX(hit_pz->normal, vec3<one>{0, 0, 1});
+
+    // Hit -Y face
+    auto hit_ny = msh->ray_intersect({.origin = vec3{0.5, -2.0, 0.5} * m, .direction = {0, 1, 0}});
+    CHECK(hit_ny.has_value());
+    CHECK_APPROX(hit_ny->normal, vec3<one>{0, -1, 0});
+}
+
+void test_ray_intersect_edge_hit()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Ray aimed exactly at an edge of the cube (where two faces meet)
+    // Should still register a hit on one of the adjacent triangles
+    auto hit = msh->ray_intersect({.origin = vec3{-1.0, 0.0, 0.5} * m, .direction = {1, 0, 0}});
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos.x(), 0.0 * m);
+    CHECK_APPROX(hit->pos.y(), 0.0 * m);
+
+    // Ray aimed at a vertex
+    auto hit_v = msh->ray_intersect({.origin = vec3{-1.0, 0.0, 0.0} * m, .direction = {1, 0, 0}});
+    CHECK(hit_v.has_value());
+    CHECK_APPROX(hit_v->pos, vec3{0.0, 0.0, 0.0} * m);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_ray_intersect_grazing()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Nearly parallel to +Z face: ray just barely enters the cube
+    auto dir = vec3{1.0, 0.0, 0.001}.normalized();
+    auto hit = msh->ray_intersect({.origin = vec3{-1.0, 0.5, 0.5} * m, .direction = dir});
+    CHECK(hit.has_value());
+    CHECK(hit->pos.x() >= -1e-6 * m); // should hit on or near the -X face
+
+    // Nearly parallel but just misses (slightly outside)
+    auto miss_dir = vec3{1.0, 0.0, 0.0};
+    auto miss = msh->ray_intersect({.origin = vec3{-1.0, 0.5, 1.0001} * m, .direction = miss_dir});
+    CHECK(!miss.has_value());
+}
+
+void test_ray_intersect_zero_distance()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Ray origin exactly on the -X face surface, pointing inward
+    auto hit = msh->ray_intersect({.origin = vec3{0.0, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    CHECK(hit.has_value());
+    // Should hit the far +X face at distance 1, or the near face at distance ~0
+    CHECK(hit->distance <= 1.0 * m + 1e-9 * m);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_ray_intersect_sphere()
+{
+    auto msh = mesh::sphere(1.0 * m, 32, 32);
+
+    // Along +X axis from outside
+    auto hit = msh->ray_intersect({.origin = vec3{5.0, 0.0, 0.0} * m, .direction = {-1, 0, 0}});
+    CHECK(hit.has_value());
+    CHECK(std::abs(hit->pos.x().numerical_value_in(si::metre) - 1.0) < 0.05);
+    CHECK(std::abs(hit->pos.y().numerical_value_in(si::metre)) < 0.05);
+    CHECK(std::abs(hit->pos.z().numerical_value_in(si::metre)) < 0.05);
+    CHECK(std::abs(hit->distance.numerical_value_in(si::metre) - 4.0) < 0.05);
+
+    // Normal at +X pole should point roughly in +X
+    CHECK(static_cast<double>(hit->normal.x()) > 0.9);
+
+    // Along -Y axis from below
+    auto hit_y = msh->ray_intersect({.origin = vec3{0.0, -5.0, 0.0} * m, .direction = {0, 1, 0}});
+    CHECK(hit_y.has_value());
+    CHECK(std::abs(hit_y->pos.y().numerical_value_in(si::metre) - (-1.0)) < 0.05);
+
+    // Miss: ray passing beside the sphere
+    CHECK(!msh->ray_intersect({.origin = vec3{0.0, 2.0, 0.0} * m, .direction = {1, 0, 0}})
+               .has_value());
+}
+
+void test_ray_intersect_pyramid()
+{
+    auto msh = mesh::pyramid(1.0 * m, 2.0 * m);
+    // Base at y=0, apex at (0, 2, 0)
+
+    // Ray from below hitting the base
+    auto hit = msh->ray_intersect({.origin = vec3{0.0, -1.0, 0.0} * m, .direction = {0, 1, 0}});
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos.y(), 0.0 * m);
+
+    // Ray from above hitting the apex
+    auto hit_top = msh->ray_intersect({.origin = vec3{0.0, 5.0, 0.0} * m, .direction = {0, -1, 0}});
+    CHECK(hit_top.has_value());
+    CHECK_APPROX(hit_top->pos, vec3{0.0, 2.0, 0.0} * m);
+
+    // Ray from the side hitting a lateral face
+    auto hit_side =
+        msh->ray_intersect({.origin = vec3{5.0, 1.0, 0.0} * m, .direction = {-1, 0, 0}});
+    CHECK(hit_side.has_value());
+    CHECK(hit_side->pos.x() > 0.0 * m);
+    CHECK(hit_side->pos.x() < 1.0 * m);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_ray_intersect_returns_nearest()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Ray passes through the entire cube: should return the FIRST (nearest) hit
+    mesh::ray r{.origin = vec3{-2.0, 0.5, 0.5} * m, .direction = {1, 0, 0}};
+    auto hit = msh->ray_intersect(r);
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos.x(), 0.0 * m); // front face, not back face at x=1
+    CHECK_APPROX(hit->distance, 2.0 * m);
+
+    // Same from the other direction
+    mesh::ray r2{.origin = vec3{3.0, 0.5, 0.5} * m, .direction = {-1, 0, 0}};
+    auto hit2 = msh->ray_intersect(r2);
+    CHECK(hit2.has_value());
+    CHECK_APPROX(hit2->pos.x(), 1.0 * m); // front face from +X side
+    CHECK_APPROX(hit2->distance, 2.0 * m);
+}
+
+void test_ray_intersect_unnormalized_direction()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Direction vector with length != 1; ray_intersect normalizes internally
+    mesh::ray r{.origin = vec3{-2.0, 0.5, 0.5} * m, .direction = {10, 0, 0}};
+    auto hit = msh->ray_intersect(r);
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos, vec3{0.0, 0.5, 0.5} * m);
+    // Distance should be the actual geometric distance, not scaled by direction length
+    CHECK_APPROX(hit->distance, 2.0 * m);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_ray_intersect_instance_translated()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    auto inst = msh->at(vec3{10.0, 0.0, 0.0} * m);
+
+    // Hit from the left
+    auto hit = inst.ray_intersect({.origin = vec3{5.0, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos.x(), 10.0 * m);
+    CHECK_APPROX(hit->distance, 5.0 * m);
+
+    // Miss at original location
+    CHECK(!inst.ray_intersect({.origin = vec3{-2.0, 0.5, 0.5} * m, .direction = {1, 0, 0}}, 5.0 * m)
+               .has_value());
+
+    // From inside the translated cube
+    auto hit_in = inst.ray_intersect({.origin = vec3{10.5, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    CHECK(hit_in.has_value());
+    CHECK_APPROX(hit_in->pos.x(), 11.0 * m);
+    CHECK_APPROX(hit_in->distance, 0.5 * m);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_ray_intersect_instance_rotated()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // 90-degree rotation around Z: (x,y,z) -> (-y,x,z)
+    // Unit cube [0,1]^3 becomes [-1,0] x [0,1] x [0,1]
+    auto rot_z =
+        quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3{0.0, 0.0, 1.0});
+    auto inst = msh->at(vec3{0.0, 0.0, 0.0} * m, rot_z);
+
+    // Ray from -X side
+    auto hit = inst.ray_intersect({.origin = vec3{-3.0, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos.x(), -1.0 * m);
+    CHECK_APPROX(hit->distance, 2.0 * m);
+
+    // Ray from +X side should hit x=0 face
+    auto hit2 = inst.ray_intersect({.origin = vec3{3.0, 0.5, 0.5} * m, .direction = {-1, 0, 0}});
+    CHECK(hit2.has_value());
+    CHECK_APPROX(hit2->pos.x(), 0.0 * m);
+    CHECK_APPROX(hit2->distance, 3.0 * m);
+}
+
+void test_ray_intersect_centered_box()
+{
+    auto msh = mesh::box(vec3{1.0, 2.0, 3.0} * m); // half-extents -> [-1,1] x [-2,2] x [-3,3]
+
+    // Hit from +X
+    auto hit = msh->ray_intersect({.origin = vec3{5.0, 0.0, 0.0} * m, .direction = {-1, 0, 0}});
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos.x(), 1.0 * m);
+    CHECK_APPROX(hit->distance, 4.0 * m);
+
+    // Hit from -Y (half-extent is 2 in Y)
+    auto hit_y = msh->ray_intersect({.origin = vec3{0.0, -5.0, 0.0} * m, .direction = {0, 1, 0}});
+    CHECK(hit_y.has_value());
+    CHECK_APPROX(hit_y->pos.y(), -2.0 * m);
+    CHECK_APPROX(hit_y->distance, 3.0 * m);
+
+    // Hit from +Z (half-extent is 3 in Z)
+    auto hit_z = msh->ray_intersect({.origin = vec3{0.0, 0.0, 10.0} * m, .direction = {0, 0, -1}});
+    CHECK(hit_z.has_value());
+    CHECK_APPROX(hit_z->pos.z(), 3.0 * m);
+    CHECK_APPROX(hit_z->distance, 7.0 * m);
 }
 
 void test_mesh_support()
@@ -987,6 +1381,25 @@ int main()
         .test("contains", test_mesh_contains)
         .test("support", test_mesh_support)
         .test("closest_point", test_mesh_closest_point);
+
+    tests.group("Ray Intersect Tests")
+        .test("all 6 faces", test_ray_intersect_all_faces)
+        .test("diagonal", test_ray_intersect_diagonal)
+        .test("miss parallel", test_ray_intersect_miss_parallel)
+        .test("miss wrong direction", test_ray_intersect_miss_wrong_direction)
+        .test("from inside", test_ray_intersect_from_inside)
+        .test("max_distance", test_ray_intersect_max_distance)
+        .test("hit normal", test_ray_intersect_hit_normal)
+        .test("edge hit", test_ray_intersect_edge_hit)
+        .test("grazing", test_ray_intersect_grazing)
+        .test("zero distance", test_ray_intersect_zero_distance)
+        .test("sphere mesh", test_ray_intersect_sphere)
+        .test("pyramid mesh", test_ray_intersect_pyramid)
+        .test("returns nearest", test_ray_intersect_returns_nearest)
+        .test("unnormalized direction", test_ray_intersect_unnormalized_direction)
+        .test("translated instance", test_ray_intersect_instance_translated)
+        .test("rotated instance", test_ray_intersect_instance_rotated)
+        .test("centered box", test_ray_intersect_centered_box);
 
     tests.group("Closest Point Tests")
         .test("all faces exterior", test_closest_point_all_faces)
