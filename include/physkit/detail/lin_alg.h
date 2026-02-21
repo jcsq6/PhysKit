@@ -308,29 +308,15 @@ public:
         return *this;
     }
 
-    constexpr auto &operator*=(QuantityOf<one> auto scalar)
+    constexpr auto &operator*=(quantity<one> scalar)
     {
         base() *= scalar.numerical_value_in(one);
         return *this;
     }
 
-    constexpr auto &operator/=(QuantityOf<one> auto scalar)
+    constexpr auto &operator/=(quantity<one> scalar)
     {
         base() /= scalar.numerical_value_in(one);
-        return *this;
-    }
-
-    constexpr auto &operator*=(auto scalar)
-        requires(std::is_arithmetic_v<decltype(scalar)>)
-    {
-        base() *= scalar;
-        return *this;
-    }
-
-    constexpr auto &operator/=(auto scalar)
-        requires(std::is_arithmetic_v<decltype(scalar)>)
-    {
-        base() /= scalar;
         return *this;
     }
 

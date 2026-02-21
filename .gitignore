@@ -46,3 +46,24 @@ $RECYCLE.BIN/
 .TemporaryItems
 ehthumbs.db
 Thumbs.db
+
+# Compiler and linker artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Logs
+*.out
+
+# Testing artifacts
+test_results/
+coverage/
+
+# Temporary files
+tmp/
+temp/
