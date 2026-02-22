@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <memory>
 #include <numbers>
 #include <span>
@@ -47,6 +48,11 @@ public:
         auto s = size();
         return s.x() * s.y() * s.z();
     }
+    [[nodiscard]] constexpr auto surface_area() const
+    {
+        auto s = size();
+        return 2.0 * (s.x() * s.y() + s.y() * s.z() + s.z() * s.x());
+    }
 
     [[nodiscard]] constexpr auto point(unsigned int index) const
     {
@@ -80,25 +86,16 @@ public:
         return {.min = min - offset, .max = max - offset};
     }
 
-    [[nodiscard]] constexpr aabb operator*(float_t scale) const
+    [[nodiscard]] constexpr aabb operator*(quantity<one> scale) const
     {
-        auto center = this->center();
-        auto half_size = size() * (scale / 2.0f);
-        return {.min = center - half_size, .max = center + half_size};
-    }
-
-    [[nodiscard]] constexpr aabb operator*(QuantityOf<dimensionless> auto scale) const
-    {
-        auto center = this->center();
-        auto half_size = size() * (scale / 2.0f);
-        return {.min = center - half_size, .max = center + half_size};
+        return {.min = min * scale, .max = max * scale};
     }
 
     template <Quantity Q>
         requires(QuantityOf<Q, dimensionless>)
     [[nodiscard]] aabb operator*(const unit_mat<Q, 3, 3> &transform) const
     {
-        aabb result{.min = transform * min, .max = transform * min};
+        aabb result{.min = transform * min, .max = transform * min}; // initialize to point(0)
         for (unsigned int i = 1; i < 8; ++i)
         {
             auto pt = transform * point(i);
@@ -116,7 +113,7 @@ public:
         requires(QuantityOf<Q, dimensionless>)
     [[nodiscard]] aabb operator*(const unit_quat<Q> &transform) const
     {
-        aabb result{.min = transform * min, .max = transform * min};
+        aabb result{.min = transform * min, .max = transform * min}; // initialize to point(0)
         for (unsigned int i = 1; i < 8; ++i)
         {
             auto pt = transform * point(i);
@@ -130,18 +127,9 @@ public:
         return result;
     }
 
-    [[nodiscard]] constexpr aabb operator/(float_t scale) const
+    [[nodiscard]] constexpr aabb operator/(quantity<one> scale) const
     {
-        auto center = this->center();
-        auto half_size = size() * (.5f / scale);
-        return {.min = center - half_size, .max = center + half_size};
-    }
-
-    [[nodiscard]] constexpr aabb operator/(QuantityOf<dimensionless> auto scale) const
-    {
-        auto center = this->center();
-        auto half_size = size() * (.5f / scale);
-        return {.min = center - half_size, .max = center + half_size};
+        return {.min = min / scale, .max = max / scale};
     }
 
     constexpr auto &operator+=(const vec3<si::metre> &offset)
@@ -158,39 +146,17 @@ public:
         return *this;
     }
 
-    constexpr auto &operator*=(float_t scale)
+    constexpr auto &operator*=(quantity<one> scale)
     {
-        auto c = center();
-        auto h = size() * (scale / 2.0f);
-        min = c - h;
-        max = c + h;
+        min *= scale;
+        max *= scale;
         return *this;
     }
 
-    constexpr auto &operator*=(QuantityOf<dimensionless> auto scale)
+    constexpr auto &operator/=(quantity<one> scale)
     {
-        auto c = center();
-        auto h = size() * (scale / 2.0f);
-        min = c - h;
-        max = c + h;
-        return *this;
-    }
-
-    constexpr auto &operator/=(float_t scale)
-    {
-        auto c = center();
-        auto h = size() * (.5f / scale);
-        min = c - h;
-        max = c + h;
-        return *this;
-    }
-
-    constexpr auto &operator/=(QuantityOf<dimensionless> auto scale)
-    {
-        auto c = center();
-        auto h = size() * (.5f / scale);
-        min = c - h;
-        max = c + h;
+        min /= scale;
+        max /= scale;
         return *this;
     }
 };
@@ -199,8 +165,8 @@ public:
 class bounding_sphere
 {
 public:
-    vec3<si::metre> center;
-    quantity<si::metre> radius;
+    vec3<si::metre> center = vec3<si::metre>::zero();
+    quantity<si::metre> radius{};
 
     /// @brief Ritter's bounding-sphere algorithm.
     [[nodiscard]] static bounding_sphere from_points(std::span<const vec3<si::metre>> points)
@@ -320,12 +286,7 @@ public:
         return {.center = center - offset, .radius = radius};
     }
 
-    [[nodiscard]] constexpr bounding_sphere operator*(float_t scale) const
-    {
-        return {.center = center, .radius = radius * scale};
-    }
-
-    [[nodiscard]] constexpr bounding_sphere operator*(QuantityOf<dimensionless> auto scale) const
+    [[nodiscard]] constexpr bounding_sphere operator*(quantity<one> scale) const
     {
         return {.center = center, .radius = radius * scale};
     }
@@ -342,14 +303,9 @@ public:
         return *this;
     }
 
-    constexpr auto &operator*=(float_t scale)
+    constexpr auto &operator*=(quantity<one> scale)
     {
-        radius = radius * scale;
-        return *this;
-    }
-
-    constexpr auto &operator*=(QuantityOf<dimensionless> auto scale)
-    {
+        center *= scale;
         radius = radius * scale;
         return *this;
     }
@@ -364,8 +320,23 @@ private:
     }
 };
 
-class mesh
+namespace detail
 {
+struct bvh_node
+{
+    aabb bounds;
+    std::uint32_t start{}; // leaf: first tri index; internal: right child index
+    std::uint16_t count{}; // >0 = leaf (tri count); 0 = internal node
+    std::uint16_t axis{};  // split axis (0/1/2)
+};
+} // namespace detail
+
+class mesh : public std::enable_shared_from_this<mesh>
+{
+    struct key
+    {
+    };
+
 public:
     struct instance;
 
@@ -380,6 +351,19 @@ public:
         }
 
         [[nodiscard]] vec3<one> normal(const instance &inst) const;
+
+        [[nodiscard]] std::array<vec3<si::metre>, 3> vertices(const mesh &m) const
+        {
+            return vertices(m.M_vertices);
+        }
+
+        [[nodiscard]] std::array<vec3<si::metre>, 3>
+        vertices(std::span<const vec3<si::metre>> verts) const
+        {
+            return {verts[(*this)[0]], verts[(*this)[1]], verts[(*this)[2]]};
+        }
+
+        [[nodiscard]] std::array<vec3<si::metre>, 3> vertices(const instance &inst) const;
     };
 
     struct ray_hit
@@ -395,27 +379,22 @@ public:
         vec3<one> direction;
     };
 
-    /// @brief A lightweight view of a mesh placed in world space.
+    /// @brief A view of a mesh placed in world space.
     /// Provides world-space collision queries by transforming into local space and back.
-    /// Not intended for long-term storage. Create one, query it, discard it. Avoid dangling
-    /// references.
     class instance
     {
     public:
         instance(const mesh &msh, const vec3<si::metre> &position,
-                 const quat<one> &orientation = quat<one>::identity())
-            : M_mesh{msh}, M_position{position}, M_orientation{orientation}
-        {
-        }
+                 const quat<one> &orientation = quat<one>::identity());
 
-        [[nodiscard]] const mesh &geometry() const { return M_mesh; }
+        [[nodiscard]] const mesh &geometry() const { return *M_mesh; }
         [[nodiscard]] const vec3<si::metre> &position() const { return M_position; }
         [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
 
         [[nodiscard]] auto vertex(unsigned int index) const
         {
-            assert(index < M_mesh.vertices().size());
-            return M_orientation * M_mesh.vertices()[index] + M_position;
+            assert(index < M_mesh->vertices().size());
+            return M_orientation * M_mesh->vertices()[index] + M_position;
         }
 
         /// @brief Compute the world-space AABB by rotating the local AABB and translating.
@@ -425,17 +404,21 @@ public:
         /// center is translated.
         [[nodiscard]] bounding_sphere bsphere() const
         {
-            auto local = M_mesh.bsphere();
+            auto local = M_mesh->bsphere();
             return {.center = M_orientation * local.center + M_position, .radius = local.radius};
         }
 
+        /// @brief Compute the world-space inertia tensor by rotating the local inertia and applying
+        /// the parallel axis theorem. O(log N) time.
         [[nodiscard]] std::optional<ray_hit>
         ray_intersect(const ray &r, quantity<si::metre> max_distance =
                                         std::numeric_limits<quantity<si::metre>>::infinity()) const;
 
+        /// @brief Compute the closest point on the mesh surface to the given world-space point.
+        /// O(log N) time.
         [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
 
-        /// @brief Point containment test in world space.
+        /// @brief Point containment test in world space. O(log N) time.
         [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
 
         /// @brief GJK support function in world space. Rotates the direction into
@@ -448,12 +431,20 @@ public:
         inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
 
     private:
-        const mesh &M_mesh; // NOLINT
+        std::shared_ptr<const mesh> M_mesh; // NOLINT
         vec3<si::metre> M_position;
         quat<one> M_orientation;
     };
 
-    mesh() = default;
+    mesh(key /*unused*/) {}
+    mesh(std::span<const vec3<si::metre>> vertices, std::span<const triangle_t> triangles,
+         key /*unused*/)
+        : M_vertices(std::from_range_t{}, vertices), M_triangles(std::from_range_t{}, triangles),
+          M_bounds(aabb::from_points(vertices)), M_bsphere(bounding_sphere::from_points(vertices))
+    {
+        build_bvh();
+    }
+
     mesh(const mesh &) = default;
     mesh &operator=(const mesh &) = default;
     mesh(mesh &&) = default;
@@ -479,6 +470,8 @@ public:
     /// @param height Height from base to apex.
     static std::shared_ptr<mesh> pyramid(quantity<si::metre> base_half, quantity<si::metre> height);
 
+    auto ptr(this auto &&self) { return std::forward<decltype(self)>(self).shared_from_this(); }
+
     [[nodiscard]] std::span<const vec3<si::metre>> vertices() const { return M_vertices; }
     [[nodiscard]] std::span<const triangle_t> triangles() const { return M_triangles; }
     [[nodiscard]] const auto &vertex(unsigned int index) const
@@ -495,13 +488,13 @@ public:
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
 
-    /// @brief Ray intersection in local (model) space.
+    /// @brief Ray intersection in local (model) space. O(log N) time.
     [[nodiscard]] std::optional<ray_hit>
     ray_intersect(const ray &r, quantity<si::metre> max_distance =
                                     std::numeric_limits<quantity<si::metre>>::infinity()) const;
-    /// @brief Closest point on the mesh surface in local space.
+    /// @brief Closest point on the mesh surface in local space. O(log N) time.
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
-    /// @brief Point containment test in local space.
+    /// @brief Point containment test in local space. O(log N) time.
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
 
     /// @brief GJK support function in local space.
@@ -516,14 +509,29 @@ public:
     }
 
 private:
+    void build_bvh();
+
     aabb M_bounds;
     bounding_sphere M_bsphere;
     std::vector<vec3<si::metre>> M_vertices;
     std::vector<triangle_t> M_triangles;
+    std::vector<detail::bvh_node> M_bvh_nodes;
 };
 
 inline vec3<one> mesh::triangle_t::normal(const mesh::instance &inst) const
 {
     return inst.orientation() * this->normal(inst.geometry());
+}
+inline std::array<vec3<si::metre>, 3> mesh::triangle_t::vertices(const instance &inst) const
+{
+    auto local = this->vertices(inst.geometry());
+    return {inst.orientation() * local[0] + inst.position(),
+            inst.orientation() * local[1] + inst.position(),
+            inst.orientation() * local[2] + inst.position()};
+}
+inline mesh::instance::instance(const mesh &msh, const vec3<si::metre> &position,
+                                const quat<one> &orientation)
+    : M_mesh{msh.ptr()}, M_position{position}, M_orientation{orientation}
+{
 }
 } // namespace physkit
