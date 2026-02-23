@@ -392,7 +392,8 @@ public:
         // project points onto axes to find min/max extents
         // build obb from these resultants.
 
-        return obb{centroid, quat<one>::identity(), vec3<si::metre>::zero()};
+        // not yet implemented, changed to unreachable for now
+        std::unreachable();
     }
 
     /// @brief Get the center of the OBB
