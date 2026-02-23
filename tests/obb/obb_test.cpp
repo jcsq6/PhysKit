@@ -1,8 +1,7 @@
 // OBB tests for PhysKit - ripped and copied from main.cpp for mesh.h
 // need to make test cases for OBB and finish OBB implementation.
 
-#include "physkit/mesh.h"
-// #include "physkit/obb.h"
+#include <physkit/physkit.h>
 
 #include <mp-units/systems/si/unit_symbols.h>
 

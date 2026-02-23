@@ -1,6 +1,9 @@
 #include "physkit/mesh.h"
 
+#include <array>
 #include <cmath>
+#include <limits>
+#include <stdexcept>
 
 namespace physkit
 {
@@ -13,23 +16,16 @@ using namespace mp_units::si::unit_symbols;
 ----------------------------------------------
 */
 
-std::shared_ptr<mesh> mesh::make(std::span<const vec3<si::metre>> vertices,
+std::shared_ptr<mesh> mesh::make(std::span<const vec3<m>> vertices,
                                  std::span<const triangle_t> triangles)
 {
     assert(!vertices.empty());
     assert(!triangles.empty());
 
-    auto m = std::make_shared<mesh>();
-    m->M_vertices.assign(vertices.begin(), vertices.end());
-    m->M_triangles.assign(triangles.begin(), triangles.end());
-
-    m->M_bounds = aabb::from_points(vertices);
-    m->M_bsphere = bounding_sphere::from_points(vertices);
-
-    return m;
+    return std::make_shared<mesh>(vertices, triangles, key{});
 }
 
-std::shared_ptr<mesh> mesh::box(const vec3<si::metre> &half_extents)
+std::shared_ptr<mesh> mesh::box(const vec3<m> &half_extents)
 {
     auto hx = half_extents.x();
     auto hy = half_extents.y();
@@ -64,13 +60,12 @@ std::shared_ptr<mesh> mesh::box(const vec3<si::metre> &half_extents)
     return make(vertices, triangles);
 }
 
-std::shared_ptr<mesh> mesh::sphere(quantity<si::metre> radius, unsigned int stacks,
-                                   unsigned int sectors)
+std::shared_ptr<mesh> mesh::sphere(quantity<m> radius, unsigned int stacks, unsigned int sectors)
 {
     assert(stacks >= 2);
     assert(sectors >= 3);
 
-    std::vector<vec3<si::metre>> vertices;
+    std::vector<vec3<m>> vertices;
     std::vector<triangle_t> triangles;
 
     vertices.reserve(2 + ((stacks - 1) * sectors));
@@ -122,30 +117,29 @@ std::shared_ptr<mesh> mesh::sphere(quantity<si::metre> radius, unsigned int stac
     return make(vertices, triangles);
 }
 
-std::shared_ptr<mesh> mesh::pyramid(quantity<si::metre> base_half, quantity<si::metre> height)
+std::shared_ptr<mesh> mesh::pyramid(quantity<m> base_half, quantity<m> height)
 {
-    // clang-format off
     std::array vertices{
         vec3{-base_half, 0.0 * m, -base_half}, // 0
         vec3{+base_half, 0.0 * m, -base_half}, // 1
         vec3{+base_half, 0.0 * m, +base_half}, // 2
         vec3{-base_half, 0.0 * m, +base_half}, // 3
-        vec3{    0.0 * m,  height,     0.0 * m}, // 4 (apex)
+        vec3{0.0 * m, height, 0.0 * m},        // 4 (apex)
     };
 
     std::array<triangle_t, 6> triangles{{
-        {0, 1, 2}, {0, 2, 3}, // base (-y)
-        {1, 0, 4},            // front (-z)
-        {2, 1, 4},            // right (+x)
-        {3, 2, 4},            // back  (+z)
-        {0, 3, 4},            // left  (-x)
+        {0, 1, 2},
+        {0, 2, 3}, // base (-y)
+        {1, 0, 4}, // front (-z)
+        {2, 1, 4}, // right (+x)
+        {3, 2, 4}, // back  (+z)
+        {0, 3, 4}, // left  (-x)
     }};
-    // clang-format on
 
     return make(vertices, triangles);
 }
 
-quantity<pow<3>(si::metre)> mesh::volume() const
+quantity<pow<3>(m)> mesh::volume() const
 {
     // Signed volume via sum of signed tetrahedra.
     auto vol = 0.0 * m * m * m;
@@ -160,118 +154,194 @@ quantity<pow<3>(si::metre)> mesh::volume() const
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-vec3<si::metre> mesh::mass_center() const
+vec3<m> mesh::mass_center() const
 {
     // TODO: implement volume-weighted centroid via divergence theorem
-    assert(false && "mesh::mass_center not yet implemented");
-    return vec3<si::metre>::zero();
+    throw std::runtime_error("mesh::mass_center not yet implemented");
 }
 
-mat3<si::kilogram * pow<2>(si::metre)>
+mat3<kg * pow<2>(m)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-mesh::inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> /*density*/) const
+mesh::inertia_tensor(quantity<kg / pow<3>(m)> /*density*/) const
 {
-    // TODO: implement inertia tensor via canonical tetrahedron integrals -> Isaac Abella
-    assert(false && "mesh::inertia_tensor not yet implemented");
-    return mat3<si::kilogram * pow<2>(si::metre)>::zero();
+    // TODO: implement inertia tensor via canonical tetrahedron integrals
+    throw std::runtime_error("mesh::inertia_tensor not yet implemented");
 }
 
-// Moeller–Trumbore
-std::optional<mesh::ray_hit> mesh::ray_intersect_local(const ray &r,
-                                                       quantity<si::metre> max_distance) const
+// BVH-accelerated ray intersection
+std::optional<ray::hit> mesh::ray_intersect(const ray &r, quantity<m> max_distance) const
 {
-    // TODO: accelerate with BVH
-    std::optional<ray_hit> best;
+    assert(!M_bvh.empty());
 
-    auto dir = r.direction.normalized(); // normalized for units
+    auto best_t = max_distance;
+    std::optional<ray::hit> best;
 
-    constexpr auto eps = 1e-12;
-
-    for (const auto &tri : M_triangles)
-    {
-        const auto &v0 = M_vertices[tri[0]];
-        const auto &v1 = M_vertices[tri[1]];
-        const auto &v2 = M_vertices[tri[2]];
-
-        auto edge1 = v1 - v0;
-        auto edge2 = v2 - v0;
-        auto h = dir.cross(edge2);
-        auto a = edge1.dot(h);
-
-        if (a > -eps * m * m && a < eps * m * m) continue;
-
-        auto f = 1.0 / a;
-        auto s = r.origin - v0;
-        auto u = f * s.dot(h);
-        if (u < 0.0 || u > 1.0) continue;
-
-        auto q = s.cross(edge1);
-        auto v = f * dir.dot(q);
-        if (v < 0.0 || u + v > 1.0) continue;
-
-        auto t = f * edge2.dot(q);
-        if (t < 0.0 * m || t > max_distance) continue;
-
-        if (!best || t < best->distance)
+    M_bvh.traverse_nearest(
+        [&](const aabb &bounds) -> std::optional<quantity<m>>
         {
-            auto normal = edge1.cross(edge2).normalized();
-            best = ray_hit{
-                .pos = r.origin + dir * t,
-                .normal = normal,
-                .distance = t,
-            };
-        }
-    }
+            auto d = r.intersect_distance(bounds, max_distance);
+            if (d.has_value() && d.value() <= best_t) return d;
+            return std::nullopt;
+        },
+        [&](std::uint32_t start, std::uint32_t count)
+        {
+            auto end = start + count;
+            for (std::uint32_t i = start; i < end; ++i)
+            {
+                if (auto hit = r.intersect(M_triangles[i].vertices(*this), best_t))
+                {
+                    best_t = hit->distance;
+                    best = hit;
+                }
+            }
+        });
 
     return best;
 }
 
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-vec3<si::metre> mesh::closest_point_local(const vec3<si::metre> & /*point*/) const
+// BVH-accelerated closest point on mesh surface
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+vec3<m> mesh::closest_point(const vec3<m> &p) const
 {
-    // TODO: implement closest-point-on-mesh (project onto each triangle, take closest)
-    assert(false && "mesh::closest_point_local not yet implemented");
-    return vec3<si::metre>::zero();
+    assert(!M_bvh.empty() && "empty mesh");
+
+    auto best_dist_sq = std::numeric_limits<double>::infinity() * pow<2>(m);
+    auto closest = M_vertices[0];
+
+    M_bvh.traverse_nearest(
+        [&](const aabb &bounds) -> std::optional<decltype(best_dist_sq)>
+        {
+            auto d_sq = bounds.squared_distance_to(p);
+            if (d_sq >= best_dist_sq) return std::nullopt;
+            return d_sq;
+        },
+        [&](std::uint32_t start, std::uint32_t count)
+        {
+            auto end = start + count;
+            for (std::uint32_t i = start; i < end; ++i)
+            {
+                const auto &tri = M_triangles[i];
+                auto candidate = tri.closest_point(p, M_vertices);
+                if (auto d_sq = (candidate - p).squared_norm(); d_sq < best_dist_sq)
+                {
+                    best_dist_sq = d_sq;
+                    closest = candidate;
+                }
+            }
+        });
+
+    return closest;
 }
 
-bool mesh::contains_local(const vec3<si::metre> &point) const
+// Ray-triangle intersection for containment parity counting.
+// Returns {t, on_edge} where on_edge is true if the hit is near a triangle edge/vertex.
+struct parity_hit
 {
-    // Ray-casting parity test: cast a ray in +x and count crossings.
-    auto dir = vec3{1.0, 0.0, 0.0};
-    int crossings = 0;
+    quantity<m> t;
+    bool on_edge;
+};
 
+static std::optional<parity_hit> ray_triangle_parity(const ray &r,
+                                                     const std::array<vec3<m>, 3> &vertices)
+{
     constexpr auto eps = 1e-12;
+    constexpr auto edge_eps = 1e-10; // threshold for "on an edge"
 
-    for (const auto &tri : M_triangles)
+    auto edge1 = vertices[1] - vertices[0];
+    auto edge2 = vertices[2] - vertices[0];
+    auto h = r.direction().cross(edge2);
+    auto a = edge1.dot(h);
+
+    if (a > -eps * m * m && a < eps * m * m) return std::nullopt; // parallel
+
+    auto f = 1.0 / a;
+    auto s = r.origin() - vertices[0];
+    auto u = f * s.dot(h);
+    if (u < 0.0 || u > 1.0) return std::nullopt;
+
+    auto q = s.cross(edge1);
+    auto v = f * r.direction().dot(q);
+    if (v < 0.0 || u + v > 1.0) return std::nullopt;
+
+    auto t = (f * edge2.dot(q));
+    if (t <= 0.0 * m) return std::nullopt;
+
+    // Hit is on an edge if any barycentric coordinate is near 0, or u+v is near 1.
+    bool on_edge = (u < edge_eps || v < edge_eps || (u + v) > 1.0 - edge_eps);
+    return parity_hit{.t = t, .on_edge = on_edge};
+}
+
+bool mesh::contains(const vec3<m> &point) const
+{
+    assert(!M_bvh.empty());
+
+    if (!M_bounds.contains(point)) return false; // early out
+
+    auto max_t = M_bounds.size().norm() + 1.0 * m;
+
+    // Cast rays and count crossings. If a hit lands exactly on a shared edge/vertex retry with a
+    // different (random) direction.
+    static const std::array directions{
+        vec3<one>{1.0, 0.0, 0.0},
+        vec3<one>{std::numbers::pi / 2, std::numbers::e * 3,
+                  std::numbers::phi * std::numbers::sqrt2},
+        vec3<one>{std::numbers::ln10 * std::numbers::pi, std::numbers::egamma / 2,
+                  std::numbers::pi * std::numbers::sqrt3},
+        vec3<one>{std::numbers::e, std::numbers::phi * 2, std::numbers::ln2},
+    };
+
+    for (const auto &dir : directions)
     {
-        const auto &v0 = M_vertices[tri[0]];
-        const auto &v1 = M_vertices[tri[1]];
-        const auto &v2 = M_vertices[tri[2]];
+        unsigned int crossings = 0;
+        bool hit_edge = false;
 
-        auto edge1 = v1 - v0;
-        auto edge2 = v2 - v0;
-        auto h = dir.cross(edge2);
-        auto a = edge1.dot(h);
+        auto ray = physkit::ray{point, dir};
 
-        if (a > -eps * m * m && a < eps * m * m) continue;
+        M_bvh.traverse([&](const aabb &bounds)
+                       { return ray.intersect_distance(bounds, max_t).has_value(); },
+                       [&](const aabb &bounds, std::uint32_t offset, std::uint32_t count)
+                       {
+                           for (std::uint32_t i = 0; i < count; ++i)
+                           {
+                               const auto &tri = M_triangles[offset + i];
+                               if (auto hit = ray_triangle_parity(ray, tri.vertices(*this));
+                                   hit && hit->t <= max_t)
+                               {
+                                   ++crossings;
+                                   if (hit->on_edge) hit_edge = true;
+                               }
+                           }
+                       });
 
-        auto f = 1.0 / a;
-        auto s = point - v0;
-        auto u = f * s.dot(h);
-        if (u < 0.0 || u > 1.0) continue;
-
-        auto q = s.cross(edge1);
-        auto v = f * dir.dot(q);
-        if (v < 0.0 || u + v > 1.0) continue;
-
-        auto t = f * edge2.dot(q);
-        if (t > 0.0 * m) ++crossings;
+        if (!hit_edge) return (crossings & 1u) != 0;
     }
 
-    return (crossings % 2) == 1;
+    throw std::runtime_error(
+        "mesh::contains failed to determine parity (what the hell are you doing, man?)");
 }
 
-vec3<si::metre> mesh::support_local(const vec3<one> &direction) const
+std::vector<std::uint32_t> mesh::overlap_sphere(const bounding_sphere &sphere) const
+{
+    assert(!M_bvh.empty());
+
+    auto r_sq = sphere.radius * sphere.radius;
+
+    std::vector<std::uint32_t> overlapping;       // TODO: Optimize allocation
+    overlapping.reserve(M_triangles.size() / 10); // heuristic
+
+    M_bvh.traverse([&](const aabb &bounds) { return sphere.intersects(bounds); },
+                   [&](const aabb & /*bound*/, std::uint32_t start, std::uint32_t count)
+                   {
+                       auto end = start + count;
+                       for (std::uint32_t i = start; i < end; ++i)
+                           if (auto closest = M_triangles[i].closest_point(sphere.center, *this);
+                               (closest - sphere.center).squared_norm() < r_sq)
+                               overlapping.push_back(i);
+                   });
+    return overlapping;
+}
+
+vec3<m> mesh::support(const vec3<one> &direction) const
 {
     assert(!M_vertices.empty());
     std::size_t best_idx = 0;
@@ -295,8 +365,7 @@ bool mesh::is_convex() const
 {
     // TODO: implement convexity test (check all edges, verify all vertices on same side of each
     // face)
-    assert(false && "mesh::is_convex not yet implemented");
-    return false;
+    throw std::runtime_error("mesh::is_convex not yet implemented");
 }
 
 /*
@@ -305,18 +374,17 @@ bool mesh::is_convex() const
 ------------------------------------------------------------
 */
 
-aabb mesh::instance::world_bounds() const { return M_mesh.bounds() * M_orientation + M_position; }
+aabb mesh::instance::bounds() const { return M_mesh->bounds() * M_orientation + M_position; }
 
-std::optional<mesh::ray_hit> mesh::instance::ray_intersect(const mesh::ray &r,
-                                                           quantity<si::metre> max_distance) const
+std::optional<ray::hit> mesh::instance::ray_intersect(const ray &r, quantity<m> max_distance) const
 {
     // Transform ray into local space.
     auto inv_orient = M_orientation.conjugate();
-    auto local_origin = inv_orient * (r.origin - M_position);
-    auto local_dir = inv_orient * r.direction;
-    mesh::ray local_ray{.origin = local_origin, .direction = local_dir};
+    auto local_origin = inv_orient * (r.origin() - M_position);
+    auto local_dir = inv_orient * r.direction();
+    ray local_ray{local_origin, local_dir};
 
-    auto hit = M_mesh.ray_intersect_local(local_ray, max_distance);
+    auto hit = M_mesh->ray_intersect(local_ray, max_distance);
     if (hit)
     {
         hit->pos = M_orientation * hit->pos + M_position;
@@ -325,36 +393,45 @@ std::optional<mesh::ray_hit> mesh::instance::ray_intersect(const mesh::ray &r,
     return hit;
 }
 
-vec3<si::metre> mesh::instance::closest_point(const vec3<si::metre> &point) const
+vec3<m> mesh::instance::closest_point(const vec3<m> &point) const
 {
     auto inv_orient = M_orientation.conjugate();
     auto local_point = inv_orient * (point - M_position);
-    auto local_closest = M_mesh.closest_point_local(local_point);
+    auto local_closest = M_mesh->closest_point(local_point);
     return M_orientation * local_closest + M_position;
 }
 
-bool mesh::instance::contains(const vec3<si::metre> &point) const
+bool mesh::instance::contains(const vec3<m> &point) const
 {
     auto inv_orient = M_orientation.conjugate();
     auto local_point = inv_orient * (point - M_position);
-    return M_mesh.contains_local(local_point);
+    return M_mesh->contains(local_point);
 }
 
-vec3<si::metre> mesh::instance::support(const vec3<one> &direction) const
+std::vector<std::uint32_t> mesh::instance::overlap_sphere(const bounding_sphere &sphere) const
+{
+    auto inv_orient = M_orientation.conjugate();
+    bounding_sphere local_sphere{
+        .center = inv_orient * (sphere.center - M_position),
+        .radius = sphere.radius,
+    };
+    return M_mesh->overlap_sphere(local_sphere);
+}
+
+vec3<m> mesh::instance::support(const vec3<one> &direction) const
 {
     auto inv_orient = M_orientation.conjugate();
     auto local_dir = inv_orient * direction;
-    auto local_support = M_mesh.support_local(local_dir);
+    auto local_support = M_mesh->support(local_dir);
     return M_orientation * local_support + M_position;
 }
 
-mat3<si::kilogram * pow<2>(si::metre)>
+mat3<kg * pow<2>(m)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-mesh::instance::world_inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
+mesh::instance::inertia_tensor(quantity<kg / pow<3>(m)> density) const
 {
     // TODO: rotate local inertia tensor into world frame and apply parallel axis theorem
-    assert(false && "mesh::instance::world_inertia_tensor not yet implemented");
-    return mat3<si::kilogram * pow<2>(si::metre)>::zero();
+    throw std::runtime_error("mesh::instance::inertia_tensor not yet implemented");
 }
 
 } // namespace physkit

@@ -8,12 +8,11 @@ class app : public graphics::graphics_app
 {
 public:
     explicit app(const Arguments &arguments)
-        : graphics::graphics_app{arguments,
-                                 {800, 600},
-                                 45 * si::degree,
-                                 "Camera Track Test",
-                                 fvec3{0.0f, 8.0f, -18.0f} * si::metre,
-                                 fvec3{0.0f, -8.0f, 18.0f}}
+        : graphics::graphics_app{g_config(arguments, false)
+                                     .window_size({800, 600})
+                                     .title("Camera Track Test")
+                                     .cam_pos(fvec3{0.0f, 8.0f, -18.0f} * si::metre)
+                                     .cam_dir(fvec3{0.0f, -8.0f, 18.0f} * physkit::one)}
     // NOLINT
     {
         using namespace si::unit_symbols;

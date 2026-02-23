@@ -33,22 +33,22 @@ include(${CMAKE_SOURCE_DIR}/cmake/EnsureClang.cmake)
 set(PHYSKIT_SOURCES
 	src/world.cpp
 	src/mesh.cpp
-	src/sat.cpp
-	src/gjk.cpp
+	src/collision.cpp
+	src/bvh.cpp
 )
 
 set(PHYSKIT_HEADERS
 	accum.h
-	gjk.h
+	collision.h
 	integrator.h
-	math_utils.h
 	mesh.h
 	obb.h
 	object.h
 	particle.h
 	physkit.h
-	sat.h
 	world.h
+	detail/bounds.h
+	detail/bvh.h
 	detail/eigen_format.h
 	detail/lin_alg.h
 	detail/types.h
@@ -89,7 +89,11 @@ add_library(physkit::physkit ALIAS physkit)
 
 set(PHYSKIT_LIBRARIES physkit)
 
-add_subdirectory(tests)
+option(PHYSKIT_BUILD_TESTS "Build tests and demos" OFF)
+if (PHYSKIT_BUILD_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake/FilterCompileCommands.cmake)
 
