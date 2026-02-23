@@ -365,7 +365,30 @@ bool mesh::is_convex() const
 {
     // TODO: implement convexity test (check all edges, verify all vertices on same side of each
     // face)
-    throw std::runtime_error("mesh::is_convex not yet implemented");
+    assert(!M_triangles.empty() && "Empty mesh.");
+    for (auto tri : M_triangles)
+    {
+        int side = 0;
+        auto n = tri.normal(*this);
+
+        for (auto point : M_vertices)
+        {
+            auto x = (point - M_vertices[tri[0]]).dot(n);
+            if (x > 0*m)
+            {
+                if (side < 0)
+                    return false;
+                side = 1;
+            }
+            else if (x < 0*m)
+            {
+                if (side > 0)
+                    return false;
+                side = -1;
+            }
+        }
+    }
+    return true;
 }
 
 /*
