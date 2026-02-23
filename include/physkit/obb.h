@@ -1,4 +1,5 @@
 #pragma once
+#include "detail/lin_alg.h"
 #include "detail/types.h"
 #include "mesh.h" // for aabb
 
@@ -47,16 +48,44 @@ public:
         return obb{transformed_center, orientation, box.extent()};
     }
 
-    /// @brief this is unresolved. I can't figure out the proper size which accounts
-    /// for current orientation.
+    /// @brief create OBB object from point cloud via PCA
+    /// @note this requires at least 4 non-coplanar points for any meaningful results
+    [[nodiscard]] static obb from_points(std::span<const vec3<si::metre>> points)
+    {
+        assert(points.size() >= 4 && "Requires 4 points for OBB fitting");
 
-    /// this is not working.
-    [[nodiscard]] constexpr auto size() const {}
+        // compute centroid - defined as the center of our object
+        vec3<si::metre> centroid = vec3<si::metre>::zero();
+        for (const auto &pt : points) { centroid = centroid + pt; }
+        centroid = centroid / static_cast<float_t>(points.size());
+
+        // compute covariance matrix for a 3x3
+        mat3<one> cov = mat3<one>::zero();
+        for (const auto &pt : points)
+        {
+            vec3<one> d = (pt - centroid) / si::metre; // noramlizes into dimensionless
+            cov += d * d.transpose();
+        }
+        cov = cov / static_cast<float_t>(points.size());
+
+        // extract eigencvectors {principal axes} needs eigen solver
+        // project points onto axes to find min/max extents
+        // build obb from these resultants.
+
+        return obb{centroid, quat<one>::identity(), vec3<si::metre>::zero()};
+    }
+
     /// @brief Get the center of the OBB
     [[nodiscard]] constexpr auto center_pos() const { return center; }
-    // [[nodiscard]] constexpr auto center() const { return (min + max) / 2.0; }
 
-    /// @brief Get the half-extents of the OBB
+    /// @brief return the center of the obb
+    /// TODO: fix center functionfor obb
+    ///[[nodiscard]] constexpr auto center() const { return (min + max) / 2.0; }
+
+    /// @brief Get the world-space size of the obb - does not account for orientation
+    [[nodiscard]] constexpr auto size() const { return half_extents * 2.0; }
+
+    /// @brief get the half extents in local space
     [[nodiscard]] constexpr auto extents() const { return half_extents; }
 
     /// @brief Calculate the volume of the OBB
@@ -101,6 +130,21 @@ public:
         return {orientation * local_x, orientation * local_y, orientation * local_z};
     }
 
+    /// @brief create an OBB that encloses another OBB with a transformation applied
+    [[nodiscard]] static constexpr obb transform(const obb &box, const quat<one> &rotation,
+                                                 const vec3<si::metre> &translation)
+    {
+        auto new_orientation = rotation * box.orientation;
+        auto new_center = rotation * box.center + translation;
+        return obb{new_center, new_orientation, box.half_extents};
+    }
+
+    /// @brief calculate the surface area of the obb
+    [[nodiscard]] constexpr auto surface_area() const
+    {
+        auto s = half_extents * 2.0;
+        return 2.0 * ((s.x() * s.y()) + (s.x() * s.z()) + (s.z() * s.y()));
+    }
     /// TODO: implement translations
 
     /// @brief Compound assignment operators - modified from aabb
@@ -139,6 +183,16 @@ public:
                (local_point.y() >= -half_extents.y() && local_point.y() <= half_extents.y()) &&
                (local_point.z() >= -half_extents.z() && local_point.z() <= half_extents.z());
     }
+
+    /// @brief check if point is contained in local space of the obb
+    [[nodiscard]] constexpr bool contains_local(const vec3<si::metre> &local_point) const
+    {
+        return (local_point.x() >= -half_extents.x() && local_point.x() <= half_extents.x()) &&
+               (local_point.y() >= -half_extents.y() && local_point.y() <= half_extents.y()) &&
+               (local_point.z() >= -half_extents.z() && local_point.z() <= half_extents.z());
+    }
+
+    /// @ brief calculate the closeset point within the obb (local space specific)
 };
 
 } // namespace physkit
