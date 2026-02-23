@@ -34,6 +34,7 @@ set(PHYSKIT_SOURCES
 	src/world.cpp
 	src/mesh.cpp
 	src/collision.cpp
+	src/bvh.cpp
 )
 
 set(PHYSKIT_HEADERS
@@ -46,6 +47,8 @@ set(PHYSKIT_HEADERS
 	particle.h
 	physkit.h
 	world.h
+	detail/bounds.h
+	detail/bvh.h
 	detail/eigen_format.h
 	detail/lin_alg.h
 	detail/types.h

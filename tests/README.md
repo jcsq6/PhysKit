@@ -634,7 +634,7 @@ All macros capture the source location and report it on failure.
 | `unit_quat<Q>` | Angular distance < `eps` |
 | `aabb` | Component-wise approximate comparison of `min` and `max` |
 | `bounding_sphere` | Approximate comparison of `center` and `radius` |
-| `mesh::ray_hit` | Approximate comparison of `pos`, `normal`, and `distance` |
+| `ray::hit` | Approximate comparison of `pos`, `normal`, and `distance` |
 
 ### Test Output
 

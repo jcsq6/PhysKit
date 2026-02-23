@@ -2,6 +2,8 @@
 
 #include "test.h"
 
+#include <algorithm>
+
 using namespace testing;
 
 // ---------------------------------------------------------------------------
@@ -24,7 +26,7 @@ struct cube_fixture
     }};
 
     // 12 triangles, 2 per face, outward-facing normals via CCW winding
-    std::array<mesh::triangle_t, 12> triangles = {{
+    std::array<triangle_t, 12> triangles = {{
         // -Z face (z=0): normal (0,0,-1)
         {0, 2, 1},
         {0, 3, 2},
@@ -356,9 +358,9 @@ void test_mesh_ray_intersect()
     auto msh = cube.make_mesh();
 
     // Ray from outside hitting the cube
-    mesh::ray r{
-        .origin = vec3{-1.0, 0.5, 0.5} * m,
-        .direction = {1.0, 0.0, 0.0},
+    ray r{
+        vec3{-1.0, 0.5, 0.5} * m,
+        {1.0, 0.0, 0.0},
     };
     auto hit = msh->ray_intersect(r);
     CHECK(hit.has_value());
@@ -368,9 +370,9 @@ void test_mesh_ray_intersect()
     CHECK_APPROX(hit->distance, 1.0 * m);
 
     // Ray pointing away - no hit
-    mesh::ray away{
-        .origin = vec3{-1.0, 0.5, 0.5} * m,
-        .direction = vec3{-1.0, 0.0, 0.0},
+    ray away{
+        vec3{-1.0, 0.5, 0.5} * m,
+        vec3{-1.0, 0.0, 0.0},
     };
     CHECK(!msh->ray_intersect(away).has_value());
 
@@ -379,9 +381,9 @@ void test_mesh_ray_intersect()
     CHECK(!short_hit.has_value());
 
     // Ray from inside - should still hit
-    mesh::ray inside{
-        .origin = vec3{0.5, 0.5, 0.5} * m,
-        .direction = vec3{1.0, 0.0, 0.0},
+    ray inside{
+        vec3{0.5, 0.5, 0.5} * m,
+        vec3{1.0, 0.0, 0.0},
     };
     auto inside_hit = msh->ray_intersect(inside);
     CHECK(inside_hit.has_value());
@@ -550,7 +552,7 @@ void test_ray_intersect_all_faces()
 
     for (const auto &[origin, dir, expected_pos, expected_dist] : cases)
     {
-        auto hit = msh->ray_intersect({.origin = origin, .direction = dir});
+        auto hit = msh->ray_intersect({origin, dir});
         CHECK(hit.has_value());
         CHECK_APPROX(hit->pos, expected_pos);
         CHECK_APPROX(hit->distance, expected_dist);
@@ -565,16 +567,16 @@ void test_ray_intersect_diagonal()
 
     // Diagonal ray aimed at the cube center from a corner direction
     auto origin = vec3{-1.0, -1.0, -1.0} * m;
-    auto dir = vec3{1.0, 1.0, 1.0}.normalized();
-    auto hit = msh->ray_intersect({.origin = origin, .direction = dir});
+    auto dir = vec3{1.0, 1.0, 1.0};
+    auto hit = msh->ray_intersect({origin, dir});
     CHECK(hit.has_value());
     // Should hit the corner region; distance from origin to (0,0,0) is sqrt(3)
     CHECK_APPROX(hit->distance, std::sqrt(3.0) * m);
 
     // Diagonal from opposite corner
     auto origin2 = vec3{2.0, 2.0, 2.0} * m;
-    auto dir2 = vec3{-1.0, -1.0, -1.0}.normalized();
-    auto hit2 = msh->ray_intersect({.origin = origin2, .direction = dir2});
+    auto dir2 = vec3{-1.0, -1.0, -1.0};
+    auto hit2 = msh->ray_intersect({origin2, dir2});
     CHECK(hit2.has_value());
     CHECK_APPROX(hit2->distance, std::sqrt(3.0) * m);
 }
@@ -585,18 +587,14 @@ void test_ray_intersect_miss_parallel()
     auto msh = cube.make_mesh();
 
     // Ray parallel to +X face, passing just outside
-    CHECK(!msh->ray_intersect({.origin = vec3{0.5, 1.1, 0.5} * m, .direction = {1, 0, 0}})
-               .has_value());
-    CHECK(!msh->ray_intersect({.origin = vec3{0.5, -0.1, 0.5} * m, .direction = {1, 0, 0}})
-               .has_value());
+    CHECK(!msh->ray_intersect({vec3{0.5, 1.1, 0.5} * m, {1, 0, 0}}).has_value());
+    CHECK(!msh->ray_intersect({vec3{0.5, -0.1, 0.5} * m, {1, 0, 0}}).has_value());
 
     // Ray parallel to Z axis, passing outside in X
-    CHECK(!msh->ray_intersect({.origin = vec3{1.5, 0.5, -2.0} * m, .direction = {0, 0, 1}})
-               .has_value());
+    CHECK(!msh->ray_intersect({vec3{1.5, 0.5, -2.0} * m, {0, 0, 1}}).has_value());
 
     // Ray parallel to Y axis, passing outside in Z
-    CHECK(!msh->ray_intersect({.origin = vec3{0.5, -2.0, 1.5} * m, .direction = {0, 1, 0}})
-               .has_value());
+    CHECK(!msh->ray_intersect({vec3{0.5, -2.0, 1.5} * m, {0, 1, 0}}).has_value());
 }
 
 void test_ray_intersect_miss_wrong_direction()
@@ -605,14 +603,10 @@ void test_ray_intersect_miss_wrong_direction()
     auto msh = cube.make_mesh();
 
     // Ray pointing away from cube on each axis
-    CHECK(!msh->ray_intersect({.origin = vec3{-1.0, 0.5, 0.5} * m, .direction = {-1, 0, 0}})
-               .has_value());
-    CHECK(!msh->ray_intersect({.origin = vec3{0.5, -1.0, 0.5} * m, .direction = {0, -1, 0}})
-               .has_value());
-    CHECK(!msh->ray_intersect({.origin = vec3{0.5, 0.5, -1.0} * m, .direction = {0, 0, -1}})
-               .has_value());
-    CHECK(!msh->ray_intersect({.origin = vec3{2.0, 0.5, 0.5} * m, .direction = {1, 0, 0}})
-               .has_value());
+    CHECK(!msh->ray_intersect({vec3{-1.0, 0.5, 0.5} * m, {-1, 0, 0}}).has_value());
+    CHECK(!msh->ray_intersect({vec3{0.5, -1.0, 0.5} * m, {0, -1, 0}}).has_value());
+    CHECK(!msh->ray_intersect({vec3{0.5, 0.5, -1.0} * m, {0, 0, -1}}).has_value());
+    CHECK(!msh->ray_intersect({vec3{2.0, 0.5, 0.5} * m, {1, 0, 0}}).has_value());
 }
 
 void test_ray_intersect_from_inside()
@@ -625,18 +619,18 @@ void test_ray_intersect_from_inside()
     for (const auto &dir : {vec3<one>{1, 0, 0}, vec3<one>{-1, 0, 0}, vec3<one>{0, 1, 0},
                             vec3<one>{0, -1, 0}, vec3<one>{0, 0, 1}, vec3<one>{0, 0, -1}})
     {
-        auto hit = msh->ray_intersect({.origin = center, .direction = dir});
+        auto hit = msh->ray_intersect({center, dir});
         CHECK(hit.has_value());
         CHECK_APPROX(hit->distance, 0.5 * m);
     }
 
     // From off-center interior point
-    auto hit = msh->ray_intersect({.origin = vec3{0.2, 0.5, 0.5} * m, .direction = {-1, 0, 0}});
+    auto hit = msh->ray_intersect({vec3{0.2, 0.5, 0.5} * m, {-1, 0, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->distance, 0.2 * m);
     CHECK_APPROX(hit->pos.x(), 0.0 * m);
 
-    auto hit2 = msh->ray_intersect({.origin = vec3{0.2, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    auto hit2 = msh->ray_intersect({vec3{0.2, 0.5, 0.5} * m, {1, 0, 0}});
     CHECK(hit2.has_value());
     CHECK_APPROX(hit2->distance, 0.8 * m);
     CHECK_APPROX(hit2->pos.x(), 1.0 * m);
@@ -647,7 +641,7 @@ void test_ray_intersect_max_distance()
     cube_fixture cube;
     auto msh = cube.make_mesh();
 
-    mesh::ray r{.origin = vec3{-5.0, 0.5, 0.5} * m, .direction = {1, 0, 0}};
+    ray r{vec3{-5.0, 0.5, 0.5} * m, {1, 0, 0}};
 
     // Too short to reach
     CHECK(!msh->ray_intersect(r, 4.0 * m).has_value());
@@ -659,7 +653,7 @@ void test_ray_intersect_max_distance()
     CHECK(msh->ray_intersect(r, 100.0 * m).has_value());
 
     // From closer, restricting to first face only (should not reach back face)
-    mesh::ray r2{.origin = vec3{-1.0, 0.5, 0.5} * m, .direction = {1, 0, 0}};
+    ray r2{vec3{-1.0, 0.5, 0.5} * m, {1, 0, 0}};
     auto hit = msh->ray_intersect(r2, 1.5 * m);
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.x(), 0.0 * m); // front face, not back face
@@ -671,22 +665,22 @@ void test_ray_intersect_hit_normal()
     auto msh = cube.make_mesh();
 
     // Hit -X face: normal should point in -X
-    auto hit_nx = msh->ray_intersect({.origin = vec3{-2.0, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    auto hit_nx = msh->ray_intersect({vec3{-2.0, 0.5, 0.5} * m, {1, 0, 0}});
     CHECK(hit_nx.has_value());
     CHECK_APPROX(hit_nx->normal, vec3<one>{-1, 0, 0});
 
     // Hit +X face: normal should point in +X
-    auto hit_px = msh->ray_intersect({.origin = vec3{3.0, 0.5, 0.5} * m, .direction = {-1, 0, 0}});
+    auto hit_px = msh->ray_intersect({vec3{3.0, 0.5, 0.5} * m, {-1, 0, 0}});
     CHECK(hit_px.has_value());
     CHECK_APPROX(hit_px->normal, vec3<one>{1, 0, 0});
 
     // Hit +Z face: normal should point in +Z
-    auto hit_pz = msh->ray_intersect({.origin = vec3{0.5, 0.5, 3.0} * m, .direction = {0, 0, -1}});
+    auto hit_pz = msh->ray_intersect({vec3{0.5, 0.5, 3.0} * m, {0, 0, -1}});
     CHECK(hit_pz.has_value());
     CHECK_APPROX(hit_pz->normal, vec3<one>{0, 0, 1});
 
     // Hit -Y face
-    auto hit_ny = msh->ray_intersect({.origin = vec3{0.5, -2.0, 0.5} * m, .direction = {0, 1, 0}});
+    auto hit_ny = msh->ray_intersect({vec3{0.5, -2.0, 0.5} * m, {0, 1, 0}});
     CHECK(hit_ny.has_value());
     CHECK_APPROX(hit_ny->normal, vec3<one>{0, -1, 0});
 }
@@ -698,13 +692,13 @@ void test_ray_intersect_edge_hit()
 
     // Ray aimed exactly at an edge of the cube (where two faces meet)
     // Should still register a hit on one of the adjacent triangles
-    auto hit = msh->ray_intersect({.origin = vec3{-1.0, 0.0, 0.5} * m, .direction = {1, 0, 0}});
+    auto hit = msh->ray_intersect({vec3{-1.0, 0.0, 0.5} * m, {1, 0, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.x(), 0.0 * m);
     CHECK_APPROX(hit->pos.y(), 0.0 * m);
 
     // Ray aimed at a vertex
-    auto hit_v = msh->ray_intersect({.origin = vec3{-1.0, 0.0, 0.0} * m, .direction = {1, 0, 0}});
+    auto hit_v = msh->ray_intersect({vec3{-1.0, 0.0, 0.0} * m, {1, 0, 0}});
     CHECK(hit_v.has_value());
     CHECK_APPROX(hit_v->pos, vec3{0.0, 0.0, 0.0} * m);
 }
@@ -717,13 +711,13 @@ void test_ray_intersect_grazing()
 
     // Nearly parallel to +Z face: ray just barely enters the cube
     auto dir = vec3{1.0, 0.0, 0.001}.normalized();
-    auto hit = msh->ray_intersect({.origin = vec3{-1.0, 0.5, 0.5} * m, .direction = dir});
+    auto hit = msh->ray_intersect({vec3{-1.0, 0.5, 0.5} * m, dir});
     CHECK(hit.has_value());
     CHECK(hit->pos.x() >= -1e-6 * m); // should hit on or near the -X face
 
     // Nearly parallel but just misses (slightly outside)
     auto miss_dir = vec3{1.0, 0.0, 0.0};
-    auto miss = msh->ray_intersect({.origin = vec3{-1.0, 0.5, 1.0001} * m, .direction = miss_dir});
+    auto miss = msh->ray_intersect({vec3{-1.0, 0.5, 1.0001} * m, miss_dir});
     CHECK(!miss.has_value());
 }
 
@@ -733,7 +727,7 @@ void test_ray_intersect_zero_distance()
     auto msh = cube.make_mesh();
 
     // Ray origin exactly on the -X face surface, pointing inward
-    auto hit = msh->ray_intersect({.origin = vec3{0.0, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    auto hit = msh->ray_intersect({vec3{0.0, 0.5, 0.5} * m, {1, 0, 0}});
     CHECK(hit.has_value());
     // Should hit the far +X face at distance 1, or the near face at distance ~0
     CHECK(hit->distance <= 1.0 * m + 1e-9 * m);
@@ -745,7 +739,7 @@ void test_ray_intersect_sphere()
     auto msh = mesh::sphere(1.0 * m, 32, 32);
 
     // Along +X axis from outside
-    auto hit = msh->ray_intersect({.origin = vec3{5.0, 0.0, 0.0} * m, .direction = {-1, 0, 0}});
+    auto hit = msh->ray_intersect({vec3{5.0, 0.0, 0.0} * m, {-1, 0, 0}});
     CHECK(hit.has_value());
     CHECK(std::abs(hit->pos.x().numerical_value_in(si::metre) - 1.0) < 0.05);
     CHECK(std::abs(hit->pos.y().numerical_value_in(si::metre)) < 0.05);
@@ -756,13 +750,12 @@ void test_ray_intersect_sphere()
     CHECK(static_cast<double>(hit->normal.x()) > 0.9);
 
     // Along -Y axis from below
-    auto hit_y = msh->ray_intersect({.origin = vec3{0.0, -5.0, 0.0} * m, .direction = {0, 1, 0}});
+    auto hit_y = msh->ray_intersect({vec3{0.0, -5.0, 0.0} * m, {0, 1, 0}});
     CHECK(hit_y.has_value());
     CHECK(std::abs(hit_y->pos.y().numerical_value_in(si::metre) - (-1.0)) < 0.05);
 
     // Miss: ray passing beside the sphere
-    CHECK(!msh->ray_intersect({.origin = vec3{0.0, 2.0, 0.0} * m, .direction = {1, 0, 0}})
-               .has_value());
+    CHECK(!msh->ray_intersect({vec3{0.0, 2.0, 0.0} * m, {1, 0, 0}}).has_value());
 }
 
 void test_ray_intersect_pyramid()
@@ -771,18 +764,17 @@ void test_ray_intersect_pyramid()
     // Base at y=0, apex at (0, 2, 0)
 
     // Ray from below hitting the base
-    auto hit = msh->ray_intersect({.origin = vec3{0.0, -1.0, 0.0} * m, .direction = {0, 1, 0}});
+    auto hit = msh->ray_intersect({vec3{0.0, -1.0, 0.0} * m, {0, 1, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.y(), 0.0 * m);
 
     // Ray from above hitting the apex
-    auto hit_top = msh->ray_intersect({.origin = vec3{0.0, 5.0, 0.0} * m, .direction = {0, -1, 0}});
+    auto hit_top = msh->ray_intersect({vec3{0.0, 5.0, 0.0} * m, {0, -1, 0}});
     CHECK(hit_top.has_value());
     CHECK_APPROX(hit_top->pos, vec3{0.0, 2.0, 0.0} * m);
 
     // Ray from the side hitting a lateral face
-    auto hit_side =
-        msh->ray_intersect({.origin = vec3{5.0, 1.0, 0.0} * m, .direction = {-1, 0, 0}});
+    auto hit_side = msh->ray_intersect({vec3{5.0, 1.0, 0.0} * m, {-1, 0, 0}});
     CHECK(hit_side.has_value());
     CHECK(hit_side->pos.x() > 0.0 * m);
     CHECK(hit_side->pos.x() < 1.0 * m);
@@ -795,14 +787,14 @@ void test_ray_intersect_returns_nearest()
     auto msh = cube.make_mesh();
 
     // Ray passes through the entire cube: should return the FIRST (nearest) hit
-    mesh::ray r{.origin = vec3{-2.0, 0.5, 0.5} * m, .direction = {1, 0, 0}};
+    ray r{vec3{-2.0, 0.5, 0.5} * m, {1, 0, 0}};
     auto hit = msh->ray_intersect(r);
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.x(), 0.0 * m); // front face, not back face at x=1
     CHECK_APPROX(hit->distance, 2.0 * m);
 
     // Same from the other direction
-    mesh::ray r2{.origin = vec3{3.0, 0.5, 0.5} * m, .direction = {-1, 0, 0}};
+    ray r2{vec3{3.0, 0.5, 0.5} * m, {-1, 0, 0}};
     auto hit2 = msh->ray_intersect(r2);
     CHECK(hit2.has_value());
     CHECK_APPROX(hit2->pos.x(), 1.0 * m); // front face from +X side
@@ -815,7 +807,7 @@ void test_ray_intersect_unnormalized_direction()
     auto msh = cube.make_mesh();
 
     // Direction vector with length != 1; ray_intersect normalizes internally
-    mesh::ray r{.origin = vec3{-2.0, 0.5, 0.5} * m, .direction = {10, 0, 0}};
+    ray r{vec3{-2.0, 0.5, 0.5} * m, {10, 0, 0}};
     auto hit = msh->ray_intersect(r);
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos, vec3{0.0, 0.5, 0.5} * m);
@@ -832,17 +824,16 @@ void test_ray_intersect_instance_translated()
     auto inst = msh->at(vec3{10.0, 0.0, 0.0} * m);
 
     // Hit from the left
-    auto hit = inst.ray_intersect({.origin = vec3{5.0, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    auto hit = inst.ray_intersect({vec3{5.0, 0.5, 0.5} * m, {1, 0, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.x(), 10.0 * m);
     CHECK_APPROX(hit->distance, 5.0 * m);
 
     // Miss at original location
-    CHECK(!inst.ray_intersect({.origin = vec3{-2.0, 0.5, 0.5} * m, .direction = {1, 0, 0}}, 5.0 * m)
-               .has_value());
+    CHECK(!inst.ray_intersect({vec3{-2.0, 0.5, 0.5} * m, {1, 0, 0}}, 5.0 * m).has_value());
 
     // From inside the translated cube
-    auto hit_in = inst.ray_intersect({.origin = vec3{10.5, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    auto hit_in = inst.ray_intersect({vec3{10.5, 0.5, 0.5} * m, {1, 0, 0}});
     CHECK(hit_in.has_value());
     CHECK_APPROX(hit_in->pos.x(), 11.0 * m);
     CHECK_APPROX(hit_in->distance, 0.5 * m);
@@ -861,13 +852,13 @@ void test_ray_intersect_instance_rotated()
     auto inst = msh->at(vec3{0.0, 0.0, 0.0} * m, rot_z);
 
     // Ray from -X side
-    auto hit = inst.ray_intersect({.origin = vec3{-3.0, 0.5, 0.5} * m, .direction = {1, 0, 0}});
+    auto hit = inst.ray_intersect({vec3{-3.0, 0.5, 0.5} * m, {1, 0, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.x(), -1.0 * m);
     CHECK_APPROX(hit->distance, 2.0 * m);
 
     // Ray from +X side should hit x=0 face
-    auto hit2 = inst.ray_intersect({.origin = vec3{3.0, 0.5, 0.5} * m, .direction = {-1, 0, 0}});
+    auto hit2 = inst.ray_intersect({vec3{3.0, 0.5, 0.5} * m, {-1, 0, 0}});
     CHECK(hit2.has_value());
     CHECK_APPROX(hit2->pos.x(), 0.0 * m);
     CHECK_APPROX(hit2->distance, 3.0 * m);
@@ -878,19 +869,19 @@ void test_ray_intersect_centered_box()
     auto msh = mesh::box(vec3{1.0, 2.0, 3.0} * m); // half-extents -> [-1,1] x [-2,2] x [-3,3]
 
     // Hit from +X
-    auto hit = msh->ray_intersect({.origin = vec3{5.0, 0.0, 0.0} * m, .direction = {-1, 0, 0}});
+    auto hit = msh->ray_intersect({vec3{5.0, 0.0, 0.0} * m, {-1, 0, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.x(), 1.0 * m);
     CHECK_APPROX(hit->distance, 4.0 * m);
 
     // Hit from -Y (half-extent is 2 in Y)
-    auto hit_y = msh->ray_intersect({.origin = vec3{0.0, -5.0, 0.0} * m, .direction = {0, 1, 0}});
+    auto hit_y = msh->ray_intersect({vec3{0.0, -5.0, 0.0} * m, {0, 1, 0}});
     CHECK(hit_y.has_value());
     CHECK_APPROX(hit_y->pos.y(), -2.0 * m);
     CHECK_APPROX(hit_y->distance, 3.0 * m);
 
     // Hit from +Z (half-extent is 3 in Z)
-    auto hit_z = msh->ray_intersect({.origin = vec3{0.0, 0.0, 10.0} * m, .direction = {0, 0, -1}});
+    auto hit_z = msh->ray_intersect({vec3{0.0, 0.0, 10.0} * m, {0, 0, -1}});
     CHECK(hit_z.has_value());
     CHECK_APPROX(hit_z->pos.z(), 3.0 * m);
     CHECK_APPROX(hit_z->distance, 7.0 * m);
@@ -1227,6 +1218,255 @@ void test_closest_point_instance_rotated()
     CHECK_APPROX(cp2.y(), 1.0 * m);
 }
 // ---------------------------------------------------------------------------
+// overlap_sphere tests
+// ---------------------------------------------------------------------------
+
+void test_overlap_sphere_no_overlap()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Sphere far from the cube — no triangles should overlap
+    bounding_sphere far_sphere{.center = vec3{10.0, 10.0, 10.0} * m, .radius = 1.0 * m};
+    auto result = msh->overlap_sphere(far_sphere);
+    CHECK(result.empty());
+}
+
+void test_overlap_sphere_full_enclosure()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Sphere centered on the cube, large enough to enclose all vertices
+    bounding_sphere big_sphere{.center = vec3{0.5, 0.5, 0.5} * m, .radius = 10.0 * m};
+    auto result = msh->overlap_sphere(big_sphere);
+    CHECK(result.size() == 12); // all 12 triangles
+}
+
+void test_overlap_sphere_single_face()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Small sphere near the +Z face center (z=1, x=0.5, y=0.5) — should
+    // overlap the 2 triangles on that face, possibly a few neighbors
+    bounding_sphere face_sphere{.center = vec3{0.5, 0.5, 1.2} * m, .radius = 0.3 * m};
+    auto result = msh->overlap_sphere(face_sphere);
+    CHECK(!result.empty());
+    CHECK(result.size() <= 4); // at most a few triangles near that face
+
+    // All returned indices must be valid triangle indices
+    for (auto idx : result) CHECK(idx < 12);
+}
+
+void test_overlap_sphere_corner()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Sphere centered at the (1,1,1) corner with small radius — should overlap
+    // triangles from the 3 faces meeting at that corner
+    bounding_sphere corner_sphere{.center = vec3{1.0, 1.0, 1.0} * m, .radius = 0.05 * m};
+    auto result = msh->overlap_sphere(corner_sphere);
+    CHECK(!result.empty());
+    // The (1,1,1) corner is shared by +X, +Y, +Z faces (6 triangles max)
+    CHECK(result.size() <= 6);
+}
+
+void test_overlap_sphere_edge()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Sphere centered at the midpoint of the +Z/+X edge (x=1, z=1, y=0.5)
+    // with a small radius — should overlap triangles from those 2 faces
+    bounding_sphere edge_sphere{.center = vec3{1.0, 0.5, 1.0} * m, .radius = 0.05 * m};
+    auto result = msh->overlap_sphere(edge_sphere);
+    CHECK(!result.empty());
+    CHECK(result.size() <= 4); // triangles from the 2 adjacent faces
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_overlap_sphere_boundary_strict_less_than()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Sphere centered outside the +X face at x=2.0.
+    // Distance from (2,0.5,0.5) to the +X face (x=1) is exactly 1.0.
+    // With radius == 1.0, squared_distance == r_sq, and the check is strict <,
+    // so the triangle should NOT be included.
+    bounding_sphere exact_sphere{.center = vec3{2.0, 0.5, 0.5} * m, .radius = 1.0 * m};
+    auto result_exact = msh->overlap_sphere(exact_sphere);
+    CHECK(result_exact.empty());
+
+    // Slightly larger radius — should now overlap
+    bounding_sphere bigger_sphere{.center = vec3{2.0, 0.5, 0.5} * m, .radius = 1.01 * m};
+    auto result_bigger = msh->overlap_sphere(bigger_sphere);
+    CHECK(!result_bigger.empty());
+}
+
+void test_overlap_sphere_zero_radius()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Zero-radius sphere at a point outside — no overlap
+    bounding_sphere zero_outside{.center = vec3{5.0, 5.0, 5.0} * m, .radius = 0.0 * m};
+    CHECK(msh->overlap_sphere(zero_outside).empty());
+
+    // Zero-radius sphere on a face center — strict < means squared_dist (0) is not < 0
+    bounding_sphere zero_on_face{.center = vec3{0.5, 0.5, 1.0} * m, .radius = 0.0 * m};
+    CHECK(msh->overlap_sphere(zero_on_face).empty());
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_overlap_sphere_no_duplicates()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Large sphere that overlaps many triangles — verify no duplicate indices
+    bounding_sphere big_sphere{.center = vec3{0.5, 0.5, 0.5} * m, .radius = 5.0 * m};
+    auto result = msh->overlap_sphere(big_sphere);
+
+    std::ranges::sort(result);
+    auto [first, last] = std::ranges::unique(result);
+    CHECK(first == result.end()); // no duplicates removed
+}
+
+void test_overlap_sphere_subset_of_triangles()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Sphere touching only the -Z face (z=0) from below
+    bounding_sphere below_sphere{.center = vec3{0.5, 0.5, -0.3} * m, .radius = 0.4 * m};
+    auto result = msh->overlap_sphere(below_sphere);
+    CHECK(!result.empty());
+    CHECK(result.size() < 12); // definitely not all triangles
+}
+
+void test_overlap_sphere_sphere_mesh()
+{
+    auto msh = mesh::sphere(1.0 * m, 16, 16);
+
+    // Sphere at origin with radius slightly smaller than mesh radius — should
+    // overlap all triangles (closest point on each tri is < 1m from origin)
+    bounding_sphere inner{.center = vec3{0.0, 0.0, 0.0} * m, .radius = 1.5 * m};
+    auto all_result = msh->overlap_sphere(inner);
+    CHECK(all_result.size() == msh->triangles().size());
+
+    // Small sphere far from the mesh — no overlap
+    bounding_sphere far{.center = vec3{10.0, 0.0, 0.0} * m, .radius = 0.5 * m};
+    CHECK(msh->overlap_sphere(far).empty());
+
+    // Small sphere near the +X pole — partial overlap
+    bounding_sphere pole{.center = vec3{1.2, 0.0, 0.0} * m, .radius = 0.3 * m};
+    auto pole_result = msh->overlap_sphere(pole);
+    CHECK(!pole_result.empty());
+    CHECK(pole_result.size() < msh->triangles().size());
+}
+
+void test_overlap_sphere_centered_box()
+{
+    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m); // [-1,1]^3
+
+    // Sphere at origin with small radius — overlaps closest face triangles
+    bounding_sphere origin_sphere{.center = vec3{0.0, 0.0, 0.0} * m, .radius = 1.1 * m};
+    auto result = msh->overlap_sphere(origin_sphere);
+    CHECK(!result.empty());
+
+    // Sphere far outside — no overlap
+    bounding_sphere far_sphere{.center = vec3{10.0, 10.0, 10.0} * m, .radius = 1.0 * m};
+    CHECK(msh->overlap_sphere(far_sphere).empty());
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_overlap_sphere_instance_translated()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Translate the cube to (5,0,0) — now occupies [5,6] x [0,1] x [0,1]
+    auto inst = msh->at(vec3{5.0, 0.0, 0.0} * m);
+
+    // Sphere at original location — should not overlap
+    bounding_sphere at_origin{.center = vec3{0.5, 0.5, 0.5} * m, .radius = 2.0 * m};
+    CHECK(inst.overlap_sphere(at_origin).empty());
+
+    // Sphere enclosing the translated cube
+    bounding_sphere enclosing{.center = vec3{5.5, 0.5, 0.5} * m, .radius = 10.0 * m};
+    CHECK(inst.overlap_sphere(enclosing).size() == 12);
+
+    // Sphere near the +X face of the translated cube (x=6)
+    bounding_sphere near_face{.center = vec3{6.3, 0.5, 0.5} * m, .radius = 0.4 * m};
+    auto face_result = inst.overlap_sphere(near_face);
+    CHECK(!face_result.empty());
+    CHECK(face_result.size() <= 4);
+
+    // Sphere just outside the translated cube — strict < boundary
+    bounding_sphere tangent{.center = vec3{7.0, 0.5, 0.5} * m, .radius = 1.0 * m};
+    CHECK(inst.overlap_sphere(tangent).empty());
+
+    bounding_sphere just_past{.center = vec3{7.0, 0.5, 0.5} * m, .radius = 1.01 * m};
+    CHECK(!inst.overlap_sphere(just_past).empty());
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_overlap_sphere_instance_rotated()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // 90-degree rotation around Z: (x,y,z) -> (-y,x,z)
+    // Unit cube [0,1]^3 becomes [-1,0] x [0,1] x [0,1]
+    auto rot_z =
+        quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3{0.0, 0.0, 1.0});
+    auto inst = msh->at(vec3{0.0, 0.0, 0.0} * m, rot_z);
+
+    // Sphere at the rotated cube's center (-0.5, 0.5, 0.5) — full enclosure
+    bounding_sphere enclosing{.center = vec3{-0.5, 0.5, 0.5} * m, .radius = 10.0 * m};
+    CHECK(inst.overlap_sphere(enclosing).size() == 12);
+
+    // Sphere near -X face of the rotated cube (x = -1)
+    bounding_sphere near_neg_x{.center = vec3{-1.3, 0.5, 0.5} * m, .radius = 0.4 * m};
+    auto neg_x_result = inst.overlap_sphere(near_neg_x);
+    CHECK(!neg_x_result.empty());
+    CHECK(neg_x_result.size() <= 4);
+
+    // Sphere near where the original cube was (+X side) but not the rotated one
+    bounding_sphere miss_original{.center = vec3{1.5, 0.5, 0.5} * m, .radius = 0.3 * m};
+    CHECK(inst.overlap_sphere(miss_original).empty());
+}
+
+void test_overlap_sphere_instance_translated_and_rotated()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+
+    // Translate to (10,0,0) and rotate 90 degrees around Z
+    // Rotated cube [-1,0] x [0,1] x [0,1] shifted to [9,10] x [0,1] x [0,1]
+    auto rot_z =
+        quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3{0.0, 0.0, 1.0});
+    auto inst = msh->at(vec3{10.0, 0.0, 0.0} * m, rot_z);
+
+    // Sphere enclosing the transformed cube
+    bounding_sphere enclosing{.center = vec3{9.5, 0.5, 0.5} * m, .radius = 10.0 * m};
+    CHECK(inst.overlap_sphere(enclosing).size() == 12);
+
+    // Sphere far from the transformed cube
+    bounding_sphere far{.center = vec3{0.0, 0.0, 0.0} * m, .radius = 1.0 * m};
+    CHECK(inst.overlap_sphere(far).empty());
+
+    // Sphere near the -X face of the transformed cube (x=9)
+    bounding_sphere near_face{.center = vec3{8.7, 0.5, 0.5} * m, .radius = 0.4 * m};
+    auto result = inst.overlap_sphere(near_face);
+    CHECK(!result.empty());
+    CHECK(result.size() <= 4);
+}
+
+// ---------------------------------------------------------------------------
 // Mesh instance tests
 // ---------------------------------------------------------------------------
 
@@ -1270,18 +1510,18 @@ void test_mesh_instance_ray_intersect()
 
     auto inst = msh->at(vec3{5.0, 0.0, 0.0} * m);
 
-    mesh::ray r{
-        .origin = vec3{3.0, 0.5, 0.5} * m,
-        .direction = vec3{1.0, 0.0, 0.0},
+    ray r{
+        vec3{3.0, 0.5, 0.5} * m,
+        vec3{1.0, 0.0, 0.0},
     };
     auto hit = inst.ray_intersect(r);
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.x(), 5.0 * m);
     CHECK_APPROX(hit->distance, 2.0 * m);
 
-    mesh::ray miss{
-        .origin = vec3{3.0, 5.0, 0.5} * m,
-        .direction = vec3{1.0, 0.0, 0.0},
+    ray miss{
+        vec3{3.0, 5.0, 0.5} * m,
+        vec3{1.0, 0.0, 0.0},
     };
     CHECK(!inst.ray_intersect(miss).has_value());
 }
@@ -1323,9 +1563,9 @@ void test_mesh_instance_rotated()
     CHECK_APPROX(wb.max.x(), 0.0 * m);
 
     // Ray in +x should hit at x = -1
-    mesh::ray r{
-        .origin = vec3{-3.0, 0.5, 0.5} * m,
-        .direction = vec3{1.0, 0.0, 0.0},
+    ray r{
+        vec3{-3.0, 0.5, 0.5} * m,
+        vec3{1.0, 0.0, 0.0},
     };
     auto hit = inst.ray_intersect(r);
     CHECK(hit.has_value());
@@ -1416,6 +1656,22 @@ int main()
         .test("pyramid mesh", test_closest_point_pyramid)
         .test("translated instance", test_closest_point_instance)
         .test("rotated instance", test_closest_point_instance_rotated);
+
+    tests.group("Overlap Sphere Tests")
+        .test("no overlap", test_overlap_sphere_no_overlap)
+        .test("full enclosure", test_overlap_sphere_full_enclosure)
+        .test("single face", test_overlap_sphere_single_face)
+        .test("corner", test_overlap_sphere_corner)
+        .test("edge", test_overlap_sphere_edge)
+        .test("boundary strict less-than", test_overlap_sphere_boundary_strict_less_than)
+        .test("zero radius", test_overlap_sphere_zero_radius)
+        .test("no duplicates", test_overlap_sphere_no_duplicates)
+        .test("subset of triangles", test_overlap_sphere_subset_of_triangles)
+        .test("sphere mesh", test_overlap_sphere_sphere_mesh)
+        .test("centered box", test_overlap_sphere_centered_box)
+        .test("translated instance", test_overlap_sphere_instance_translated)
+        .test("rotated instance", test_overlap_sphere_instance_rotated)
+        .test("translated+rotated instance", test_overlap_sphere_instance_translated_and_rotated);
 
     tests.group("Mesh Instance Tests")
         .test("basic construction", test_mesh_instance_basic)

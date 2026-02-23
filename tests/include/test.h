@@ -53,7 +53,7 @@ inline bool approx(const bounding_sphere &a, const bounding_sphere &b)
     return approx(a.center, b.center) && approx(a.radius, b.radius);
 }
 
-inline bool approx(const mesh::ray_hit &a, const mesh::ray_hit &b)
+inline bool approx(const ray::hit &a, const ray::hit &b)
 {
     return approx(a.pos, b.pos) && approx(a.normal, b.normal) && approx(a.distance, b.distance);
 }
