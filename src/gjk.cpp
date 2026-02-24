@@ -1,9 +1,11 @@
+#include "physkit/collision.h"
 #include "physkit/detail/bounds.h"
 #include "physkit/detail/types.h"
 
 #include <array>
 #include <concepts>
 #include <mp-units/systems/si/unit_symbols.h>
+#include <optional>
 #include <utility>
 
 using namespace mp_units;
@@ -11,6 +13,7 @@ using namespace mp_units::si::unit_symbols;
 
 namespace physkit
 {
+/// based off winter dev gjk algorithm implementation
 
 ///@brief define a compile type shape for the GJK algorithm
 // to be a valid convex shape, type T must have furthest point method
@@ -235,6 +238,64 @@ bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction)
     return true;
 }
 
-// check for intersection and implement tests from bounds.h
+/// @brief return information that intersection occured
+[[nodiscard]] gjk_result make_intersection_result()
+{
+    gjk_result result;
+    result.intersects = true;
+    result.closest_points_data = std::nullopt; // better way of showing disengaged.
+    result.distance_data = quantity<si::metre>{};
+    return result;
+}
+
+/// @brief return information that intersection did not occur
+[[nodiscard]] gjk_result make_separated_result(const vec3<si::metre> &point_a,
+                                               const vec3<si::metre> &point_b)
+{
+    gjk_result result;
+    result.intersects = false;
+    result.closest_points_data = std::pair{point_a, point_b}; // better way of showing disengaged.
+    result.distance_data = (point_b - point_a).norm();
+    return result;
+}
+
+vec3<si::metre> support_obb(const obb &obj, const vec3<one> &direction)
+{
+    return obj.furthest_point(direction);
+}
+
+vec3<si::metre> support_aabb(const aabb &obj, const vec3<one> &direction)
+{
+    return obj.furthest_point(direction);
+}
+
+/// @brief return data for obb obb collision
+gjk_result gjk_obb_obb(const obb &a, const obb &b)
+{
+    if (gjk_collision(a, b)) return make_intersection_result();
+    return make_separated_result(a.furthest_point({1, 0, 0}), b.furthest_point({-1, 0, 0}));
+}
+
+gjk_result gjk_aabb_aabb(const aabb &a, const aabb &b)
+{
+    if (a.intersects(b)) return make_intersection_result();
+
+    if (gjk_collision(a, b)) return make_intersection_result();
+    return make_separated_result(a.furthest_point({1, 0, 0}), b.furthest_point({-1, 0, 0}));
+}
+
+gjk_result gjk_obb_aabb(const obb &obb_obj, const aabb &aabb_obj)
+{
+    if (gjk_collision(obb_obj, aabb_obj)) return make_intersection_result();
+    return make_separated_result(obb_obj.furthest_point({1, 0, 0}),
+                                 aabb_obj.furthest_point({-1, 0, 0}));
+}
+
+gjk_result gjk_aabb_obb(const aabb &aabb_obj, const obb &obb_obj)
+{
+    if (gjk_collision(aabb_obj, obb_obj)) return make_intersection_result();
+    return make_separated_result(aabb_obj.furthest_point({1, 0, 0}),
+                                 obb_obj.furthest_point({-1, 0, 0}));
+}
 
 } // namespace physkit
