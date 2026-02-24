@@ -902,7 +902,8 @@ void test_mesh_is_convex()
 {
     cube_fixture cube;
     auto msh = cube.make_mesh();
-    auto sphere_msh = mesh::sphere(2.0*m, 32, 32);
+    auto sphere_msh = mesh::sphere(2.0*m, 3, 3);
+    auto pyra_msh = mesh::pyramid(2.0*m, 2.0*m);
 
     std::array<vec3<m>, 12> v = {{
         vec3{0.0, 0.0, 0.0} * m, // 0
@@ -934,6 +935,7 @@ void test_mesh_is_convex()
 
     CHECK(!weird->is_convex());
     CHECK(msh->is_convex());
+    CHECK(pyra_msh->is_convex());
     CHECK(sphere_msh->is_convex());
 }
 

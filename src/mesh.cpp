@@ -363,6 +363,8 @@ vec3<m> mesh::support(const vec3<one> &direction) const
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 bool mesh::is_convex() const
 {
+    //tolerance
+    auto epsilon = 1e-10 * m;
     // TODO: implement convexity test (check all edges, verify all vertices on same side of each
     // face)
     assert(!M_triangles.empty() && "Empty mesh.");
@@ -370,23 +372,40 @@ bool mesh::is_convex() const
     {
         int side = 0;
         auto n = tri.normal(*this);
-
-        for (auto point : M_vertices)
+        for (size_t i = 0; i < M_vertices.size(); i++)
         {
-            auto x = (point - M_vertices[tri[0]]).dot(n);
-            if (x > 0*m)
+            auto point = M_vertices[i];
+            if (i == tri[0] || i == tri[1] || i == tri[2])
+                continue;
+            auto a = (point-M_vertices[tri[0]]).dot(n);
+
+            if (side == 0)
             {
-                if (side < 0)
-                    return false;
-                side = 1;
+                if (a > 0*m + epsilon)
+                    side = 1;
+                else if (a < 0*m - epsilon)
+                    side = -1;
             }
-            else if (x < 0*m)
+            else if ((a > 0*m+epsilon && side < 0) || (a < 0*m-epsilon && side > 0))
             {
-                if (side > 0)
-                    return false;
-                side = -1;
+                printf("a: %.50f, side: %d, point %.20f %.20f %.20f\n", a.numerical_value_in(m), side,
+                    point.x().numerical_value_in(m),
+                    point.y().numerical_value_in(m),
+                    point.z().numerical_value_in(m));
+                printf("vertices: %.20f, %.20f, %.20f\n%.20f, %.20f, %.20f\n%.20f, %.20f, %.20f\n",
+                    M_vertices[tri[0]].x().numerical_value_in(m),
+                    M_vertices[tri[0]].y().numerical_value_in(m),
+                    M_vertices[tri[0]].z().numerical_value_in(m),
+                    M_vertices[tri[1]].x().numerical_value_in(m),
+                    M_vertices[tri[1]].y().numerical_value_in(m),
+                    M_vertices[tri[1]].z().numerical_value_in(m),
+                    M_vertices[tri[2]].x().numerical_value_in(m),
+                    M_vertices[tri[2]].y().numerical_value_in(m),
+                    M_vertices[tri[2]].z().numerical_value_in(m));
+                return false;
             }
         }
+        printf("\n");
     }
     return true;
 }
