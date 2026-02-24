@@ -87,4 +87,5 @@ template <typename ShapeA, typename ShapeB>
 [[nodiscard]] vec3<si::metre> minkowski_difference_support(const ShapeA &shape_a,
                                                            const ShapeB &shape_b,
                                                            const vec3<one> &direction);
+
 } // namespace physkit

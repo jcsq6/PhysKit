@@ -145,6 +145,19 @@ public:
         return {.min = min / scale, .max = max / scale};
     }
 
+    /// @brief adding in support for furthest point in the shape in direction d.
+    [[nodiscard]] vec3<si::metre> furthest_point(const vec3<one> &direction) const
+    {
+        // for AABB, support point is the corner furthest in the direction
+        vec3<one> signs;
+        signs.x(direction.x() >= 0 ? 1 : -1);
+        signs.y(direction.y() >= 0 ?: -1);
+        signs.z(direction.z() >= 0 ?: -1);
+
+        return vec3<si::metre>{signs.x() > 0 ? max.x() : min.x(), signs.y() > 0 ? max.y() : min.y(),
+                               signs.z() > 0 ? max.z() : min.z()};
+    }
+
     constexpr auto &operator+=(const vec3<si::metre> &offset)
     {
         min += offset;
@@ -305,6 +318,11 @@ public:
     {
         assert(scale >= 0.0);
         return {.center = center, .radius = radius * scale};
+    }
+
+    [[nodiscard]] vec3<si::metre> furthest_point(const vec3<one> &direction) const
+    {
+        return center + radius * direction.normalized();
     }
 
     constexpr auto &operator+=(const vec3<si::metre> &offset)
@@ -511,6 +529,25 @@ public:
         return (local_point.x() >= -half_extents.x() && local_point.x() <= half_extents.x()) &&
                (local_point.y() >= -half_extents.y() && local_point.y() <= half_extents.y()) &&
                (local_point.z() >= -half_extents.z() && local_point.z() <= half_extents.z());
+    }
+
+    // addin support to obb
+    [[nodiscard]] vec3<si::metre> furthest_point(const vec3<one> &direction) const
+    {
+        // transform into local space
+        auto local_dir = orientation.conjugate() * direction;
+
+        // find corner in local space
+        vec3<one> signs;
+        signs.x(local_dir.x() >= 0 ? 1 : -1);
+        signs.y(local_dir.y() >= 0 ? 1 : -1);
+        signs.z(local_dir.z() >= 0 ? 1 : -1);
+
+        auto local_point =
+            vec3<si::metre>{signs.x() * half_extents.x(), signs.y() * half_extents.y(),
+                            signs.z() * half_extents.z()};
+
+        return center + orientation * local_point;
     }
 
     /// @ brief calculate the closeset point within the obb (local space specific)

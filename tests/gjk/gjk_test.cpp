@@ -1,6 +1,6 @@
 // GJK tests for PhysKit
 
-#include "physkit/gjk.h"
+#include "physkit/collision.h"
 
 #include <mp-units/systems/si/unit_symbols.h>
 
