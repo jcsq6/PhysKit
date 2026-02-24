@@ -1,148 +1,91 @@
-#include "detail/bounds.h"
-#include "detail/types.h"
-#include "physkit/mesh.h"
+#include "physkit/detail/types.h"
 
 #include <array>
+#include <concepts>
 #include <mp-units/systems/si/unit_symbols.h>
+#include <utility>
 
 using namespace mp_units;
 using namespace mp_units::si::unit_symbols;
-using namespace physkit;
 
-#include <algorithm>
-#include <cmath>
-#include <concepts>
-#include <limits>
-#include <optional>
 namespace physkit
 {
-///@brief support function for GJK to take two collides and a direction - returns minkowski
-/// difference
-template <typename ShapeA, typename ShapeB>
-vec3<si::metre> minkowski_difference_support(const ShapeA &shape_a, const ShapeB &shape_b,
-                                             const vec3<one> &direction)
-{
-    // support A - B in direction d
-    // Note: This assumes support_function is defined elsewhere for each shape type
-    // For now, we'll leave this as a placeholder that needs implementation
-    return vec3<si::metre>{0 * si::metre, 0 * si::metre, 0 * si::metre}; // Placeholder
-}
 
-// include support
 template <typename T>
 concept ConvexShape = requires(const T &shape, const vec3<one> &dir) {
-    { shape.support(dir) } -> std::same_as<vec3<si::metre>>;
+    { shape.furthest_point(dir) } -> std::same_as<vec3<si::metre>>;
 };
 
-// add in forward declarations for helper functions
-bool handle_line(Simplex &s, vec3<si::metre> &dir);
-bool handle_triangle(Simplex &s, vec3<si::metre> &dir);
-bool handle_tetrahedron(Simplex &s, vec3<si::metre> &dir, quantity<si::metre> tolerance);
-
-///@brief construct simplex class
 class Simplex
 {
 public:
-    Simplex() = default;
     void add_point(const vec3<si::metre> &point)
     {
         if (M_count < 4)
         {
             M_points[M_count] = point;
-            M_count++;
+            ++M_count;
         }
     }
 
-    [[nodiscard]] size_t size() const { return M_count; }
+    [[nodiscard]] std::size_t size() const { return M_count; }
 
-    vec3<si::metre> &operator[](size_t i) { return M_points[i]; }
-    const vec3<si::metre> &operator[](size_t i) const
-    {
-        return M_points[i];
-    } // Fixed: was returning pointer, should return reference
+    vec3<si::metre> &operator[](std::size_t i) { return M_points[i]; }
+    [[nodiscard]] const vec3<si::metre> &operator[](std::size_t i) const { return M_points[i]; }
 
-    // remove points at index i and shift all points after
     void remove_point(std::size_t i)
     {
-        for (std::size_t j = i; j < M_count - 1; ++j)
-        { // Fixed: extra space in expression
-            M_points[j] = M_points[j + 1];
-        }
-        M_count--;
+        if (i >= M_count) return;
+        for (std::size_t j = i; j + 1 < M_count; ++j) { M_points[j] = M_points[j + 1]; }
+        --M_count;
     }
 
-    // find the last point in the simplex
-    [[nodiscard]] const vec3<si::metre> &last() const
-    {
-        return M_points[M_count - 1];
-    } // Fixed: return const reference
-
-    void clear() { M_count = 0; }
-
-    // add in begin and end for simplex structure
-    [[nodiscard]] auto begin() const { return M_points.begin(); }
-    [[nodiscard]] auto end() const { return M_points.end() - (4 - M_count); }
-
 private:
-    std::array<vec3<si::metre>, 4> M_points;
-    [[nodiscard]] size_t M_count{};
-
-    // Create support functions before creating the iteration loop
+    std::array<vec3<si::metre>, 4> M_points{};
+    std::size_t M_count{};
 };
 
-// from class simplex, we can make shapes - line, triangle, tetrahedron, etc...
-/// @brief compute support point for minkowski difference A - B in given direction
+bool handle_simplex(Simplex &simplex, vec3<one> &direction);
+bool handle_line(Simplex &simplex, vec3<one> &direction);
+bool handle_triangle(Simplex &simplex, vec3<one> &direction);
+bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction);
+
 template <typename ShapeA, typename ShapeB>
-[[nodiscard]] vec3<si::metre> minkowksi_difference_support(const ShapeA &shape_a,
-                                                           const ShapeB &shape_b,
-                                                           const vec3<one> &direction)
+    requires ConvexShape<ShapeA> && ConvexShape<ShapeB>
+[[nodiscard]] vec3<si::metre> minkowski_support(const ShapeA &a, const ShapeB &b,
+                                                const vec3<one> &direction)
 {
-    return shape_a.support(direction) - shape_b.support(-direction);
+    return a.furthest_point(direction) - b.furthest_point(-direction);
 }
 
-// explicit instatiation for mesh::instance - WIP
-template <typename>
-[[nodiscard]] vec3<si::metre>
-minkowski_difference_support(const mesh::instance &, const mesh::instance &, const vec3<one> &);
-
-/// @brief support function for a single convex shape
-vec3<si::metre> support(const ConvexShape &shape, const vec3<si::metre> &direction);
-
-vec3<si::metre> minkowski_support(const ConvexShape &A, const ConvexShape &B,
-                                  const vec3<si::metre> &direction)
-{
-    return support(A, direction) - support(B, -direction);
-}
-
-bool gjk_collision(const ConvexShape &A, ConvexShape &B,
-                   const quantity<si::metre> tolerance = quantity<si::metre>{1e-6})
+template <typename ShapeA, typename ShapeB>
+    requires ConvexShape<ShapeA> && ConvexShape<ShapeB>
+bool gjk_collision(const ShapeA &a, const ShapeB &b,
+                   quantity<si::metre> tolerance = 1e-6 * si::metre)
 {
     Simplex simplex;
-    vec3<si::metre> direction = {1 * si::metre, 0 * si::metre,
-                                 0 * si::metre}; // initial search direction in x axis
+    vec3<one> direction = {1.0, 0.0, 0.0};
 
-    // set the support point
-    auto point = minkowski_support(A, B, direction);
-    direction = -point; // point towards origin
+    auto point = minkowski_support(a, b, direction);
+    if (point.squared_norm() == decltype(point.squared_norm()){}) return true;
+    simplex.add_point(point);
+    direction = -point.normalized();
 
     constexpr int max_iterations = 100;
     for (int iter = 0; iter < max_iterations; ++iter)
     {
-        auto new_point = minkowski_support(A, B, direction);
-
-        // termination: if new point doesn't pass the origin in search direction
-        // dot returns quantity<metre> -> compare against same type
-
-        if (dot(new_point, direction) < quantity<si::metre>{0}) { return false; }
+        auto new_point = minkowski_support(a, b, direction);
+        auto progress = new_point.dot(direction);
+        if (progress < tolerance) return false;
 
         simplex.add_point(new_point);
-        if (next_simplex(simplex, direction, tolerance)) { return true; }
-        // continue into updated direction
+        if (handle_simplex(simplex, direction)) return true;
     }
-    return false; // max iterations reached
+
+    return false;
 }
 
-bool next_simplex(Simplex &simplex, vec3<si::metre> &direction, const quantity<si::metre> tolerance)
+bool handle_simplex(Simplex &simplex, vec3<one> &direction)
 {
     switch (simplex.size())
     {
@@ -151,64 +94,140 @@ bool next_simplex(Simplex &simplex, vec3<si::metre> &direction, const quantity<s
     case 3:
         return handle_triangle(simplex, direction);
     case 4:
-        return handle_tetrahedron(simplex, direction, tolerance);
+        return handle_tetrahedron(simplex, direction);
     default:
         return false;
     }
 }
-bool handle_line(Simplex &s, vec3<si::metre> &dir)
+
+bool handle_line(Simplex &simplex, vec3<one> &direction)
 {
-    const auto A = s[1];
-    const auto B = s[0];
+    const auto a = simplex[1];
+    const auto b = simplex[0];
+    const auto ab = b - a;
+    const auto ao = -a;
 
-    auto AB = B - A;
-    auto A0 = -A; // vector from A to origin
-
-    if (dot(AB, A0) > quantity<si::metre * si::metre>{0})
+    auto ab_dot_ao = ab.dot(ao);
+    if (ab_dot_ao > decltype(ab_dot_ao){})
     {
-        dir = A0;
-        s.remove_point(0);
+        auto triple = ab.cross(ao).cross(ab);
+        if (triple.squared_norm() == decltype(triple.squared_norm()){})
+            direction = ao.normalized();
+        else
+            direction = triple.normalized();
     }
     else
     {
-        dir = cross(cross(AB, A0), AB);
+        simplex.remove_point(0); // keep A only
+        direction = ao.normalized();
     }
+
     return false;
 }
 
-bool handle_triangle(Simplex &s, vec3<si::metre> &dir)
+bool handle_triangle(Simplex &simplex, vec3<one> &direction)
 {
-    auto A = s[2];
-    auto B = s[1];
-    auto C = s[0];
-    auto AB = B - A;
-    auto AC = C - A;
-    auto A0 = -A;
+    const auto a = simplex[2];
+    const auto b = simplex[1];
+    const auto c = simplex[0];
 
-    auto ABC = cross(AB, AC);
+    const auto ab = b - a;
+    const auto ac = c - a;
+    const auto ao = -a;
+    const auto abc = ab.cross(ac);
 
-    // region test using voroni features
-    // logic:
+    const auto ab_perp = abc.cross(ab);
+    const auto ab_side = ab_perp.dot(ao);
+    if (ab_side > decltype(ab_side){})
+    {
+        simplex.remove_point(0); // remove C
+        auto triple = ab.cross(ao).cross(ab);
+        direction = (triple.squared_norm() == decltype(triple.squared_norm()){})
+                        ? ao.normalized()
+                        : triple.normalized();
+        return false;
+    }
 
-    /*
+    const auto ac_perp = ac.cross(abc);
+    const auto ac_side = ac_perp.dot(ao);
+    if (ac_side > decltype(ac_side){})
+    {
+        simplex.remove_point(1); // remove B
+        auto triple = ac.cross(ao).cross(ac);
+        direction = (triple.squared_norm() == decltype(triple.squared_norm()){})
+                        ? ao.normalized()
+                        : triple.normalized();
+        return false;
+    }
 
-    if origin outside of edge Ac, keep A,C; dir = perpendicular to AC; return false;
-    else if: origin outside edge AB, keep A, B; dir = perp to AB; return false;
-    else if origin on same side as norm. {dir = ABC; return false;}
-    else {dir = -ABC; s = {A,B,C}; reutrn false} will flip winding
-    */
-    dir = cross(cross(AB, A0), AB);
+    const auto abc_side = abc.dot(ao);
+    if (abc_side > decltype(abc_side){}) { direction = abc.normalized(); }
+    else
+    {
+        std::swap(simplex[0], simplex[1]);
+        direction = (-abc).normalized();
+    }
+
     return false;
 }
 
-bool handle_tetrahedron(Simplex &s, vec3<si::metre> &dir, quantity<si::metre> tolerance)
+bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction)
 {
-    // check if origin is inside tetrahedron using barycentric or plane tests
-    // if inside: return true is collision
-    // if outside: reduce to closest face and update direction
+    const auto a = simplex[3];
+    const auto b = simplex[2];
+    const auto c = simplex[1];
+    const auto d = simplex[0];
+    const auto ao = -a;
 
-    void(toleranec);
-    return false;
+    auto abc = (b - a).cross(c - a);
+    auto acd = (c - a).cross(d - a);
+    auto adb = (d - a).cross(b - a);
+
+    auto orient_face_outward = [](auto &normal, const auto &face_a, const auto &opposite)
+    {
+        auto toward_opposite = opposite - face_a;
+        auto side = normal.dot(toward_opposite);
+        if (side > decltype(side){}) normal = -normal;
+    };
+
+    orient_face_outward(abc, a, d);
+    orient_face_outward(acd, a, b);
+    orient_face_outward(adb, a, c);
+
+    const auto side_abc = abc.dot(ao);
+    if (side_abc > decltype(side_abc){})
+    {
+        simplex = Simplex{};
+        simplex.add_point(c);
+        simplex.add_point(b);
+        simplex.add_point(a);
+        direction = abc.normalized();
+        return handle_triangle(simplex, direction);
+    }
+
+    const auto side_acd = acd.dot(ao);
+    if (side_acd > decltype(side_acd){})
+    {
+        simplex = Simplex{};
+        simplex.add_point(d);
+        simplex.add_point(c);
+        simplex.add_point(a);
+        direction = acd.normalized();
+        return handle_triangle(simplex, direction);
+    }
+
+    const auto side_adb = adb.dot(ao);
+    if (side_adb > decltype(side_adb){})
+    {
+        simplex = Simplex{};
+        simplex.add_point(b);
+        simplex.add_point(d);
+        simplex.add_point(a);
+        direction = adb.normalized();
+        return handle_triangle(simplex, direction);
+    }
+
+    return true;
 }
 
 } // namespace physkit

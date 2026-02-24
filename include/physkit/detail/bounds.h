@@ -151,8 +151,8 @@ public:
         // for AABB, support point is the corner furthest in the direction
         vec3<one> signs;
         signs.x(direction.x() >= 0 ? 1 : -1);
-        signs.y(direction.y() >= 0 ?: -1);
-        signs.z(direction.z() >= 0 ?: -1);
+        signs.y(direction.y() >= 0 ? 1 : -1);
+        signs.z(direction.z() >= 0 ? 1 : -1);
 
         return vec3<si::metre>{signs.x() > 0 ? max.x() : min.x(), signs.y() > 0 ? max.y() : min.y(),
                                signs.z() > 0 ? max.z() : min.z()};

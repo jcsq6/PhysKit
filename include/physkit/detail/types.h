@@ -22,4 +22,12 @@ template <int Size, auto unit = one> using fvec = vec<Size, unit, float>;
 
 template <auto unit = one> using fquat = quat<unit, float>;
 
+/// @brief - collision detection specific units
+
+/// @brief squared length
+template <typename Rep = float_t> using area_t = quantity<si::metre * si::metre, Rep>;
+
+/// @ brief triple scalar product
+template <typename Rep = float_t> using volume_t = quantity<si::metre * si::metre * si::metre, Rep>;
+
 } // namespace physkit
