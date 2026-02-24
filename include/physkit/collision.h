@@ -60,12 +60,10 @@ collision_result sat(const mesh::instance &a, const mesh::instance &b);
 struct gjk_result
 {
     bool intersects = false;
-    std::optional<std::pair<vec3<si::metre>, vec3<si::metre>>> closest_points_data{};
+    std::optional<std::pair<vec3<si::metre>, vec3<si::metre>>> closest_points_data;
     quantity<si::metre> distance_data{};
 
     [[nodiscard]] const auto &closest_points() const { return closest_points_data; }
-    // Temporary compatibility with the old misspelled API.
-    [[nodiscard]] const auto &closeest_points() const { return closest_points_data; }
     [[nodiscard]] auto distance() const { return distance_data; }
 };
 
@@ -107,10 +105,9 @@ template <typename ShapeA, typename ShapeB>
     }
 }
 
-/// TODO -> implement generic test for any obb abbb combination: future goal idk if we need
 /// immediately.
-template <typename ShapeA, typename ShapeB>
-[[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b);
+// template <typename ShapeA, typename ShapeB>
+// [[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b);
 
 // TODO -> change support to furthest_point to keep consistency between bounds.h
 
