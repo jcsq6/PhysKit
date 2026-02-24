@@ -8,6 +8,8 @@
 #include <mp-units/systems/si/units.h>
 
 #include <array>
+#include <optional>
+#include <utility>
 
 namespace physkit
 {
@@ -58,9 +60,13 @@ collision_result sat(const mesh::instance &a, const mesh::instance &b);
 struct gjk_result
 {
     bool intersects = false;
-    std::optional<std::pair<vec3<si::metre>, vec3<si::metre>>>
-    closeest_points();              // define cloeset point on each shape if not intersecting
-    quantity<si::metre> distance(); // minimum distance between shapes
+    std::optional<std::pair<vec3<si::metre>, vec3<si::metre>>> closest_points_data{};
+    quantity<si::metre> distance_data{};
+
+    [[nodiscard]] const auto &closest_points() const { return closest_points_data; }
+    // Temporary compatibility with the old misspelled API.
+    [[nodiscard]] const auto &closeest_points() const { return closest_points_data; }
+    [[nodiscard]] auto distance() const { return distance_data; }
 };
 
 /// @brief add in GJK algorithm tests for obb and abb type intersections
@@ -74,15 +80,47 @@ struct gjk_result
 /// @brief GJK algorithm implementation for AABB-AABB intersection/distance
 [[nodiscard]] gjk_result gjk_aabb_aabb(const aabb &a, const aabb &b);
 
+/// @brief verify that the GJK only works on aabb obb type convex shapes.
+template <typename ShapeA, typename ShapeB>
+[[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b)
+{
+    if constexpr (std::same_as<ShapeA, obb> && std::same_as<ShapeB, obb>)
+    {
+        return gjk_obb_obb(shape_a, shape_b);
+    }
+    else if constexpr (std::same_as<ShapeA, obb> && std::same_as<ShapeB, aabb>)
+    {
+        return gjk_obb_aabb(shape_a, shape_b);
+    }
+    else if constexpr (std::same_as<ShapeA, aabb> && std::same_as<ShapeB, obb>)
+    {
+        return gjk_aabb_obb(shape_a, shape_b);
+    }
+
+    else if constexpr (std::same_as<ShapeA, aabb> && std::same_as<ShapeB, aabb>)
+    {
+        return gjk_aabb_aabb(shape_a, shape_b);
+    }
+    else
+    {
+        static_assert(std::same_as<ShapeA, void>, "GJK ONLY APPLIES TO OBB AND AABB OBJECTS ONLY");
+    }
+}
+
 /// TODO -> implement generic test for any obb abbb combination: future goal idk if we need
 /// immediately.
 template <typename ShapeA, typename ShapeB>
 [[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b);
 
+// TODO -> change support to furthest_point to keep consistency between bounds.h
+
 /// @brief Support function for obb & aabb - finds furthest point in given direction
 [[nodiscard]] vec3<si::metre> support_obb(const obb &obj, const vec3<one> &direction);
 
 [[nodiscard]] vec3<si::metre> support_aabb(const aabb &obj, const vec3<one> &direction);
+
+/// @brief requires requires is a double boolean check at compile time, so minkowkski_diff should
+/// only work if the inner requires clause of needing furthest points enable is true.
 
 /// @brief Compute Minkowski difference of shapes A and B
 template <typename ShapeA, typename ShapeB>
