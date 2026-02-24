@@ -1,48 +1,103 @@
-// GJK tests for PhysKit
-
 #include "physkit/collision.h"
+#include "test.h"
 
 #include <mp-units/systems/si/unit_symbols.h>
-
-#include <cassert>
-#include <cmath>
-#include <print>
 
 using namespace mp_units;
 using namespace mp_units::si::unit_symbols;
 using namespace physkit;
+using namespace testing;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-constexpr double eps = 1e-6;
-
-bool approx(double a, double b) { return std::abs(a - b) < eps; }
-bool approx_q(quantity<si::metre> a, quantity<si::metre> b)
+int main()
 {
-    return approx(a.numerical_value_in(si::metre), b.numerical_value_in(si::metre));
-}
-bool approx_q(quantity<pow<2>(si::metre)> a, quantity<pow<2>(si::metre)> b)
-{
-    return approx(a.numerical_value_in(pow<2>(si::metre)), b.numerical_value_in(pow<2>(si::metre)));
-}
-bool approx_q(quantity<pow<3>(si::metre)> a, quantity<pow<3>(si::metre)> b)
-{
-    return approx(a.numerical_value_in(pow<3>(si::metre)), b.numerical_value_in(pow<3>(si::metre)));
-}
+    return suite{}
+        .group("Bounds Support Mapping")
+        .test("aabb furthest_point picks extremal corner by direction signs",
+              []
+              {
+                  const aabb box{.min = {-1.0 * m, 2.0 * m, -3.0 * m},
+                                 .max = {4.0 * m, 5.0 * m, 6.0 * m}};
+                  const auto support = box.furthest_point(vec3<one>{1.0, -1.0, 0.0});
+                  CHECK_APPROX(support, vec3<m>{4.0 * m, 2.0 * m, 6.0 * m});
+              })
+        .test("sphere furthest_point moves center along normalized direction",
+              []
+              {
+                  const bounding_sphere sphere{.center = {1.0 * m, 2.0 * m, 3.0 * m},
+                                               .radius = 2.0 * m};
+                  const auto support = sphere.furthest_point(vec3<one>{0.0, 3.0, 4.0});
+                  CHECK_APPROX(support, vec3<m>{1.0 * m, 3.2 * m, 4.6 * m});
+              })
+        .test("obb furthest_point works for identity orientation",
+              []
+              {
+                  const obb box{{10.0 * m, 0.0 * m, 0.0 * m},
+                                quat<one>::identity(),
+                                {1.0 * m, 2.0 * m, 3.0 * m}};
+                  const auto support = box.furthest_point(vec3<one>{-1.0, 1.0, -0.1});
+                  CHECK_APPROX(support, vec3<m>{9.0 * m, 2.0 * m, -3.0 * m});
+              })
+        .group("GJK API")
+        .test("support wrappers match shape furthest_point",
+              []
+              {
+                  const aabb a{.min = {-1.0 * m, -1.0 * m, -1.0 * m},
+                               .max = {2.0 * m, 3.0 * m, 4.0 * m}};
+                  const obb b{{0.0 * m, 0.0 * m, 0.0 * m},
+                              quat<one>::identity(),
+                              {1.0 * m, 2.0 * m, 3.0 * m}};
+                  const vec3<one> dir{1.0, -1.0, 0.5};
+                  CHECK_APPROX(support_aabb(a, dir), a.furthest_point(dir));
+                  CHECK_APPROX(support_obb(b, dir), b.furthest_point(dir));
+              })
+        .test("gjk_aabb_aabb separated reports distance and closest points",
+              []
+              {
+                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
+                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
+                  const aabb b{.min = {2.0 * m, 0.0 * m, 0.0 * m},
+                               .max = {3.0 * m, 1.0 * m, 1.0 * m}};
+                  const auto result = gjk_aabb_aabb(a, b);
 
-bool approx_vec(const vec3<si::metre> &a, const vec3<si::metre> &b)
-{
-    return approx_q(a.x(), b.x()) && approx_q(a.y(), b.y()) && approx_q(a.z(), b.z());
+                  CHECK(!result.intersects);
+                  CHECK(result.closest_points().has_value());
+                  CHECK_APPROX(result.distance(), 1.0 * m);
+
+                  const auto [point_a, point_b] = *result.closest_points();
+                  CHECK_APPROX((point_b - point_a).norm(), result.distance());
+                  CHECK_APPROX(point_a.x(), 1.0 * m);
+                  CHECK_APPROX(point_b.x(), 2.0 * m);
+                  CHECK(point_a.y() >= 0.0 * m && point_a.y() <= 1.0 * m);
+                  CHECK(point_a.z() >= 0.0 * m && point_a.z() <= 1.0 * m);
+                  CHECK(point_b.y() >= 0.0 * m && point_b.y() <= 1.0 * m);
+                  CHECK(point_b.z() >= 0.0 * m && point_b.z() <= 1.0 * m);
+              })
+        .test("gjk_aabb_aabb overlap reports intersection",
+              []
+              {
+                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
+                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
+                  const aabb b{.min = {0.5 * m, 0.5 * m, 0.5 * m},
+                               .max = {1.5 * m, 1.5 * m, 1.5 * m}};
+                  const auto result = gjk_aabb_aabb(a, b);
+
+                  CHECK(result.intersects);
+                  CHECK(!result.closest_points().has_value());
+                  CHECK_APPROX(result.distance(), quantity<m>{});
+              })
+        .test("gjk_test dispatch works for aabb-aabb",
+              []
+              {
+                  const aabb a{.min = {-1.0 * m, -1.0 * m, -1.0 * m},
+                               .max = {0.0 * m, 0.0 * m, 0.0 * m}};
+                  const aabb b{.min = {1.0 * m, 1.0 * m, 1.0 * m},
+                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
+
+                  const auto direct = gjk_aabb_aabb(a, b);
+                  const auto generic = gjk_test(a, b);
+
+                  CHECK(direct.intersects == generic.intersects);
+                  CHECK_APPROX(direct.distance(), generic.distance());
+              })
+        .run();
 }
-
-// ---------------------------------------------------------------------------
-// GJK tests
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
-int main() {}

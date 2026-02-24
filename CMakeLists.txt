@@ -43,7 +43,6 @@ set(PHYSKIT_HEADERS
 	collision.h
 	integrator.h
 	mesh.h
-	obb.h
 	object.h
 	particle.h
 	physkit.h
