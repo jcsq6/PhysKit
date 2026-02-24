@@ -52,6 +52,8 @@ collision_result sat(const mesh::instance &a, const mesh::instance &b);
 
 // Implement GJK implementation into here from previous headers
 
+/// @brief implement aabb vs aabb tests first.
+
 /// @brief result of GJK intersection test
 struct gjk_result
 {

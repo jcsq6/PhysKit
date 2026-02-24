@@ -1,3 +1,4 @@
+#include "physkit/detail/bounds.h"
 #include "physkit/detail/types.h"
 
 #include <array>
@@ -11,6 +12,10 @@ using namespace mp_units::si::unit_symbols;
 namespace physkit
 {
 
+///@brief define a compile type shape for the GJK algorithm
+// to be a valid convex shape, type T must have furthest point method
+
+// takes dir vector and returns a point in metres.
 template <typename T>
 concept ConvexShape = requires(const T &shape, const vec3<one> &dir) {
     { shape.furthest_point(dir) } -> std::same_as<vec3<si::metre>>;
@@ -229,5 +234,7 @@ bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction)
 
     return true;
 }
+
+// check for intersection and implement tests from bounds.h
 
 } // namespace physkit
