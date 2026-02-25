@@ -339,4 +339,6 @@ gjk_result gjk_aabb_obb(const aabb &aabb_obj, const obb &obb_obj)
                                  obb_obj.furthest_point({-1, 0, 0}));
 }
 
+/// EPA to be implemented separately.
+
 } // namespace physkit
