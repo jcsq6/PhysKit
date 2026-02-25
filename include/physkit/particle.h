@@ -82,6 +82,12 @@ public:
         M_torque_acc = vec3<si::kilogram * si::metre * si::metre / si::second / si::second>::zero();
     }
 
+    [[nodiscard]] auto project_local(const vec3<si::metre> &point) const
+    {
+        auto r = M_orientation.to_rotation_matrix();
+        return r.transpose() * (point - M_pos);
+    }
+
 private:
     vec3<si::metre> M_pos = vec3<si::metre>::zero();
     vec3<si::metre / si::second> M_vel = vec3<si::metre / si::second>::zero();
