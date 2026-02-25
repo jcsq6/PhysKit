@@ -531,7 +531,7 @@ public:
                (local_point.z() >= -half_extents.z() && local_point.z() <= half_extents.z());
     }
 
-    // addin support to obb
+    /// @brief calculate the closeset point within the obb (local space specific)
     [[nodiscard]] vec3<si::metre> furthest_point(const vec3<one> &direction) const
     {
         // transform into local space
@@ -549,8 +549,6 @@ public:
 
         return center + orientation * local_point;
     }
-
-    /// @ brief calculate the closeset point within the obb (local space specific)
 };
 
 } // namespace physkit

@@ -54,9 +54,8 @@ collision_result sat(const mesh::instance &a, const mesh::instance &b);
 
 // Implement GJK implementation into here from previous headers
 
-/// @brief implement aabb vs aabb tests first.
-
-/// @brief result of GJK intersection test
+/// @brief result of GJK intersection test returns confirmation of collision, closest points, and
+/// distance
 struct gjk_result
 {
     bool intersects = false;
@@ -68,17 +67,16 @@ struct gjk_result
 };
 
 /// @brief add in GJK algorithm tests for obb and abb type intersections
-/// obb - obb | aabb - aabb | aabb - obb |
 [[nodiscard]] gjk_result gjk_obb_obb(const obb &a, const obb &b);
 
 [[nodiscard]] gjk_result gjk_obb_aabb(const obb &obb_obj, const aabb &aabb_obj);
 
 [[nodiscard]] gjk_result gjk_aabb_obb(const aabb &aabb_obj, const obb &obb_obj);
 
-/// @brief GJK algorithm implementation for AABB-AABB intersection/distance
 [[nodiscard]] gjk_result gjk_aabb_aabb(const aabb &a, const aabb &b);
 
-/// @brief verify that the GJK only works on aabb obb type convex shapes.
+/// @brief verify that the GJK only works on aabb obb type convex shapes -> does not support
+/// spherical bounding objects
 template <typename ShapeA, typename ShapeB>
 [[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b)
 {
@@ -105,12 +103,9 @@ template <typename ShapeA, typename ShapeB>
     }
 }
 
-/// immediately.
-// template <typename ShapeA, typename ShapeB>
-// [[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b);
+// TODO -> change "support" to "furthest_point" to keep consistency between bounds.h
 
-// TODO -> change support to furthest_point to keep consistency between bounds.h
-
+/// from winterdev implementation of GJK algorithm
 /// @brief Support function for obb & aabb - finds furthest point in given direction
 [[nodiscard]] vec3<si::metre> support_obb(const obb &obj, const vec3<one> &direction);
 
@@ -118,6 +113,7 @@ template <typename ShapeA, typename ShapeB>
 
 /// @brief requires requires is a double boolean check at compile time, so minkowkski_diff should
 /// only work if the inner requires clause of needing furthest points enable is true.
+/// reverted to be simpler
 
 /// @brief Compute Minkowski difference of shapes A and B
 template <typename ShapeA, typename ShapeB>
