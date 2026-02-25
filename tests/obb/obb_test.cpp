@@ -1,6 +1,7 @@
 // OBB tests for PhysKit - ripped and copied from main.cpp for mesh.h
 // need to make test cases for OBB and finish OBB implementation.
 
+#include "test.h"
 #include <physkit/physkit.h>
 
 #include <mp-units/systems/si/unit_symbols.h>
@@ -48,8 +49,8 @@ bool approx_vec(const vec3<si::metre> &a, const vec3<si::metre> &b)
 
 int main()
 {
-    std::println("=== OBB Tests ===");
-
-    std::println("All OBB tests passed!");
-    return 0;
+    // TODO implement SAT tests
+    suite s;
+    s.group("SAT").test("NOTIMPLEMENTED", [] { throw "Not Implemented"; });
+    return s.run();
 }

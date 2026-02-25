@@ -24,6 +24,40 @@ concept ConvexShape = requires(const T &shape, const vec3<one> &dir) {
     { shape.furthest_point(dir) } -> std::same_as<vec3<si::metre>>;
 };
 
+// move gjk struct for results into this code
+struct gjk_result
+{
+    bool intersects;
+    std::optional<std::pair<vec3<si::metre>, vec3<si::metre>>> closest_points_data;
+    quantity<si::metre> distance_data;
+};
+
+template <typename ShapeA, typename ShapeB>
+[[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b)
+{
+    if constexpr (std::same_as<ShapeA, obb> && std::same_as<ShapeB, obb>)
+    {
+        return gjk_obb_obb(shape_a, shape_b);
+    }
+    else if constexpr (std::same_as<ShapeA, obb> && std::same_as<ShapeB, aabb>)
+    {
+        return gjk_obb_aabb(shape_a, shape_b);
+    }
+    else if constexpr (std::same_as<ShapeA, aabb> && std::same_as<ShapeB, obb>)
+    {
+        return gjk_aabb_obb(shape_a, shape_b);
+    }
+
+    else if constexpr (std::same_as<ShapeA, aabb> && std::same_as<ShapeB, aabb>)
+    {
+        return gjk_aabb_aabb(shape_a, shape_b);
+    }
+    else
+    {
+        static_assert(std::same_as<ShapeA, void>, "GJK ONLY APPLIES TO OBB AND AABB OBJECTS ONLY");
+    }
+}
+
 class Simplex
 {
 public:
@@ -270,13 +304,12 @@ vec3<si::metre> support_aabb(const aabb &obj, const vec3<one> &direction)
     return obj.furthest_point(direction);
 }
 
+/// @brief moved minkowski difference support into this file to keep self-contained
 template <typename ShapeA, typename ShapeB>
-    vec3<si::metre> minkowski_difference_support(const ShapeA &shape_a, const ShapeB &shape_b,
-                                                 const vec3<one> &direction)
-
-    // debating on whether this would sit in collision on inside gjk.cpp code.
-    return shape_a.furthest_point(direction) -
-    shape_b.furthest(-direction);
+vec3<si::metre> minkowski_difference_support(const ShapeA &shape_a, const ShapeB &shape_b,
+                                             const vec3<one> &direction)
+{
+    return shape_a.furthest_point(direction) - shape_b.furthest_point(-direction);
 }
 
 /// @brief return data for obb obb collision

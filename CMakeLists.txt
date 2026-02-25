@@ -49,6 +49,7 @@ set(PHYSKIT_HEADERS
 	world.h
 	detail/bounds.h
 	detail/bvh.h
+	detail/collision_phases.h
 	detail/eigen_format.h
 	detail/lin_alg.h
 	detail/types.h
@@ -81,8 +82,10 @@ find_package(mp-units REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 
+find_package(absl REQUIRED)
+
 target_link_libraries(physkit
-    PUBLIC mp-units::mp-units Eigen3::Eigen
+    PUBLIC mp-units::mp-units Eigen3::Eigen absl::flat_hash_map absl::flat_hash_set
 )
 
 add_library(physkit::physkit ALIAS physkit)

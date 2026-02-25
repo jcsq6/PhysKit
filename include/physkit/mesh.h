@@ -110,10 +110,10 @@ class mesh : public std::enable_shared_from_this<mesh>
     };
 
 public:
-    struct instance;
-
     /// @brief A view of a mesh placed in world space.
     /// Provides world-space collision queries by transforming into local space and back.
+    /// Instances are meant for temporary use in queries and should not be stored long-term by
+    /// users. Watch out for dangling references.
     class instance
     {
     public:
@@ -168,7 +168,7 @@ public:
         inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
 
     private:
-        std::shared_ptr<const mesh> M_mesh; // NOLINT
+        const mesh *M_mesh; // NOLINT
         vec3<si::metre> M_position;
         quat<one> M_orientation;
     };
@@ -277,7 +277,7 @@ private:
 
 inline mesh::instance::instance(const mesh &msh, const vec3<si::metre> &position,
                                 const quat<one> &orientation)
-    : M_mesh{msh.ptr()}, M_position{position}, M_orientation{orientation}
+    : M_mesh{&msh}, M_position{position}, M_orientation{orientation}
 {
 }
 

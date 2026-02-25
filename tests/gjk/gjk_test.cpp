@@ -8,4 +8,10 @@ using namespace mp_units::si::unit_symbols;
 using namespace physkit;
 using namespace testing;
 
-int main() {}
+int main()
+{
+    // TODO implement GJK tests
+    suite s;
+    s.group("GJK").test("NOTIMPLEMENTED", [] { throw "Not Implemented"; });
+    return s.run();
+}

@@ -898,6 +898,143 @@ void test_mesh_support()
     CHECK_APPROX(msh->support(vec3{1.0, 1.0, 1.0}), vec3{1.0, 1.0, 1.0} * m);
 }
 
+void test_mesh_is_convex()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+    auto sphere_msh = mesh::sphere(2.0 * m, 3, 3);
+    auto pyra_msh = mesh::pyramid(2.0 * m, 2.0 * m);
+
+    std::array<vec3<m>, 12> v = {{
+        vec3{0.0, 0.0, 0.0} * m, // 0
+        vec3{1.0, 0.0, 0.0} * m, // 1
+        vec3{0.0, 1.0, 0.0} * m, // 2
+        vec3{1.0, 1.0, 0.0} * m, // 3
+        vec3{0.0, 0.0, 1.0} * m, // 4
+        vec3{1.0, 0.0, 1.0} * m, // 5
+        vec3{0.0, 0.5, 1.0} * m, // 6
+        vec3{1.0, 0.5, 1.0} * m, // 7
+        vec3{0.0, 0.0, 2.0} * m, // 8
+        vec3{1.0, 0.0, 2.0} * m, // 9
+        vec3{0.0, 1.0, 2.0} * m, // 10
+        vec3{1.0, 1.0, 2.0} * m  // 11
+    }};
+    std::array<triangle_t, 20> t = {{
+        {0, 1, 2},   {1, 2, 3},   // face 0 1 2 3
+        {8, 9, 10},  {9, 10, 11}, // face 8 9 10 11
+        {0, 1, 4},   {1, 4, 5},   // face 0 1 4 5
+        {2, 3, 6},   {3, 6, 7},   // face 2 3 6 7
+        {1, 3, 5},   {3, 5, 7},   // face 1 3 5 7
+        {0, 2, 4},   {2, 4, 6},   // face 0 2 4 6
+        {8, 9, 4},   {9, 4, 5},   // face 8 9 4 5
+        {10, 11, 6}, {11, 6, 7},  // face 10 11 6 7
+        {9, 11, 5},  {11, 5, 7},  // face 9 11 5 7
+        {8, 10, 4},  {10, 4, 6}   // face 8 10 4 6
+    }};
+    auto weird = mesh::make(v, t);
+
+    CHECK(!weird->is_convex());
+    CHECK(msh->is_convex());
+    CHECK(pyra_msh->is_convex());
+    CHECK(sphere_msh->is_convex());
+}
+
+// Test the simplest possible convex polyhedron.
+void test_is_convex_tetrahedron()
+{
+    // Regular tetrahedron: all 4 vertices are equidistant from the origin.
+    std::array<vec3<m>, 4> v = {{
+        vec3{1.0, 1.0, 1.0} * m,
+        vec3{1.0, -1.0, -1.0} * m,
+        vec3{-1.0, 1.0, -1.0} * m,
+        vec3{-1.0, -1.0, 1.0} * m,
+    }};
+    std::array<triangle_t, 4> t = {{
+        {0, 1, 3},
+        {0, 3, 2},
+        {0, 2, 1},
+        {1, 2, 3},
+    }};
+    CHECK(mesh::make(v, t)->is_convex());
+}
+
+// Test another well-known convex polyhedron: the regular octahedron.
+void test_is_convex_octahedron()
+{
+    std::array<vec3<m>, 6> v = {{
+        vec3{1.0, 0.0, 0.0} * m,  // 0 +x
+        vec3{-1.0, 0.0, 0.0} * m, // 1 -x
+        vec3{0.0, 1.0, 0.0} * m,  // 2 +y
+        vec3{0.0, -1.0, 0.0} * m, // 3 -y
+        vec3{0.0, 0.0, 1.0} * m,  // 4 +z
+        vec3{0.0, 0.0, -1.0} * m, // 5 -z
+    }};
+    std::array<triangle_t, 8> t = {{
+        // upper hemisphere (z+)
+        {0, 2, 4},
+        {2, 1, 4},
+        {1, 3, 4},
+        {3, 0, 4},
+        // lower hemisphere (z-)
+        {0, 5, 3},
+        {3, 5, 1},
+        {1, 5, 2},
+        {2, 5, 0},
+    }};
+    CHECK(mesh::make(v, t)->is_convex());
+}
+
+// A triangular prism has vertices that are naturally coplanar with adjacent faces
+// (e.g. all four vertices of each rectangular side face are coplanar).  This
+// exercises the epsilon path in is_convex where dot(v - face_pt, normal) == 0.
+void test_is_convex_triangular_prism()
+{
+    std::array<vec3<m>, 6> v = {{
+        vec3{0.0, 0.0, 0.0} * m, // 0
+        vec3{2.0, 0.0, 0.0} * m, // 1
+        vec3{0.0, 2.0, 0.0} * m, // 2
+        vec3{0.0, 0.0, 2.0} * m, // 3
+        vec3{2.0, 0.0, 2.0} * m, // 4
+        vec3{0.0, 2.0, 2.0} * m, // 5
+    }};
+    std::array<triangle_t, 8> t = {{
+        {0, 2, 1}, // bottom triangle (z=0)
+        {3, 4, 5}, // top triangle (z=2)
+        {0, 1, 4},
+        {0, 4, 3}, // front face (y=0)
+        {1, 2, 5},
+        {1, 5, 4}, // hypotenuse face (x+y=2)
+        {2, 0, 3},
+        {2, 3, 5}, // left face (x=0)
+    }};
+    CHECK(mesh::make(v, t)->is_convex());
+}
+
+// Moving a corner vertex deep inside the cube creates an obvious concavity.
+void test_is_convex_dented_cube()
+{
+    cube_fixture cube;
+    auto v = cube.vertices;
+    v[6] = vec3{0.5, 0.5, 0.5} * m; // was (1,1,1); now at cube's center
+    CHECK(!mesh::make(v, cube.triangles)->is_convex());
+}
+
+// A tiny inward nudge — well above epsilon — must also be detected.
+void test_is_convex_slightly_dented()
+{
+    cube_fixture cube;
+    auto v = cube.vertices;
+    v[6] = vec3{0.99, 0.99, 0.99} * m; // was (1,1,1); 1 % inward dent
+    CHECK(!mesh::make(v, cube.triangles)->is_convex());
+}
+
+// A very flat box is geometrically degenerate but still strictly convex.
+void test_is_convex_thin_box()
+{
+    auto thin = mesh::box({2.0 * m, 0.001 * m, 2.0 * m});
+    CHECK(thin->is_convex());
+}
+
 void test_mesh_closest_point()
 {
     cube_fixture cube;
@@ -1620,7 +1757,14 @@ int main()
         .test("ray_intersect", test_mesh_ray_intersect)
         .test("contains", test_mesh_contains)
         .test("support", test_mesh_support)
-        .test("closest_point", test_mesh_closest_point);
+        .test("closest_point", test_mesh_closest_point)
+        .test("is_convex", test_mesh_is_convex)
+        .test("is_convex/tetrahedron", test_is_convex_tetrahedron)
+        .test("is_convex/octahedron", test_is_convex_octahedron)
+        .test("is_convex/triangular prism (coplanar verts)", test_is_convex_triangular_prism)
+        .test("is_convex/dented cube (deep)", test_is_convex_dented_cube)
+        .test("is_convex/dented cube (slight)", test_is_convex_slightly_dented)
+        .test("is_convex/thin box", test_is_convex_thin_box);
 
     tests.group("Ray Intersect Tests")
         .test("all 6 faces", test_ray_intersect_all_faces)

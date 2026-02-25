@@ -37,6 +37,8 @@ class PhysKit(ConanFile):
         
         self.requires("eigen/3.4.0")
         
+        self.requires("abseil/20250814.1") # TODO: update to latest release when available on conan
+        
         if self.options.build_tests:
             self.requires("glfw/3.4")
             self.requires("glaze/7.0.2")
