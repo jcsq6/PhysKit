@@ -898,6 +898,47 @@ void test_mesh_support()
     CHECK_APPROX(msh->support(vec3{1.0, 1.0, 1.0}), vec3{1.0, 1.0, 1.0} * m);
 }
 
+void test_mesh_is_convex()
+{
+    cube_fixture cube;
+    auto msh = cube.make_mesh();
+    auto sphere_msh = mesh::sphere(2.0 * m, 3, 3);
+    auto pyra_msh = mesh::pyramid(2.0 * m, 2.0 * m);
+
+    std::array<vec3<m>, 12> v = {{
+        vec3{0.0, 0.0, 0.0} * m, // 0
+        vec3{1.0, 0.0, 0.0} * m, // 1
+        vec3{0.0, 1.0, 0.0} * m, // 2
+        vec3{1.0, 1.0, 0.0} * m, // 3
+        vec3{0.0, 0.0, 1.0} * m, // 4
+        vec3{1.0, 0.0, 1.0} * m, // 5
+        vec3{0.0, 0.5, 1.0} * m, // 6
+        vec3{1.0, 0.5, 1.0} * m, // 7
+        vec3{0.0, 0.0, 2.0} * m, // 8
+        vec3{1.0, 0.0, 2.0} * m, // 9
+        vec3{0.0, 1.0, 2.0} * m, // 10
+        vec3{1.0, 1.0, 2.0} * m  // 11
+    }};
+    std::array<triangle_t, 20> t = {{
+        {0, 1, 2},   {1, 2, 3},   // face 0 1 2 3
+        {8, 9, 10},  {9, 10, 11}, // face 8 9 10 11
+        {0, 1, 4},   {1, 4, 5},   // face 0 1 4 5
+        {2, 3, 6},   {3, 6, 7},   // face 2 3 6 7
+        {1, 3, 5},   {3, 5, 7},   // face 1 3 5 7
+        {0, 2, 4},   {2, 4, 6},   // face 0 2 4 6
+        {8, 9, 4},   {9, 4, 5},   // face 8 9 4 5
+        {10, 11, 6}, {11, 6, 7},  // face 10 11 6 7
+        {9, 11, 5},  {11, 5, 7},  // face 9 11 5 7
+        {8, 10, 4},  {10, 4, 6}   // face 8 10 4 6
+    }};
+    auto weird = mesh::make(v, t);
+
+    CHECK(!weird->is_convex());
+    CHECK(msh->is_convex());
+    CHECK(pyra_msh->is_convex());
+    CHECK(sphere_msh->is_convex());
+}
+
 void test_mesh_closest_point()
 {
     cube_fixture cube;
@@ -1620,7 +1661,8 @@ int main()
         .test("ray_intersect", test_mesh_ray_intersect)
         .test("contains", test_mesh_contains)
         .test("support", test_mesh_support)
-        .test("closest_point", test_mesh_closest_point);
+        .test("closest_point", test_mesh_closest_point)
+        .test("is_convex", test_mesh_is_convex);
 
     tests.group("Ray Intersect Tests")
         .test("all 6 faces", test_ray_intersect_all_faces)
