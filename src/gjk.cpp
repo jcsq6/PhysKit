@@ -273,21 +273,8 @@ vec3<si::metre> support_aabb(const aabb &obj, const vec3<one> &direction)
 template <typename ShapeA, typename ShapeB>
 vec3<si::metre> minkowski_difference_support(const ShapeA &shape_a, const ShapeB &shape_b,
                                              const vec3<one> &direction)
-{
-    // Minkowski difference support: S_A-B(d) = S_A(d) - S_B(-d)
-    vec3<si::metre> support_a;
-    vec3<si::metre> support_b;
 
-    if constexpr (std::same_as<ShapeA, obb>) { support_a = support_obb(shape_a, direction); }
-    else if constexpr (std::same_as<ShapeA, aabb>) { support_a = support_aabb(shape_a, direction); }
-
-    if constexpr (std::same_as<ShapeB, obb>) { support_b = support_obb(shape_b, -direction); }
-    else if constexpr (std::same_as<ShapeB, aabb>)
-    {
-        support_b = support_aabb(shape_b, -direction);
-    }
-
-    return support_a - support_b;
+// TODO: Implement minkowksi difference
 }
 
 /// @brief return data for obb obb collision
