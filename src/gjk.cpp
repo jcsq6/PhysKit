@@ -271,10 +271,12 @@ vec3<si::metre> support_aabb(const aabb &obj, const vec3<one> &direction)
 }
 
 template <typename ShapeA, typename ShapeB>
-vec3<si::metre> minkowski_difference_support(const ShapeA &shape_a, const ShapeB &shape_b,
-                                             const vec3<one> &direction)
+    vec3<si::metre> minkowski_difference_support(const ShapeA &shape_a, const ShapeB &shape_b,
+                                                 const vec3<one> &direction)
 
-// TODO: Implement minkowksi difference
+    // debating on whether this would sit in collision on inside gjk.cpp code.
+    return shape_a.furthest_point(direction) -
+    shape_b.furthest(-direction);
 }
 
 /// @brief return data for obb obb collision
@@ -286,8 +288,6 @@ gjk_result gjk_obb_obb(const obb &a, const obb &b)
 
 gjk_result gjk_aabb_aabb(const aabb &a, const aabb &b)
 {
-    if (a.intersects(b)) return make_intersection_result();
-
     if (gjk_collision(a, b)) return make_intersection_result();
     return make_separated_result(a.furthest_point({1, 0, 0}), b.furthest_point({-1, 0, 0}));
 }
