@@ -386,24 +386,8 @@ bool mesh::is_convex() const
                     side = -1;
             }
             else if ((a > 0 * m + epsilon && side < 0) || (a < 0 * m - epsilon && side > 0))
-            {
-                printf("a: %.50f, side: %d, point %.20f %.20f %.20f\n", a.numerical_value_in(m),
-                       side, point.x().numerical_value_in(m), point.y().numerical_value_in(m),
-                       point.z().numerical_value_in(m));
-                printf("vertices: %.20f, %.20f, %.20f\n%.20f, %.20f, %.20f\n%.20f, %.20f, %.20f\n",
-                       M_vertices[tri[0]].x().numerical_value_in(m),
-                       M_vertices[tri[0]].y().numerical_value_in(m),
-                       M_vertices[tri[0]].z().numerical_value_in(m),
-                       M_vertices[tri[1]].x().numerical_value_in(m),
-                       M_vertices[tri[1]].y().numerical_value_in(m),
-                       M_vertices[tri[1]].z().numerical_value_in(m),
-                       M_vertices[tri[2]].x().numerical_value_in(m),
-                       M_vertices[tri[2]].y().numerical_value_in(m),
-                       M_vertices[tri[2]].z().numerical_value_in(m));
                 return false;
-            }
         }
-        printf("\n");
     }
     return true;
 }
