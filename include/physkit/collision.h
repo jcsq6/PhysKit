@@ -29,7 +29,6 @@ concept SupportShape = requires(const T &shape, const vec3<one> &dir) {
     { shape.support_point(dir) } -> std::same_as<vec3<si::metre>>;
 };
 
-/// @brief - fuckass support function definition
 template <typename ShapeA, typename ShapeB>
     requires SupportShape<ShapeA> && SupportShape<ShapeB>
 [[nodiscard]] vec3<si::metre> minkowski_support(const ShapeA &a, const ShapeB &b,

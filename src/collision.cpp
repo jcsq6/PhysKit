@@ -25,6 +25,8 @@ template <typename ShapeA, typename ShapeB>
     return a.support_point(direction) - b.support_point(-direction);
 }
 
+/// @brief implement a dispatcher function for a function call
+
 template <typename ShapeA, typename ShapeB>
 [[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b)
 {
