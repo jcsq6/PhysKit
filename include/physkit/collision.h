@@ -12,6 +12,7 @@
 
 namespace physkit
 {
+// moved struct of GJK result back into collision.h
 struct gjk_result
 {
     bool intersects{};
@@ -22,20 +23,19 @@ struct gjk_result
     [[nodiscard]] auto distance() const { return distance_data; }
 };
 
+/// @brief - not a true convex check but just checking for valid furthest point
 template <typename T>
 concept SupportShape = requires(const T &shape, const vec3<one> &dir) {
     { shape.support_point(dir) } -> std::same_as<vec3<si::metre>>;
 };
 
+/// @brief - fuckass support function definition
 template <typename ShapeA, typename ShapeB>
     requires SupportShape<ShapeA> && SupportShape<ShapeB>
 [[nodiscard]] vec3<si::metre> minkowski_support(const ShapeA &a, const ShapeB &b,
                                                 const vec3<one> &direction);
 
-template <typename ShapeA, typename ShapeB>
-[[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b);
-
-class collision_info
+class collision_info // TODO: time of impact for continuous collision detection
 {
 public:
     vec3<one> normal = vec3<one>::zero();
@@ -44,6 +44,7 @@ public:
     quantity<si::metre> depth{};
 };
 
+// moved gjk tests back into collision.h
 [[nodiscard]] gjk_result gjk_obb_obb(const obb &a, const obb &b);
 [[nodiscard]] gjk_result gjk_aabb_aabb(const aabb &a, const aabb &b);
 [[nodiscard]] gjk_result gjk_obb_aabb(const obb &obb_obj, const aabb &aabb_obj);

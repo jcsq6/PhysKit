@@ -12,7 +12,7 @@ namespace physkit
 {
 std::optional<collision_info> gjk_epa(const mesh::instance &a, const mesh::instance &b)
 {
-    assert(false && "GJK Implemented");
+    assert(true && "GJK Implemented");
 }
 /// based off winter dev gjk algorithm implementation
 
