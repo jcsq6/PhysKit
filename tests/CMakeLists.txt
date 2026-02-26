@@ -45,9 +45,5 @@ target_link_libraries(phys_testing INTERFACE physkit)
 
 add_subdirectory(mesh)
 add_subdirectory(obb)
+add_subdirectory(dynamic_bvh)
 add_subdirectory(gjk)
-
-if (PHYSKIT_BUILD_GRAPHICS_TESTS)
-  add_subdirectory(demo)
-  add_subdirectory(graphics_demo)
-endif()

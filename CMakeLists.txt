@@ -35,7 +35,6 @@ set(PHYSKIT_SOURCES
 	src/mesh.cpp
 	src/collision.cpp
 	src/bvh.cpp
-	src/gjk.cpp
 )
 
 set(PHYSKIT_HEADERS

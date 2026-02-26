@@ -134,8 +134,8 @@ public:
     struct node
     {
         aabb bounds;
-        std::uint32_t start{}; // leaf: first tri index; internal: right child index
-        std::uint16_t count{}; // >0 = leaf (tri count); 0 = internal node
+        std::uint32_t start{}; // leaf: first node index; internal: right child index
+        std::uint16_t count{}; // >0 = leaf (node count); 0 = internal node
         std::uint16_t axis{};  // split axis (0/1/2)
 
         [[nodiscard]] bool is_leaf() const { return count > 0; }
@@ -248,6 +248,222 @@ private:
     std::vector<node> M_nodes;
 
     friend struct builder;
+};
+
+class dynamic_bvh
+{
+public:
+    static constexpr std::size_t stack_size = 64;
+
+    struct node_handle
+    {
+        using value_type = std::uint32_t;
+        value_type value;
+
+        constexpr operator value_type() const { return value; }
+    };
+
+    struct object_handle
+    {
+        using value_type = std::uint32_t;
+
+        value_type value;
+
+        constexpr operator value_type() const { return value; }
+    };
+
+    dynamic_bvh(std::size_t initial_capacity = 1024) { M_nodes.reserve(initial_capacity); }
+
+    auto add(object_handle id, const aabb &bounds)
+    {
+        auto leaf_idx = allocate_node();
+        M_nodes[leaf_idx].data = id;
+        M_nodes[leaf_idx].bounds = bounds;
+        insert_leaf(leaf_idx);
+        refit_and_rotate(M_nodes[leaf_idx].parent);
+        return leaf_idx;
+    }
+
+    bool update_leaf(node_handle leaf_idx, const aabb &true_bounds,
+                     const vec3<si::metre> &displacement);
+
+    void remove_leaf(node_handle leaf_idx)
+    {
+        extract_leaf(leaf_idx);
+        free_node(leaf_idx);
+    }
+
+    void query_aabb(const aabb &box, std::predicate<object_handle> auto &&callback) const
+    {
+        if (M_root == node::null) return;
+
+        std::array<node_handle, stack_size> stack{};
+        int sp = 0;
+        stack[sp++] = M_root;
+
+        while (sp > 0)
+        {
+            auto node_idx = stack[--sp];
+            const auto &node = M_nodes[node_idx];
+
+            if (!node.bounds.intersects(box)) continue;
+
+            if (node.is_leaf())
+            {
+                if (!callback(node.data)) return;
+                continue;
+            }
+
+            assert(sp + 1 < stack_size &&
+                   "BVH stack overflow: adjust detail::dynamic_bvh::stack_size");
+
+            auto [first, second] = M_nodes[node.children.left].bounds.surface_area() >
+                                           M_nodes[node.children.right].bounds.surface_area()
+                                       ? std::pair{node.children.left, node.children.right}
+                                       : std::pair{node.children.right, node.children.left};
+            stack[sp++] = first;
+            stack[sp++] = second;
+        }
+    }
+
+    void raycast(const ray &r, quantity<si::metre> max_distance,
+                 std::regular_invocable<object_handle, quantity<si::metre>,
+                                        quantity<si::metre>> auto &&callback) const
+    {
+        if (M_root == node::null) return;
+
+        std::array<node_handle, stack_size> stack{};
+        int sp = 0;
+        stack[sp++] = M_root;
+
+        while (sp > 0)
+        {
+            auto node_idx = stack[--sp];
+            const auto &node = M_nodes[node_idx];
+
+            auto d_node = r.intersect_distance(node.bounds, max_distance);
+            if (!d_node.has_value()) continue;
+
+            if (node.is_leaf())
+            {
+                // callback should evaluate the exact shape intersection and return the new max
+                // distance. returning 0.0 * m ends the raycast
+                max_distance = callback(node.data, *d_node, max_distance);
+                if (max_distance <= 0.0 * si::metre) return;
+                continue;
+            }
+
+            assert(sp + 1 < stack_size &&
+                   "BVH stack overflow: adjust detail::dynamic_bvh::stack_size");
+
+            auto [left, right] = node.children;
+            auto d_left = r.intersect_distance(M_nodes[left].bounds, max_distance);
+            auto d_right = r.intersect_distance(M_nodes[right].bounds, max_distance);
+
+            if (d_left && d_right)
+            {
+                // push further node first so that closer one is processed first
+                if (*d_left > *d_right)
+                {
+                    stack[sp++] = left;
+                    stack[sp++] = right;
+                }
+                else
+                {
+                    stack[sp++] = right;
+                    stack[sp++] = left;
+                }
+            }
+            else if (d_left)
+                stack[sp++] = left;
+            else if (d_right)
+                stack[sp++] = right;
+        }
+    }
+
+    [[nodiscard]] auto &bounds(node_handle leaf_idx) const
+    {
+        assert(leaf_idx < M_nodes.size() && M_nodes[leaf_idx].is_leaf());
+        return M_nodes[leaf_idx].bounds;
+    }
+
+    [[nodiscard]] auto data(node_handle leaf_idx) const
+    {
+        assert(leaf_idx < M_nodes.size() && M_nodes[leaf_idx].is_leaf());
+        return M_nodes[leaf_idx].data;
+    }
+
+private:
+    struct node
+    {
+        static constexpr node_handle null{std::numeric_limits<node_handle::value_type>::max()};
+        static constexpr auto free_node = std::numeric_limits<std::uint32_t>::max();
+        struct child_locs
+        {
+            node_handle left;
+            node_handle right;
+        };
+        aabb bounds;
+        node_handle parent = null;
+
+        union
+        {
+            // State 1: internal node
+            child_locs children;
+
+            // State 2: leaf node
+            object_handle data{
+                std::numeric_limits<object_handle::value_type>::
+                    max()}; // Points to the rigid body or scene entity this leaf represents.
+
+            // State 3: free node
+            node_handle next_free; // Index of the next free node in the free list.
+        };
+
+        std::uint32_t height = free_node;
+
+        void set_free(node_handle next_free)
+        {
+            height = free_node;
+            this->next_free = next_free;
+        }
+
+        [[nodiscard]] bool is_leaf() const { return height == 0; }
+        [[nodiscard]] bool is_free() const { return height == free_node; }
+    };
+
+    std::vector<node> M_nodes;
+    node_handle M_root = node::null;
+    node_handle M_free_head = node::null;
+
+    node_handle allocate_node()
+    {
+        if (M_free_head != node::null)
+        {
+            auto allocated = M_free_head;
+            M_free_head = M_nodes[allocated].next_free;
+
+            M_nodes[allocated].parent = node::null;
+            M_nodes[allocated].height = 0; // Mark as leaf by default
+            return allocated;
+        }
+
+        M_nodes.emplace_back().height = 0;
+        return static_cast<node_handle>(M_nodes.size() - 1);
+    }
+
+    void free_node(node_handle node)
+    {
+        assert(node < M_nodes.size());
+
+        M_nodes[node].set_free(M_free_head);
+        M_free_head = node;
+    }
+
+    node_handle insert_leaf(node_handle leaf_idx);
+    void extract_leaf(node_handle leaf_idx);
+    void refit_and_rotate(node_handle node_idx);
+    node_handle balance(node_handle node_idx);
 };
 } // namespace detail
 } // namespace physkit

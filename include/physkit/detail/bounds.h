@@ -63,6 +63,13 @@ public:
                (point.z() >= min.z() && point.z() <= max.z());
     }
 
+    [[nodiscard]] constexpr bool contains(const aabb &other) const
+    {
+        return (other.min.x() >= min.x() && other.max.x() <= max.x()) &&
+               (other.min.y() >= min.y() && other.max.y() <= max.y()) &&
+               (other.min.z() >= min.z() && other.max.z() <= max.z());
+    }
+
     [[nodiscard]] constexpr bool intersects(const aabb &other) const
     {
         return (min.x() <= other.max.x() && max.x() >= other.min.x()) &&
@@ -146,7 +153,7 @@ public:
     }
 
     /// @brief adding in support for furthest point in the shape in direction d.
-    [[nodiscard]] vec3<si::metre> furthest_point(const vec3<one> &direction) const
+    [[nodiscard]] vec3<si::metre> support_point(const vec3<one> &direction) const
     {
         // for AABB, support point is the corner furthest in the direction
         vec3<one> signs;
@@ -320,7 +327,7 @@ public:
         return {.center = center, .radius = radius * scale};
     }
 
-    [[nodiscard]] vec3<si::metre> furthest_point(const vec3<one> &direction) const
+    [[nodiscard]] vec3<si::metre> support_point(const vec3<one> &direction) const
     {
         return center + radius * direction.normalized();
     }
@@ -532,7 +539,7 @@ public:
     }
 
     /// @brief calculate the closeset point within the obb (local space specific)
-    [[nodiscard]] vec3<si::metre> furthest_point(const vec3<one> &direction) const
+    [[nodiscard]] vec3<si::metre> support_point(const vec3<one> &direction) const
     {
         // transform into local space
         auto local_dir = orientation.conjugate() * direction;
