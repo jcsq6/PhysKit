@@ -1,11 +1,7 @@
-// generated test case and edge cases with codex 5.3
-
 #include "physkit/collision.h"
 #include "physkit/detail/bounds.h"
 #include "test.h"
 
-#include <cmath>
-#include <mp-units/systems/si/unit_symbols.h>
 #include <numbers>
 
 using namespace mp_units;
@@ -13,821 +9,359 @@ using namespace mp_units::si::unit_symbols;
 using namespace physkit;
 using namespace testing;
 
-// Helper function to create rotation quaternion from axis-angle
-quat<one> make_rotation(const vec3<one> &axis, double angle_rad)
+namespace
 {
-    auto half = angle_rad / 2.0;
-    auto sin_half = std::sin(half);
-    auto cos_half = std::cos(half);
-    return quat<one>{cos_half * one, axis.x() * sin_half * one, axis.y() * sin_half * one,
-                     axis.z() * sin_half * one};
+
+// ============================================================
+// AABB vs AABB
+// ============================================================
+
+void aabb_aabb_overlap_on_x()
+{
+    // A extends [-1,1], B extends [0.5, 2.5] - 0.5m overlap on x
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value());
 }
+
+void aabb_aabb_no_collision_x()
+{
+    // A extends to x=1, B starts at x=2 - 1m gap
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{2.0, -1.0, -1.0} * m, .max = vec3{4.0, 1.0, 1.0} * m};
+    CHECK(!gjk_epa(a, b).has_value());
+}
+
+void aabb_aabb_no_collision_y()
+{
+    // Aligned on XZ, separated on Y
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{-1.0, 2.0, -1.0} * m, .max = vec3{1.0, 4.0, 1.0} * m};
+    CHECK(!gjk_epa(a, b).has_value());
+}
+
+void aabb_aabb_no_collision_z()
+{
+    // Aligned on XY, separated on Z
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{-1.0, -1.0, 2.0} * m, .max = vec3{1.0, 1.0, 4.0} * m};
+    CHECK(!gjk_epa(a, b).has_value());
+}
+
+void aabb_aabb_containment()
+{
+    // Inner box fully inside outer box
+    aabb outer{.min = vec3{-3.0, -3.0, -3.0} * m, .max = vec3{3.0, 3.0, 3.0} * m};
+    aabb inner{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(outer, inner).has_value());
+    CHECK(gjk_epa(inner, outer).has_value());
+}
+
+void aabb_aabb_large_separation()
+{
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{100.0, -1.0, -1.0} * m, .max = vec3{102.0, 1.0, 1.0} * m};
+    CHECK(!gjk_epa(a, b).has_value());
+}
+
+void aabb_aabb_same_box()
+{
+    // Minkowski difference of a shape with itself contains the origin
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, a).has_value());
+}
+
+void aabb_aabb_partial_overlap_all_axes()
+{
+    // Corner overlap: A=[0,2]^3, B=[1,3]^3 - overlap region [1,2]^3
+    aabb a{.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
+    aabb b{.min = vec3{1.0, 1.0, 1.0} * m, .max = vec3{3.0, 3.0, 3.0} * m};
+    CHECK(gjk_epa(a, b).has_value());
+}
+
+void aabb_aabb_separated_diagonal()
+{
+    // Boxes that don't overlap on any diagonal
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{5.0, 5.0, 5.0} * m, .max = vec3{7.0, 7.0, 7.0} * m};
+    CHECK(!gjk_epa(a, b).has_value());
+}
+
+// ============================================================
+// OBB vs OBB
+// ============================================================
+
+void obb_obb_axis_aligned_overlap()
+{
+    // Same as AABB overlap but using OBBs with identity orientation
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    obb b{vec3{1.5, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value());
+}
+
+void obb_obb_axis_aligned_separated()
+{
+    // 1m gap between faces
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    obb b{vec3{3.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    CHECK(!gjk_epa(a, b).has_value());
+}
+
+void obb_obb_same_center_different_orientation()
+{
+    // Identical cubes at same center with different orientations - always collide
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto rot =
+        quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
+    obb b{vec3{0.0, 0.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value());
+}
+
+void obb_obb_rotated_45_overlap()
+{
+    // OBB B rotated 45° around Z, center at (1,0,0).
+    // After rotation, support in -x is at x = 1 - sqrt(2) ≈ -0.414 < 1 → overlap with A
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto rot =
+        quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
+    obb b{vec3{1.0, 0.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value());
+}
+
+void obb_obb_rotated_45_separated()
+{
+    // B rotated 45° around Z at (3,0,0).
+    // Support of B in -x direction is at x = 3 - sqrt(2) ≈ 1.586 > 1 (A's max x) → gap = 0.586m
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto rot =
+        quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
+    obb b{vec3{3.0, 0.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    CHECK(!gjk_epa(a, b).has_value());
+}
+
+void obb_obb_cross_config_overlap()
+{
+    // Two elongated thin boxes forming a cross at origin - classic GJK test
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{2.0, 0.2, 0.2} * m};
+    auto rot =
+        quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
+    obb b{vec3{0.0, 0.0, 0.0} * m, rot, vec3{2.0, 0.2, 0.2} * m};
+    CHECK(gjk_epa(a, b).has_value());
+}
+
+void obb_obb_cross_config_separated()
+{
+    // Cross configuration but B is elevated so the beams don't touch
+    // A: center (0,0,0), identity, half-extents (2, 0.2, 0.2) → y range [-0.2, 0.2]
+    // B: center (0, 3, 0), rot90Z, half-extents (2, 0.2, 0.2)
+    //   → after rotation: extends ±2 in Y, ±0.2 in X → y range [0.8, 5.2]
+    //   Gap on y = 0.8 - 0.2 = 0.6m
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{2.0, 0.2, 0.2} * m};
+    auto rot =
+        quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
+    obb b{vec3{0.0, 3.0, 0.0} * m, rot, vec3{2.0, 0.2, 0.2} * m};
+    CHECK(!gjk_epa(a, b).has_value());
+}
+
+void obb_obb_rotated_90_x_overlap()
+{
+    // B rotated 90° around X axis, centers close together
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto rot =
+        quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3<one>{1.0, 0.0, 0.0});
+    obb b{vec3{0.5, 0.5, 0.5} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value());
+}
+
+void obb_obb_non_uniform_extents_overlap()
+{
+    // Flat slab vs tall narrow box that intersect
+    obb slab{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{3.0, 0.3, 3.0} * m};
+    obb pillar{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{0.3, 3.0, 0.3} * m};
+    CHECK(gjk_epa(slab, pillar).has_value());
+}
+
+void obb_obb_non_uniform_extents_separated()
+{
+    // Slab and pillar with no overlap: pillar offset so it's beside the slab
+    obb slab{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{3.0, 0.3, 3.0} * m};
+    obb pillar{vec3{5.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{0.3, 3.0, 0.3} * m};
+    CHECK(!gjk_epa(slab, pillar).has_value());
+}
+
+void obb_obb_3d_diagonal_overlap()
+{
+    // Both unit cubes, centers 1.5m apart diagonally → 0.5m overlap on every axis
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    obb b{vec3{1.5, 1.5, 1.5} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value());
+}
+
+void obb_obb_3d_diagonal_separated()
+{
+    // Centers 3m apart diagonally → 1m gap on every axis
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    obb b{vec3{3.0, 3.0, 3.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    CHECK(!gjk_epa(a, b).has_value());
+}
+
+// ============================================================
+// OBB vs AABB  /  AABB vs OBB
+// ============================================================
+
+void obb_aabb_axis_aligned_overlap()
+{
+    obb o{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    aabb a{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
+    CHECK(gjk_epa(o, a).has_value());
+    CHECK(gjk_epa(a, o).has_value());
+}
+
+void obb_aabb_axis_aligned_separated()
+{
+    obb o{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    aabb a{.min = vec3{2.5, -1.0, -1.0} * m, .max = vec3{4.5, 1.0, 1.0} * m};
+    CHECK(!gjk_epa(o, a).has_value());
+    CHECK(!gjk_epa(a, o).has_value());
+}
+
+void obb_aabb_rotated_overlap()
+{
+    // Rotated OBB that still overlaps with an AABB
+    auto rot =
+        quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
+    obb o{vec3{1.0, 0.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(o, a).has_value());
+    CHECK(gjk_epa(a, o).has_value());
+}
+
+void obb_aabb_rotated_separated()
+{
+    // Rotated OBB with a clear gap from the AABB
+    auto rot =
+        quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
+    obb o{vec3{5.0, 0.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    CHECK(!gjk_epa(o, a).has_value());
+    CHECK(!gjk_epa(a, o).has_value());
+}
+
+void obb_aabb_containment()
+{
+    // Large AABB containing an OBB
+    obb o{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{0.5, 0.5, 0.5} * m};
+    aabb a{.min = vec3{-2.0, -2.0, -2.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
+    CHECK(gjk_epa(o, a).has_value());
+    CHECK(gjk_epa(a, o).has_value());
+}
+
+// ============================================================
+// Symmetry: gjk_epa(A,B) must agree with gjk_epa(B,A)
+// ============================================================
+
+void symmetry_aabb_aabb_colliding()
+{
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+}
+
+void symmetry_aabb_aabb_separated()
+{
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{3.0, -1.0, -1.0} * m, .max = vec3{5.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+}
+
+void symmetry_obb_obb_colliding()
+{
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto rot = quat<one>::from_angle_axis((std::numbers::pi / 6.0) * si::radian,
+                                          vec3<one>{1.0, 1.0, 0.0}.normalized());
+    obb b{vec3{1.0, 1.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+}
+
+void symmetry_obb_obb_separated()
+{
+    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    obb b{vec3{4.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+}
+
+// ============================================================
+// collision_info fields (EPA is currently a stub returning zeros)
+// ============================================================
+
+void collision_info_stub_fields()
+{
+    // EPA stub explicitly sets all fields to zero - verify those defaults hold
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{0.0, -1.0, -1.0} * m, .max = vec3{2.0, 1.0, 1.0} * m};
+    auto result = gjk_epa(a, b);
+    CHECK(result.has_value());
+    CHECK_APPROX(result->depth, 0.0 * m);
+    CHECK_APPROX(result->local_a, vec3<si::metre>::zero());
+    CHECK_APPROX(result->local_b, vec3<si::metre>::zero());
+    CHECK_APPROX(result->normal, vec3<one>::zero());
+}
+
+void collision_info_nullopt_when_separated()
+{
+    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    aabb b{.min = vec3{3.0, -1.0, -1.0} * m, .max = vec3{5.0, 1.0, 1.0} * m};
+    auto result = gjk_epa(a, b);
+    CHECK(!result.has_value());
+}
+
+} // namespace
 
 int main()
 {
-    return suite{} // =====================================================================
-                   // GROUP 1: Minkowski Difference Support Function Tests
-                   // =====================================================================
-        .group("Minkowski Difference Support")
-
-        .test("minkowski_support: AABB - AABB basic",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const aabb b{.min = {5.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {7.0 * m, 2.0 * m, 2.0 * m}};
-
-                  // Direction along X: should get rightmost point of A, leftmost of B
-                  const vec3<one> dir{1.0, 0.0, 0.0};
-                  auto result = minkowski_support(a, b, dir);
-
-                  // A's support in dir (1,0,0) = (2, 2, 2) or (2, 0, 2) etc (any point with x=2)
-                  // B's support in -dir (-1,0,0) = (5, 0, 0) or (5, 0, 2) etc (any point with x=5)
-                  // Minkowski diff = (2,?,?) - (5,?,?) = (-3, ?, ?)
-                  CHECK_APPROX(result.x(), -3.0 * m);
-              })
-
-        .test("minkowski_support: AABB - AABB negative direction",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const aabb b{.min = {5.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {7.0 * m, 2.0 * m, 2.0 * m}};
-
-                  const vec3<one> dir{-1.0, 0.0, 0.0};
-                  auto result = minkowski_support(a, b, dir);
-
-                  // A's support in (-1,0,0) = (0, ?, ?)
-                  // B's support in (1,0,0) = (7, ?, ?)
-                  // Result = (0,?,?) - (7,?,?) = (-7, ?, ?)
-                  CHECK_APPROX(result.x(), -7.0 * m);
-              })
-
-        .test("minkowski_support: OBB - OBB with identity rotation",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const obb b{{5.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const vec3<one> dir{1.0, 0.0, 0.0};
-                  auto result = minkowski_support(a, b, dir);
-
-                  // A's support: (1, ?, ?) in local, transformed = (1, ?, ?)
-                  // B's support in -dir: (-1, ?, ?) in local, transformed to world = (4, ?, ?)
-                  // Result should be approximately (-3, ?, ?)
-                  CHECK_APPROX(result.x(), -3.0 * m);
-              })
-
-        .test("minkowski_support: OBB - OBB with 90 degree Z rotation",
-              []
-              {
-                  // Create OBB rotated 90 degrees around Z axis
-                  auto rot =
-                      make_rotation({0.0, 0.0, 1.0}, std::numbers::pi_v<physkit::float_t> / 2.0);
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m}, rot, {2.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const vec3<one> dir{1.0, 0.0, 0.0};
-                  // Just verify it doesn't crash and returns a finite value
-                  auto result = minkowski_support(a, a, dir);
-                  CHECK(std::isfinite(result.x().numerical_value_in(m)) &&
-                        std::isfinite(result.y().numerical_value_in(m)) &&
-                        std::isfinite(result.z().numerical_value_in(m)));
-              })
-
-        .test("minkowski_support: AABB - OBB mixed",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const obb b{{5.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const vec3<one> dir{1.0, 0.0, 0.0};
-                  auto result = minkowski_support(a, b, dir);
-
-                  // A's support: (2, ?, ?)
-                  // B's support in -dir: (4, ?, ?)
-                  // Result: (-2, ?, ?)
-                  CHECK_APPROX(result.x(), -2.0 * m);
-              })
-
-        .test("minkowski_support: OBB - AABB mixed",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {5.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {7.0 * m, 2.0 * m, 2.0 * m}};
-
-                  const vec3<one> dir{1.0, 0.0, 0.0};
-                  auto result = minkowski_support(a, b, dir);
-
-                  // A's support: (1, ?, ?)
-                  // B's support in -dir: (5, ?, ?)
-                  // Result: (-4, ?, ?)
-                  CHECK_APPROX(result.x(), -4.0 * m);
-              })
-
-        .test("minkowski_support: origin is in Minkowski diff when overlapping",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {4.0 * m, 4.0 * m, 4.0 * m}};
-                  const aabb b{.min = {2.0 * m, 2.0 * m, 2.0 * m},
-                               .max = {6.0 * m, 6.0 * m, 6.0 * m}};
-
-                  // When objects overlap, origin should be inside Minkowski difference
-                  // Test by checking that we can get points on both sides of origin
-                  auto result_pos = minkowski_support(a, b, {1.0, 0.0, 0.0});
-                  auto result_neg = minkowski_support(a, b, {-1.0, 0.0, 0.0});
-
-                  // One should be positive, one should be negative in x component
-                  CHECK(result_pos.x() >= 0.0 * m || result_neg.x() <= 0.0 * m);
-              })
-
-        // =====================================================================
-        // GROUP 2: AABB vs AABB Collision Tests
-        // =====================================================================
-        .group("GJK: AABB vs AABB")
-
-        .test("separated along X axis - reports correct distance",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {3.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {4.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(!result.intersects);
-                  CHECK(result.closest_points().has_value());
-                  CHECK_APPROX(result.distance(), 2.0 * m);
-
-                  const auto [pa, pb] = *result.closest_points();
-                  CHECK_APPROX(pa.x(), 1.0 * m);
-                  CHECK_APPROX(pb.x(), 3.0 * m);
-              })
-
-        .test("separated along Y axis",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {0.0 * m, 3.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 4.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(!result.intersects);
-                  CHECK_APPROX(result.distance(), 2.0 * m);
-              })
-
-        .test("separated along Z axis",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {0.0 * m, 0.0 * m, 5.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 6.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(!result.intersects);
-                  CHECK_APPROX(result.distance(), 4.0 * m);
-              })
-
-        .test("separated diagonally",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {3.0 * m, 3.0 * m, 3.0 * m},
-                               .max = {4.0 * m, 4.0 * m, 4.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(!result.intersects);
-                  // Distance should be sqrt(2^2 + 2^2 + 2^2) = sqrt(12)
-                  auto expected_dist = std::sqrt(12.0) * m;
-                  CHECK_APPROX(result.distance(), expected_dist, 1e-5 * m);
-              })
-
-        .test("overlapping - reports intersection",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const aabb b{.min = {1.0 * m, 1.0 * m, 1.0 * m},
-                               .max = {3.0 * m, 3.0 * m, 3.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(result.intersects);
-                  CHECK(!result.closest_points().has_value());
-              })
-
-        .test("touching faces - should intersect",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {1.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  // Touching faces should be considered intersecting
-                  CHECK(result.intersects);
-              })
-
-        .test("touching edges - should intersect",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {1.0 * m, 1.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("touching corners - should intersect",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {1.0 * m, 1.0 * m, 1.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("one box contains another",
-              []
-              {
-                  const aabb outer{.min = {-5.0 * m, -5.0 * m, -5.0 * m},
-                                   .max = {5.0 * m, 5.0 * m, 5.0 * m}};
-                  const aabb inner{.min = {-1.0 * m, -1.0 * m, -1.0 * m},
-                                   .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(outer, inner);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("identical boxes",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, a);
-
-                  CHECK(result.intersects);
-              })
-
-        // =====================================================================
-        // GROUP 3: OBB vs OBB Collision Tests
-        // =====================================================================
-        .group("GJK: OBB vs OBB")
-
-        .test("separated OBBs with identity rotation",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const obb b{{5.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_obb_obb(a, b);
-
-                  CHECK(!result.intersects);
-                  CHECK_APPROX(result.distance(), 3.0 * m);
-              })
-
-        .test("overlapping OBBs with identity rotation",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const obb b{{1.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {2.0 * m, 2.0 * m, 2.0 * m}};
-
-                  const auto result = gjk_obb_obb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("OBBs touching with identity rotation",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const obb b{{2.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_obb_obb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("rotated OBB intersects axis-aligned OBB",
-              []
-              {
-                  // Create a cross shape - two boxes that should intersect
-                  const obb horizontal{{0.0 * m, 0.0 * m, 0.0 * m},
-                                       quat<one>::identity(),
-                                       {3.0 * m, 0.5 * m, 0.5 * m}};
-
-                  auto rot =
-                      make_rotation({0.0, 0.0, 1.0}, std::numbers::pi_v<physkit::float_t> / 2.0);
-                  const obb vertical{{0.0 * m, 0.0 * m, 0.0 * m}, rot, {3.0 * m, 0.5 * m, 0.5 * m}};
-
-                  const auto result = gjk_obb_obb(horizontal, vertical);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("rotated OBB separated from axis-aligned OBB",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  auto rot =
-                      make_rotation({0.0, 0.0, 1.0}, std::numbers::pi_v<physkit::float_t> / 4.0);
-                  const obb b{{10.0 * m, 0.0 * m, 0.0 * m}, rot, {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_obb_obb(a, b);
-
-                  CHECK(!result.intersects);
-                  CHECK(result.distance() > 0.0 * m);
-              })
-
-        .test("OBB with 45 degree rotation",
-              []
-              {
-                  auto rot =
-                      make_rotation({0.0, 0.0, 1.0}, std::numbers::pi_v<physkit::float_t> / 4.0);
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const obb b{{3.0 * m, 0.0 * m, 0.0 * m}, rot, {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_obb_obb(a, b);
-
-                  // Should be separated
-                  CHECK(!result.intersects);
-              })
-
-        .test("OBB one contains another (rotated)",
-              []
-              {
-                  const obb outer{{0.0 * m, 0.0 * m, 0.0 * m},
-                                  quat<one>::identity(),
-                                  {5.0 * m, 5.0 * m, 5.0 * m}};
-
-                  auto rot =
-                      make_rotation({1.0, 0.0, 0.0}, std::numbers::pi_v<physkit::float_t> / 6.0);
-                  const obb inner{{0.0 * m, 0.0 * m, 0.0 * m}, rot, {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_obb_obb(outer, inner);
-
-                  CHECK(result.intersects);
-              })
-
-        // =====================================================================
-        // GROUP 4: AABB vs OBB Mixed Collision Tests
-        // =====================================================================
-        .group("GJK: AABB vs OBB (Mixed)")
-
-        .test("AABB - OBB separated",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const obb b{{5.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_obb(a, b);
-
-                  CHECK(!result.intersects);
-                  CHECK_APPROX(result.distance(), 3.0 * m);
-              })
-
-        .test("AABB - OBB overlapping",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {3.0 * m, 3.0 * m, 3.0 * m}};
-                  const obb b{{2.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_obb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("AABB - OBB touching",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const obb b{{3.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_obb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("AABB - rotated OBB",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-
-                  auto rot =
-                      make_rotation({0.0, 0.0, 1.0}, std::numbers::pi_v<physkit::float_t> / 4.0);
-                  const obb b{{1.0 * m, 1.0 * m, 0.0 * m}, rot, {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_obb(a, b);
-
-                  // The rotated OBB should intersect the AABB
-                  CHECK(result.intersects);
-              })
-
-        .test("OBB - AABB separated",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {5.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {6.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_obb_aabb(a, b);
-
-                  CHECK(!result.intersects);
-                  CHECK_APPROX(result.distance(), 3.0 * m);
-              })
-
-        .test("OBB - AABB overlapping",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const aabb b{.min = {1.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {4.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_obb_aabb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("OBB - AABB touching",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {2.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {3.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_obb_aabb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("rotated OBB - AABB",
-              []
-              {
-                  auto rot =
-                      make_rotation({0.0, 0.0, 1.0}, std::numbers::pi_v<physkit::float_t> / 4.0);
-                  const obb a{{1.0 * m, 1.0 * m, 0.0 * m}, rot, {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-
-                  const auto result = gjk_obb_aabb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        // =====================================================================
-        // GROUP 5: GJK Result Verification Tests
-        // =====================================================================
-        .group("GJK Result Verification")
-
-        .test("intersects flag is accurate for separated objects",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {5.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {6.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(!result.intersects);
-              })
-
-        .test("intersects flag is accurate for colliding objects",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const aabb b{.min = {1.0 * m, 1.0 * m, 1.0 * m},
-                               .max = {3.0 * m, 3.0 * m, 3.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("closest_points engaged when separated",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {3.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {4.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(result.closest_points().has_value());
-                  const auto [pa, pb] = *result.closest_points();
-                  // Points should be on the facing faces
-                  CHECK_APPROX(pa.x(), 1.0 * m);
-                  CHECK_APPROX(pb.x(), 3.0 * m);
-              })
-
-        .test("closest_points disengaged when intersecting",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const aabb b{.min = {1.0 * m, 1.0 * m, 1.0 * m},
-                               .max = {3.0 * m, 3.0 * m, 3.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(!result.closest_points().has_value());
-              })
-
-        .test("distance is zero (or near) when intersecting",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 2.0 * m, 2.0 * m}};
-                  const aabb b{.min = {1.0 * m, 1.0 * m, 1.0 * m},
-                               .max = {3.0 * m, 3.0 * m, 3.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK_APPROX(result.distance(), 0.0 * m);
-              })
-
-        .test("distance matches closest_points magnitude when separated",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {4.0 * m, 3.0 * m, 0.0 * m},
-                               .max = {5.0 * m, 4.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(result.closest_points().has_value());
-                  const auto [pa, pb] = *result.closest_points();
-                  auto computed_dist = (pb - pa).norm();
-                  CHECK_APPROX(computed_dist, result.distance());
-              })
-
-        .test("distance is positive when separated",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const obb b{{10.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_obb(a, b);
-
-                  CHECK(result.distance() > 0.0 * m);
-              })
-
-        // =====================================================================
-        // GROUP 6: Mathematical Verification Tests
-        // =====================================================================
-        .group("Mathematical Verification")
-
-        .test("distance between unit cubes separated by 1 unit",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {2.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {3.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  // Gap is exactly 1 metre
-                  CHECK_APPROX(result.distance(), 1.0 * m);
-              })
-
-        .test("distance verification for diagonal separation",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {3.0 * m, 4.0 * m, 0.0 * m},
-                               .max = {4.0 * m, 5.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  // Gap in X: 2, Gap in Y: 3, Gap in Z: 0
-                  // Distance = sqrt(2^2 + 3^2) = sqrt(13)
-                  auto expected = std::sqrt(13.0) * m;
-                  CHECK_APPROX(result.distance(), expected, 1e-5 * m);
-              })
-
-        .test("GJK consistency: A-B distance equals B-A distance",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {5.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {6.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result_ab = gjk_aabb_aabb(a, b);
-                  const auto result_ba = gjk_aabb_aabb(b, a);
-
-                  CHECK_APPROX(result_ab.distance(), result_ba.distance());
-                  CHECK(result_ab.intersects == result_ba.intersects);
-              })
-
-        .test("symmetry test: OBB-OBB",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const obb b{{5.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result_ab = gjk_obb_obb(a, b);
-                  const auto result_ba = gjk_obb_obb(b, a);
-
-                  CHECK_APPROX(result_ab.distance(), result_ba.distance());
-              })
-
-        .test("gjk_test dispatcher produces same results as direct calls",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {5.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {6.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto direct = gjk_aabb_aabb(a, b);
-                  const auto dispatched = gjk_test(a, b);
-
-                  CHECK(direct.intersects == dispatched.intersects);
-                  CHECK_APPROX(direct.distance(), dispatched.distance());
-              })
-
-        // =====================================================================
-        // GROUP 7: Edge Cases
-        // =====================================================================
-        .group("Edge Cases")
-
-        .test("degenerate AABB with zero volume",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {0.0 * m, 0.0 * m, 0.0 * m}};
-                  const aabb b{.min = {1.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  // Point vs box - should not intersect
-                  CHECK(!result.intersects);
-                  CHECK_APPROX(result.distance(), 1.0 * m);
-              })
-
-        .test("degenerate OBB with zero volume",
-              []
-              {
-                  const obb a{{0.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {0.0 * m, 0.0 * m, 0.0 * m}};
-                  const obb b{{5.0 * m, 0.0 * m, 0.0 * m},
-                              quat<one>::identity(),
-                              {1.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_obb_obb(a, b);
-
-                  CHECK(!result.intersects);
-              })
-
-        .test("very small separation",
-              []
-              {
-                  const aabb a{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                               .max = {1.0 * m, 1.0 * m, 1.0 * m}};
-                  const aabb b{.min = {1.0001 * m, 0.0 * m, 0.0 * m},
-                               .max = {2.0 * m, 1.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  // Very small gap - should not intersect
-                  CHECK(!result.intersects);
-                  CHECK(result.distance() > 0.0 * m);
-                  CHECK(result.distance() < 0.001 * m);
-              })
-
-        .test("large size difference",
-              []
-              {
-                  const aabb small{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                                   .max = {0.1 * m, 0.1 * m, 0.1 * m}};
-                  const aabb large{.min = {-100.0 * m, -100.0 * m, -100.0 * m},
-                                   .max = {100.0 * m, 100.0 * m, 100.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(small, large);
-
-                  CHECK(result.intersects);
-              })
-
-        .test("negative coordinates",
-              []
-              {
-                  const aabb a{.min = {-10.0 * m, -10.0 * m, -10.0 * m},
-                               .max = {-8.0 * m, -8.0 * m, -8.0 * m}};
-                  const aabb b{.min = {-5.0 * m, -5.0 * m, -5.0 * m},
-                               .max = {-3.0 * m, -3.0 * m, -3.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(a, b);
-
-                  CHECK(!result.intersects);
-                  // Distance should be sqrt(3^2 + 3^2 + 3^2) = sqrt(27)
-                  auto expected = std::sqrt(27.0) * m;
-                  CHECK_APPROX(result.distance(), expected, 1e-5 * m);
-              })
-
-        .test("flat box (2D-like)",
-              []
-              {
-                  const aabb flat{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                                  .max = {5.0 * m, 5.0 * m, 0.0 * m}};
-                  const aabb box{.min = {2.0 * m, 2.0 * m, 0.0 * m},
-                                 .max = {3.0 * m, 3.0 * m, 1.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(flat, box);
-
-                  // They touch at z=0 plane
-                  CHECK(result.intersects);
-              })
-
-        .test("line-like box",
-              []
-              {
-                  const aabb line{.min = {0.0 * m, 0.0 * m, 0.0 * m},
-                                  .max = {10.0 * m, 0.0 * m, 0.0 * m}};
-                  const aabb point{.min = {5.0 * m, 0.0 * m, 0.0 * m},
-                                   .max = {5.0 * m, 0.0 * m, 0.0 * m}};
-
-                  const auto result = gjk_aabb_aabb(line, point);
-
-                  CHECK(result.intersects);
-              })
-
-        .run();
+    suite s;
+
+    s.group("AABB vs AABB")
+        .test("overlap on X", aabb_aabb_overlap_on_x)
+        .test("no collision X", aabb_aabb_no_collision_x)
+        .test("no collision Y", aabb_aabb_no_collision_y)
+        .test("no collision Z", aabb_aabb_no_collision_z)
+        .test("containment", aabb_aabb_containment)
+        .test("large separation", aabb_aabb_large_separation)
+        .test("same box", aabb_aabb_same_box)
+        .test("partial overlap all axes", aabb_aabb_partial_overlap_all_axes)
+        .test("separated diagonal", aabb_aabb_separated_diagonal);
+
+    s.group("OBB vs OBB")
+        .test("axis-aligned overlap", obb_obb_axis_aligned_overlap)
+        .test("axis-aligned separated", obb_obb_axis_aligned_separated)
+        .test("same center different orientation", obb_obb_same_center_different_orientation)
+        .test("rotated 45deg overlap", obb_obb_rotated_45_overlap)
+        .test("rotated 45deg separated", obb_obb_rotated_45_separated)
+        .test("cross config overlap", obb_obb_cross_config_overlap)
+        .test("cross config separated", obb_obb_cross_config_separated)
+        .test("rotated 90deg X overlap", obb_obb_rotated_90_x_overlap)
+        .test("non-uniform extents overlap", obb_obb_non_uniform_extents_overlap)
+        .test("non-uniform extents separated", obb_obb_non_uniform_extents_separated)
+        .test("3D diagonal overlap", obb_obb_3d_diagonal_overlap)
+        .test("3D diagonal separated", obb_obb_3d_diagonal_separated);
+
+    s.group("OBB vs AABB")
+        .test("axis-aligned overlap", obb_aabb_axis_aligned_overlap)
+        .test("axis-aligned separated", obb_aabb_axis_aligned_separated)
+        .test("rotated overlap", obb_aabb_rotated_overlap)
+        .test("rotated separated", obb_aabb_rotated_separated)
+        .test("containment", obb_aabb_containment);
+
+    s.group("Symmetry")
+        .test("aabb-aabb colliding", symmetry_aabb_aabb_colliding)
+        .test("aabb-aabb separated", symmetry_aabb_aabb_separated)
+        .test("obb-obb colliding", symmetry_obb_obb_colliding)
+        .test("obb-obb separated", symmetry_obb_obb_separated);
+
+    s.group("collision_info")
+        .test("stub fields are zero", collision_info_stub_fields)
+        .test("nullopt when separated", collision_info_nullopt_when_separated);
+
+    return s.run();
 }

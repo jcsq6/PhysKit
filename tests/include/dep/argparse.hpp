@@ -200,12 +200,16 @@ constexpr decltype(auto) apply_plus_one(F &&f, Tuple &&t, Extra &&x)
 }
 
 constexpr auto pointer_range(std::string_view s) noexcept
-{ return std::tuple(s.data(), s.data() + s.size()); }
+{
+    return std::tuple(s.data(), s.data() + s.size());
+}
 
 template <class CharT, class Traits>
 constexpr bool starts_with(std::basic_string_view<CharT, Traits> prefix,
                            std::basic_string_view<CharT, Traits> s) noexcept
-{ return s.substr(0, prefix.size()) == prefix; }
+{
+    return s.substr(0, prefix.size()) == prefix;
+}
 
 enum class chars_format
 {
@@ -1173,7 +1177,9 @@ public:
             struct ActionApply
             {
                 void operator()(valued_action &f)
-                { std::transform(first, last, std::back_inserter(self.m_values), f); }
+                {
+                    std::transform(first, last, std::back_inserter(self.m_values), f);
+                }
 
                 void operator()(void_action &f)
                 {
@@ -1498,7 +1504,9 @@ private:
         }
 
         bool operator==(const NArgsRange &rhs) const
-        { return rhs.m_min == m_min && rhs.m_max == m_max; }
+        {
+            return rhs.m_min == m_min && rhs.m_max == m_max;
+        }
 
         bool operator!=(const NArgsRange &rhs) const { return !(*this == rhs); }
     };
@@ -1698,7 +1706,9 @@ private:
     }
 
     static bool is_optional(std::string_view name, std::string_view prefix_chars)
-    { return !is_positional(name, prefix_chars); }
+    {
+        return !is_positional(name, prefix_chars);
+    }
 
     /*
      * Get argument value given a type
@@ -1882,7 +1892,9 @@ public:
         MutuallyExclusiveGroup(MutuallyExclusiveGroup &&other) noexcept
             : m_parent(other.m_parent), m_required(other.m_required),
               m_elements(std::move(other.m_elements))
-        { other.m_elements.clear(); }
+        {
+            other.m_elements.clear();
+        }
 
         template <typename... Targs> Argument &add_argument(Targs... f_args)
         {
@@ -2092,7 +2104,9 @@ public:
      */
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     auto parse_known_args(int argc, const char *const argv[])
-    { return parse_known_args({argv, argv + argc}); }
+    {
+        return parse_known_args({argv, argv + argc});
+    }
 
     /* Getter for options with default values.
      * @throws std::logic_error if parse_args() has not been previously called
@@ -2113,7 +2127,9 @@ public:
      */
     template <typename T = std::string>
     auto present(std::string_view arg_name) const -> std::optional<T>
-    { return (*this)[arg_name].present<T>(); }
+    {
+        return (*this)[arg_name].present<T>();
+    }
 
     /* Getter that returns true for user-supplied options. Returns false if not
      * user-supplied, even with a default value.
@@ -2123,12 +2139,16 @@ public:
     /* Getter that returns true if a subcommand is used.
      */
     auto is_subcommand_used(std::string_view subcommand_name) const
-    { return m_subparser_used.at(std::string(subcommand_name)); }
+    {
+        return m_subparser_used.at(std::string(subcommand_name));
+    }
 
     /* Getter that returns true if a subcommand is used.
      */
     auto is_subcommand_used(const ArgumentParser &subparser) const
-    { return is_subcommand_used(subparser.m_program_name); }
+    {
+        return is_subcommand_used(subparser.m_program_name);
+    }
 
     /* Indexing operator. Return a reference to an Argument object
      * Used in conjunction with Argument.operator== e.g., parser["foo"] == true

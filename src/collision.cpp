@@ -4,69 +4,34 @@
 
 #include <array>
 #include <cassert>
-#include <concepts>
 #include <mp-units/systems/si/unit_symbols.h>
 #include <optional>
-#include <utility>
+
 namespace physkit
 {
 std::optional<collision_info> gjk_epa(const mesh::instance &a, const mesh::instance &b)
-{ assert(true && "GJK Implemented"); }
+{
+    throw std::runtime_error("gjk_epa for mesh not yet implemented");
+}
 /// based off winter dev gjk algorithm implementation
 
-/// @brief minkowski differenec support for convex shapes
-template <typename ShapeA, typename ShapeB>
-    requires SupportShape<ShapeA> && SupportShape<ShapeB>
-[[nodiscard]] vec3<si::metre> minkowski_support(const ShapeA &a, const ShapeB &b,
-                                                const vec3<one> &direction)
-{ return a.support_point(direction) - b.support_point(-direction); }
-
-/// @brief implement a dispatcher function for a function call
-
-template <typename ShapeA, typename ShapeB>
-[[nodiscard]] gjk_result gjk_test(const ShapeA &shape_a, const ShapeB &shape_b)
-{
-    if constexpr (std::same_as<ShapeA, obb> && std::same_as<ShapeB, obb>)
-    {
-        return gjk_obb_obb(shape_a, shape_b);
-    }
-    else if constexpr (std::same_as<ShapeA, obb> && std::same_as<ShapeB, aabb>)
-    {
-        return gjk_obb_aabb(shape_a, shape_b);
-    }
-    else if constexpr (std::same_as<ShapeA, aabb> && std::same_as<ShapeB, obb>)
-    {
-        return gjk_aabb_obb(shape_a, shape_b);
-    }
-
-    else if constexpr (std::same_as<ShapeA, aabb> && std::same_as<ShapeB, aabb>)
-    {
-        return gjk_aabb_aabb(shape_a, shape_b);
-    }
-    else
-    {
-        static_assert(std::same_as<ShapeA, void>, "GJK ONLY APPLIES TO OBB AND AABB OBJECTS ONLY");
-    }
-}
-
 /// @brief add in support vertex - TODO -> Add in support points in the future
-struct SupportVertex
+struct support_pt
 {
     vec3<si::metre> p;  // minkowski point
     vec3<si::metre> pa; // point on A
     vec3<si::metre> pb; // point on b
 };
 
-class Simplex
+template <std::size_t N> class simplex
 {
 public:
     void add_point(const vec3<si::metre> &point)
     {
-        if (M_count < 4)
-        {
-            M_points[M_count] = point;
-            ++M_count;
-        }
+        if (M_count == N) throw std::runtime_error("simplex is full");
+
+        M_points[M_count] = point;
+        ++M_count;
     }
 
     [[nodiscard]] std::size_t size() const { return M_count; }
@@ -82,60 +47,11 @@ public:
     }
 
 private:
-    std::array<vec3<si::metre>, 4> M_points{};
+    std::array<vec3<si::metre>, N> M_points{};
     std::size_t M_count{};
 };
 
-bool handle_simplex(Simplex &simplex, vec3<one> &direction);
-bool handle_line(Simplex &simplex, vec3<one> &direction);
-bool handle_triangle(Simplex &simplex, vec3<one> &direction);
-bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction);
-
-/// @brief modify collision loop to check on separation
-template <typename ShapeA, typename ShapeB>
-    requires SupportShape<ShapeA> && SupportShape<ShapeB>
-
-bool gjk_collision(const ShapeA &a, const ShapeB &b,
-                   quantity<si::metre> tolerance = 1e-6 * si::metre)
-{
-    Simplex simplex;
-    vec3<one> direction = {1.0, 0.0, 0.0};
-
-    auto point = minkowski_support(a, b, direction);
-    if (point.squared_norm() == decltype(point.squared_norm()){}) return true;
-    simplex.add_point(point);
-    direction = -point.normalized();
-
-    constexpr int max_iterations = 100;
-    for (int iter = 0; iter < max_iterations; ++iter)
-    {
-        auto new_point = minkowski_support(a, b, direction);
-        auto progress = new_point.dot(direction);
-        if (progress < tolerance) return false;
-
-        simplex.add_point(new_point);
-        if (handle_simplex(simplex, direction)) return true;
-    }
-
-    return false;
-}
-
-inline bool handle_simplex(Simplex &simplex, vec3<one> &direction)
-{
-    switch (simplex.size())
-    {
-    case 2:
-        return handle_line(simplex, direction);
-    case 3:
-        return handle_triangle(simplex, direction);
-    case 4:
-        return handle_tetrahedron(simplex, direction);
-    default:
-        return false;
-    }
-}
-
-inline bool handle_line(Simplex &simplex, vec3<one> &direction)
+template <std::size_t N> inline bool handle_line(simplex<N> &simplex, vec3<one> &direction)
 {
     const auto a = simplex[1];
     const auto b = simplex[0];
@@ -160,7 +76,7 @@ inline bool handle_line(Simplex &simplex, vec3<one> &direction)
     return false;
 }
 
-inline bool handle_triangle(Simplex &simplex, vec3<one> &direction)
+template <std::size_t N> inline bool handle_triangle(simplex<N> &simplex, vec3<one> &direction)
 {
     const auto a = simplex[2];
     const auto b = simplex[1];
@@ -206,7 +122,7 @@ inline bool handle_triangle(Simplex &simplex, vec3<one> &direction)
     return false;
 }
 
-inline bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction)
+template <std::size_t N> inline bool handle_tetrahedron(simplex<N> &simplex, vec3<one> &direction)
 {
     const auto a = simplex[3];
     const auto b = simplex[2];
@@ -232,7 +148,7 @@ inline bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction)
     const auto side_abc = abc.dot(ao);
     if (side_abc > decltype(side_abc){})
     {
-        simplex = Simplex{};
+        simplex = physkit::simplex<N>{};
         simplex.add_point(c);
         simplex.add_point(b);
         simplex.add_point(a);
@@ -243,7 +159,7 @@ inline bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction)
     const auto side_acd = acd.dot(ao);
     if (side_acd > decltype(side_acd){})
     {
-        simplex = Simplex{};
+        simplex = physkit::simplex<N>{};
         simplex.add_point(d);
         simplex.add_point(c);
         simplex.add_point(a);
@@ -254,7 +170,7 @@ inline bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction)
     const auto side_adb = adb.dot(ao);
     if (side_adb > decltype(side_adb){})
     {
-        simplex = Simplex{};
+        simplex = physkit::simplex<N>{};
         simplex.add_point(b);
         simplex.add_point(d);
         simplex.add_point(a);
@@ -265,57 +181,90 @@ inline bool handle_tetrahedron(Simplex &simplex, vec3<one> &direction)
     return true;
 }
 
-/// @brief return information that intersection occured
-[[nodiscard]] inline gjk_result make_intersection_result()
+template <std::size_t N> inline bool handle_simplex(simplex<N> &simplex, vec3<one> &direction)
 {
-    gjk_result result;
-    result.intersects = true;
-    result.closest_points_data = std::nullopt; // better way of showing disengaged.
-    result.distance_data = quantity<si::metre>{};
-    return result;
+    switch (simplex.size())
+    {
+    case 2:
+        return handle_line(simplex, direction);
+    case 3:
+        return handle_triangle(simplex, direction);
+    case 4:
+        return handle_tetrahedron(simplex, direction);
+    default:
+        return false;
+    }
 }
 
-/// @brief return information that intersection did not occur
-[[nodiscard]] inline gjk_result make_separated_result(const vec3<si::metre> &point_a,
-                                                      const vec3<si::metre> &point_b)
+/// @brief modify collision loop to check on separation
+template <detail::SupportShape ShapeA, detail::SupportShape ShapeB>
+bool gjk_collision(const ShapeA &a, const ShapeB &b,
+                   quantity<si::metre> tolerance = 1e-6 * si::metre)
 {
-    gjk_result result;
-    result.intersects = false;
-    result.closest_points_data =
-        std::pair{point_a, point_b}; // std::null_opt might be better way of showing disengaged.
-    result.distance_data = (point_b - point_a).norm();
-    return result;
+    simplex<4> simplex;
+    vec3<one> direction = {1.0, 0.0, 0.0};
+
+    auto point = detail::minkowski_support(a, b, direction);
+    if (point.squared_norm() == decltype(point.squared_norm()){}) return true;
+    simplex.add_point(point);
+    direction = -point.normalized();
+
+    constexpr int max_iterations = 100;
+    for (int iter = 0; iter < max_iterations; ++iter)
+    {
+        auto new_point = detail::minkowski_support(a, b, direction);
+        auto progress = new_point.dot(direction);
+        if (progress < tolerance) return false;
+
+        simplex.add_point(new_point);
+        if (handle_simplex(simplex, direction)) return true;
+    }
+
+    return false;
+}
+
+/// @brief return information that intersection occured
+inline std::optional<collision_info> epa(const detail::SupportShape auto &a,
+                                         const detail::SupportShape auto &b)
+{
+    collision_info info;
+    info.normal = vec3<one>::zero();
+    info.local_a = vec3<si::metre>::zero();
+    info.local_b = vec3<si::metre>::zero();
+    info.depth = quantity<si::metre>{};
+
+    return info;
 }
 
 /// @brief return data for obb obb collision
-inline gjk_result gjk_obb_obb(const obb &a, const obb &b)
+std::optional<collision_info> gjk_epa(const obb &a, const obb &b)
 {
-    if (gjk_collision(a, b)) return make_intersection_result();
-    return make_separated_result(a.support_point({1, 0, 0}), b.support_point({-1, 0, 0}));
+    if (gjk_collision(a, b)) return epa(a, b);
+    return std::nullopt;
 }
 
-inline gjk_result gjk_aabb_aabb(const aabb &a, const aabb &b)
+std::optional<collision_info> gjk_epa(const aabb &a, const aabb &b)
 {
-    if (gjk_collision(a, b)) return make_intersection_result();
-    return make_separated_result(a.support_point({1, 0, 0}), b.support_point({-1, 0, 0}));
+    if (gjk_collision(a, b)) return epa(a, b);
+    return std::nullopt;
 }
 
-inline gjk_result gjk_obb_aabb(const obb &obb_obj, const aabb &aabb_obj)
+std::optional<collision_info> gjk_epa(const obb &obb_obj, const aabb &aabb_obj)
 {
-    if (gjk_collision(obb_obj, aabb_obj)) return make_intersection_result();
-    return make_separated_result(obb_obj.support_point({1, 0, 0}),
-                                 aabb_obj.support_point({-1, 0, 0}));
+    if (gjk_collision(obb_obj, aabb_obj)) return epa(obb_obj, aabb_obj);
+    return std::nullopt;
 }
 
-inline gjk_result gjk_aabb_obb(const aabb &aabb_obj, const obb &obb_obj)
+std::optional<collision_info> gjk_epa(const aabb &aabb_obj, const obb &obb_obj)
 {
-    if (gjk_collision(aabb_obj, obb_obj)) return make_intersection_result();
-    return make_separated_result(aabb_obj.support_point({1, 0, 0}),
-                                 obb_obj.support_point({-1, 0, 0}));
+    if (gjk_collision(aabb_obj, obb_obj)) return epa(aabb_obj, obb_obj);
+    return std::nullopt;
 }
 
 /// EPA to be implemented separately.
 
 std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
-{ assert(false && "SAT not implemented"); }
+{
+    assert(false && "SAT not implemented");
+}
 } // namespace physkit

@@ -138,14 +138,14 @@ void test_contains_and_contains_local()
     CHECK(!rotated.contains(rotated.center + rotated.orientation * outside_local));
 }
 
-void test_support_point_point()
+void test_support_point()
 {
     obb axis_aligned{
         vec3{0.0, 0.0, 0.0} * m,
         quat<one>::identity(),
         vec3{1.0, 2.0, 3.0} * m,
     };
-    CHECK_APPROX(axis_aligned.support_point(vec3<one>{1.0, -2.0, 0.3}), vec3{1.0, -2.0, 3.0} * m);
+    CHECK_APPROX(axis_aligned.support(vec3<one>{1.0, -2.0, 0.3}), vec3{1.0, -2.0, 3.0} * m);
 
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3{0.0, 0.0, 1.0});
@@ -154,7 +154,7 @@ void test_support_point_point()
         rot,
         vec3{2.0, 1.0, 1.0} * m,
     };
-    CHECK_APPROX(rotated.support_point(vec3<one>{1.0, 0.0, 0.0}), vec3{2.0, 3.0, 1.0} * m);
+    CHECK_APPROX(rotated.support(vec3<one>{1.0, 0.0, 0.0}), vec3{2.0, 3.0, 1.0} * m);
 }
 
 void test_compound_assign()
@@ -191,7 +191,7 @@ int main()
         .test("axes rotation", test_axes_rotation)
         .test("transform", test_transform)
         .test("contains and contains_local", test_contains_and_contains_local)
-        .test("support_point_point", test_support_point_point)
+        .test("support_point", test_support_point)
         .test("compound assignment", test_compound_assign);
     return s.run();
 }

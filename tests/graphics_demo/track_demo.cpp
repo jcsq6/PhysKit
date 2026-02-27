@@ -57,7 +57,9 @@ public:
     }
 
     void update(physkit::quantity<physkit::si::second> dt) override
-    { using namespace si::unit_symbols; }
+    {
+        using namespace si::unit_symbols;
+    }
 
 private:
     gfx_obj *M_center{};
