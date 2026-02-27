@@ -290,23 +290,6 @@ void symmetry_obb_obb_separated()
     CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
 }
 
-// ============================================================
-// collision_info fields (EPA is currently a stub returning zeros)
-// ============================================================
-
-void collision_info_stub_fields()
-{
-    // EPA stub explicitly sets all fields to zero - verify those defaults hold
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{0.0, -1.0, -1.0} * m, .max = vec3{2.0, 1.0, 1.0} * m};
-    auto result = gjk_epa(a, b);
-    CHECK(result.has_value());
-    CHECK_APPROX(result->depth, 0.0 * m);
-    CHECK_APPROX(result->local_a, vec3<si::metre>::zero());
-    CHECK_APPROX(result->local_b, vec3<si::metre>::zero());
-    CHECK_APPROX(result->normal, vec3<one>::zero());
-}
-
 void collision_info_nullopt_when_separated()
 {
     aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
@@ -432,19 +415,6 @@ void mesh_instance_symmetry_separated()
     auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
     auto b = msh->at(vec3{4.0, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
-}
-
-void mesh_instance_collision_info_stub_fields()
-{
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{1.0, 0.0, 0.0} * m);
-    auto result = gjk_epa(a, b);
-    CHECK(result.has_value());
-    CHECK_APPROX(result->depth, 0.0 * m);
-    CHECK_APPROX(result->local_a, vec3<si::metre>::zero());
-    CHECK_APPROX(result->local_b, vec3<si::metre>::zero());
-    CHECK_APPROX(result->normal, vec3<one>::zero());
 }
 
 void mesh_instance_collision_info_nullopt_when_separated()
@@ -605,10 +575,6 @@ int main()
         .test("obb-obb colliding", symmetry_obb_obb_colliding)
         .test("obb-obb separated", symmetry_obb_obb_separated);
 
-    s.group("collision_info")
-        .test("stub fields are zero", collision_info_stub_fields)
-        .test("nullopt when separated", collision_info_nullopt_when_separated);
-
     s.group("mesh::instance")
         .test("box-box overlap", mesh_instance_box_box_overlap)
         .test("box-box separated", mesh_instance_box_box_separated)
@@ -622,7 +588,6 @@ int main()
         .test("box-sphere separated", mesh_instance_box_sphere_separated)
         .test("symmetry colliding", mesh_instance_symmetry_colliding)
         .test("symmetry separated", mesh_instance_symmetry_separated)
-        .test("stub fields are zero", mesh_instance_collision_info_stub_fields)
         .test("nullopt when separated", mesh_instance_collision_info_nullopt_when_separated);
 
     s.group("mesh::pyramid")

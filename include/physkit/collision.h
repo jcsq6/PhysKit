@@ -1,6 +1,5 @@
 #pragma once
 
-#include "detail/bounds.h"
 #include "detail/types.h"
 #include "mesh.h"
 
@@ -38,12 +37,7 @@ public:
     quantity<si::metre> depth{};
 };
 
-// moved gjk tests back into collision.h
-[[nodiscard]] std::optional<collision_info> gjk_epa(const obb &a, const obb &b);
-[[nodiscard]] std::optional<collision_info> gjk_epa(const aabb &a, const aabb &b);
-[[nodiscard]] std::optional<collision_info> gjk_epa(const obb &obb_obj, const aabb &aabb_obj);
-[[nodiscard]] std::optional<collision_info> gjk_epa(const aabb &aabb_obj, const obb &obb_obj);
-
-std::optional<collision_info> gjk_epa(const mesh::instance &a, const mesh::instance &b);
+std::optional<collision_info> gjk_epa(detail::SupportShape auto const &a,
+                                      detail::SupportShape auto const &b);
 std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b);
 } // namespace physkit

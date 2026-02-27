@@ -84,7 +84,7 @@ find_package(Eigen3 REQUIRED)
 find_package(absl REQUIRED)
 
 target_link_libraries(physkit
-    PUBLIC mp-units::mp-units Eigen3::Eigen absl::flat_hash_map absl::flat_hash_set
+    PUBLIC mp-units::mp-units Eigen3::Eigen absl::flat_hash_map absl::flat_hash_set absl::inlined_vector
 )
 
 add_library(physkit::physkit ALIAS physkit)
