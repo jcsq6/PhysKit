@@ -182,9 +182,7 @@ public:
     }
     auto determinant() const
         requires(_rows == _cols)
-    {
-        return base().determinant() * mp_units::pow<_cols>(ref);
-    }
+    { return base().determinant() * mp_units::pow<_cols>(ref); }
     auto inverse() const
         requires(_rows == _cols)
     {
@@ -194,9 +192,7 @@ public:
     auto trace() const { return base().trace() * ref; }
 
     template <Quantity OtherQ> auto dot(const unit_mat<OtherQ, _rows, _cols> &other) const
-    {
-        return base().dot(other.base()) * ref * OtherQ::reference;
-    }
+    { return base().dot(other.base()) * ref * OtherQ::reference; }
 
     template <Quantity OtherQ> auto cross(const unit_mat<OtherQ, _rows, _cols> &other) const
     {
@@ -222,9 +218,7 @@ public:
 
     void normalize()
         requires(ref == one)
-    {
-        M_data.normalize();
-    }
+    { M_data.normalize(); }
 
     auto as_diagonal() const
         requires(_rows == 1 || _cols == 1)
@@ -239,16 +233,12 @@ public:
     constexpr Q operator[](Eigen::Index index) const { return M_data[index] * ref; }
 
     constexpr Q operator[](Eigen::Index row, Eigen::Index col) const
-    {
-        return M_data(row, col) * ref;
-    }
+    { return M_data(row, col) * ref; }
 
     constexpr void set(Eigen::Index index, Q val) { M_data[index] = val.numerical_value_in(ref); }
 
     constexpr void set(Eigen::Index row, Eigen::Index col, Q val)
-    {
-        M_data(row, col) = val.numerical_value_in(ref);
-    }
+    { M_data(row, col) = val.numerical_value_in(ref); }
 
     template <Quantity OtherQ, int R, int C>
         requires(_cols == R)
@@ -287,14 +277,10 @@ public:
     }
 
     constexpr auto operator+(const unit_mat &other) const
-    {
-        return unit_mat{base() + other.base(), key{}};
-    }
+    { return unit_mat{base() + other.base(), key{}}; }
 
     constexpr auto operator-(const unit_mat &other) const
-    {
-        return unit_mat{base() - other.base(), key{}};
-    }
+    { return unit_mat{base() - other.base(), key{}}; }
 
     constexpr auto &operator+=(const unit_mat &other)
     {
@@ -328,21 +314,15 @@ public:
 
     constexpr static auto identity()
         requires(_rows == _cols)
-    {
-        return unit_mat{eigen_type::Identity(), key{}};
-    }
+    { return unit_mat{eigen_type::Identity(), key{}}; }
 
     constexpr static auto random() { return unit_mat{eigen_type::Random(), key{}}; }
 
     constexpr static auto constant(Q value)
-    {
-        return unit_mat{eigen_type::Constant(value.numerical_value_in(ref)), key{}};
-    }
+    { return unit_mat{eigen_type::Constant(value.numerical_value_in(ref)), key{}}; }
 
     constexpr static auto constant(Eigen::Index rows, Eigen::Index cols, Q value)
-    {
-        return unit_mat{eigen_type::Constant(rows, cols, value.numerical_value_in(ref)), key{}};
-    }
+    { return unit_mat{eigen_type::Constant(rows, cols, value.numerical_value_in(ref)), key{}}; }
 
 private:
     eigen_type M_data;
@@ -360,9 +340,7 @@ private:
     template <Quantity OQ> friend class unit_quat;
 
     constexpr decltype(auto) base(this auto &&self)
-    {
-        return std::forward_like<decltype(self)>(self.M_data);
-    }
+    { return std::forward_like<decltype(self)>(self.M_data); }
 
     template <typename T, typename CharT> friend class std::formatter;
 };
@@ -370,9 +348,7 @@ private:
 template <typename T, Quantity Q, int Rows, int Cols>
     requires(std::is_arithmetic_v<T> || Quantity<T>)
 auto operator*(T scalar, const unit_mat<Q, Rows, Cols> &matrix)
-{
-    return matrix * scalar;
-}
+{ return matrix * scalar; }
 
 template <Quantity Q> class unit_quat
 {
@@ -449,9 +425,7 @@ public:
 
     constexpr operator eigen_type() const
         requires(ref == one)
-    {
-        return M_data;
-    }
+    { return M_data; }
 
     constexpr Q w() const { return M_data.w() * ref; }
     constexpr Q x() const { return M_data.x() * ref; }
@@ -512,9 +486,7 @@ public:
 
     void normalize()
         requires(ref == one)
-    {
-        M_data.normalize();
-    }
+    { M_data.normalize(); }
 
     auto normalized() const
     {
@@ -523,15 +495,11 @@ public:
     }
 
     template <Quantity OtherQ> auto dot(const unit_quat<OtherQ> &other) const
-    {
-        return M_data.dot(other.base()) * ref * OtherQ::reference;
-    }
+    { return M_data.dot(other.base()) * ref * OtherQ::reference; }
 
     auto angular_distance(const unit_quat &other) const
         requires(ref == one)
-    {
-        return M_data.angularDistance(other.M_data) * si::radian;
-    }
+    { return M_data.angularDistance(other.M_data) * si::radian; }
 
     auto to_rotation_matrix() const
         requires(ref == one)
@@ -542,9 +510,7 @@ public:
 
     auto slerp(rep_type t, const unit_quat &other) const
         requires(ref == one)
-    {
-        return unit_quat{M_data.slerp(t, other.M_data), key{}};
-    }
+    { return unit_quat{M_data.slerp(t, other.M_data), key{}}; }
 
     auto &set_identity()
         requires(ref == one)
@@ -564,9 +530,7 @@ public:
 
     bool is_approx(const unit_quat &other,
                    rep_type prec = Eigen::NumTraits<rep_type>::dummy_precision()) const
-    {
-        return M_data.isApprox(other.M_data, prec);
-    }
+    { return M_data.isApprox(other.M_data, prec); }
 
     constexpr bool operator==(const unit_quat &other) const { return base() == other.base(); }
 
@@ -589,9 +553,7 @@ public:
     static unit_quat from_two_vectors(const unit_mat<VecQ1, 3, 1> &a,
                                       const unit_mat<VecQ2, 3, 1> &b)
         requires(ref == one)
-    {
-        return unit_quat{eigen_type::FromTwoVectors(a.base(), b.base()), key{}};
-    }
+    { return unit_quat{eigen_type::FromTwoVectors(a.base(), b.base()), key{}}; }
 
 private:
     eigen_type M_data{rep_type(1), rep_type(0), rep_type(0), rep_type(0)};
@@ -610,9 +572,7 @@ private:
     template <typename T, typename CharT> friend class std::formatter;
 
     constexpr decltype(auto) base(this auto &&self)
-    {
-        return std::forward_like<decltype(self)>(self.M_data);
-    }
+    { return std::forward_like<decltype(self)>(self.M_data); }
 };
 } // namespace physkit
 

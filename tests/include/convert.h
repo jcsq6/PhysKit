@@ -17,9 +17,7 @@ namespace detail
 {
 template <typename Ret, std::size_t... Indices>
 constexpr auto expand(auto &&nth, std::index_sequence<Indices...> /*helper*/)
-{
-    return Ret{nth(Indices)...};
-}
+{ return Ret{nth(Indices)...}; }
 } // namespace detail
 
 template <mp_units::Reference auto ref, typename T, int Size, mp_units::Quantity Q>

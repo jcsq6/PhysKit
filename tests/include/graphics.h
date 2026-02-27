@@ -92,9 +92,7 @@ public:
 
     physkit::object &obj() { return **M_world->get_rigid(M_handle); }
     [[nodiscard]] const physkit::object &obj() const
-    {
-        return **std::as_const(*M_world).get_rigid(M_handle);
-    }
+    { return **std::as_const(*M_world).get_rigid(M_handle); }
 
     void sync()
     {
@@ -156,9 +154,7 @@ public:
     explicit instanced_drawable(std::derived_from<gfx_obj_base> auto &parent,
                                 instanced_drawables &group)
         : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}
-    {
-        group.add_object(*this);
-    }
+    { group.add_object(*this); }
 
     instanced_drawable(const instanced_drawable &) = delete;
     instanced_drawable &operator=(const instanced_drawable &) = delete;
@@ -878,11 +874,11 @@ public:
     auto &physics_objects() const { return M_physics_objs; }
 
     graphics_app(const g_config &config)
-        : Magnum::Platform::Application{config.args(),
-                                        Configuration{}
-                                            .setTitle(Containers::StringView{config.title().data(),
-                                                                             config.title().size()})
-                                            .setSize(config.window_size())},
+        : Magnum::Platform::Application{
+              config.args(),
+              Configuration{}
+                  .setTitle(Containers::StringView{config.title().data(), config.title().size()})
+                  .setSize(config.window_size())},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
           M_drag(config.drag()), M_testing(config.testing())
@@ -976,14 +972,10 @@ protected:
     }
 
     physkit::quantity<physkit::si::second> dt() const
-    {
-        return M_timeline.previousFrameDuration() * physkit::si::second;
-    }
+    { return M_timeline.previousFrameDuration() * physkit::si::second; }
 
     physkit::quantity<physkit::si::second> current_time() const
-    {
-        return M_timeline.previousFrameTime() * physkit::si::second;
-    }
+    { return M_timeline.previousFrameTime() * physkit::si::second; }
 
 private:
     void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
@@ -1103,15 +1095,11 @@ namespace mesh_objs
 {
 // radius 1
 inline auto cube()
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid()));
-}
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
 
 // radius 1
 inline auto sphere(unsigned int subdivisions = 3)
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions)));
-}
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions))); }
 
 inline auto cone(unsigned int rings, unsigned int segments, float half_length)
 {
@@ -1128,8 +1116,6 @@ inline auto cylinder(unsigned int rings, unsigned int segments, float half_lengt
 }
 
 inline auto plane()
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid()));
-}
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
 }; // namespace mesh_objs
 } // namespace graphics

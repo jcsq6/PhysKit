@@ -111,9 +111,7 @@ public:
         requires(std::derived_from<std::remove_cvref_t<Derived>, constraint_base>)
     void build_jacobian(this Derived &&self, quantity<si::second> dt,
                         std::vector<jacobian_row> &rows)
-    {
-        std::forward<Derived>(self).build_jacobian_impl(dt, rows, {});
-    }
+    { std::forward<Derived>(self).build_jacobian_impl(dt, rows, {}); }
 
     [[nodiscard]] auto &obj_a() const { return *M_a; }
     [[nodiscard]] auto &obj_b() const { return *M_b; }
@@ -265,9 +263,7 @@ public:
                      const vec3<one> &local_axis_b)
         : constraint_base(a, b), M_local_anchor_a(local_anchor_a), M_local_anchor_b(local_anchor_b),
           M_local_axis_a(local_axis_a.normalized()), M_local_axis_b(local_axis_b.normalized())
-    {
-        std::tie(M_local_v_a, M_local_w_a) = detail::build_orthonormal_basis(M_local_axis_a);
-    }
+    { std::tie(M_local_v_a, M_local_w_a) = detail::build_orthonormal_basis(M_local_axis_a); }
 
     void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
                              detail::passkey<constraint_base> /*unused*/) const

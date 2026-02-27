@@ -1,7 +1,4 @@
 #include "physkit/world.h"
-// TODO: remove
-#include "physkit/detail/eigen_format.h" // IWYU pragma: keep
-#include <print>
 
 namespace physkit
 {
