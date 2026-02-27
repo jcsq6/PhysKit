@@ -7,6 +7,7 @@ using namespace mp_units;
 
 using float_t = double;
 
+template <auto unit = one, typename Rep = float_t> using vec2 = unit_mat<quantity<unit, Rep>, 2, 1>;
 template <auto unit = one, typename Rep = float_t> using vec3 = unit_mat<quantity<unit, Rep>, 3, 1>;
 template <auto unit = one, typename Rep = float_t> using mat3 = unit_mat<quantity<unit, Rep>, 3, 3>;
 template <auto unit = one, typename Rep = float_t> using mat4 = unit_mat<quantity<unit, Rep>, 4, 4>;

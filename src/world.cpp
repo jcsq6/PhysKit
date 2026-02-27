@@ -5,42 +5,41 @@
 
 namespace physkit
 {
-void world::step(quantity<si::second> dt)
+template class world<semi_implicit_euler>;
+
+template <> void world<semi_implicit_euler>::step(quantity<si::second> dt)
 {
-    for (auto &slot : M_rigid.slots)
+    for (auto &slot : rigids().slots)
     {
-        if (slot.available || slot.obj.is_static()) continue;
+        if (slot.available || slot.value.obj.is_static()) continue;
 
-        auto &obj = slot.obj;
-        obj.apply_force(M_gravity * obj.mass());
-        M_int->integrate(obj, dt);
+        auto &obj = slot.value.obj;
+        obj.apply_force(gravity() * obj.mass());
+        semi_implicit_euler::integrate_vel(obj, dt);
 
-        M_broad.update_node(slot.broad_handle, obj.instance().bounds(), obj.vel() * dt);
+        broad_phase().update_node(slot.value.broad_handle, obj.instance().bounds(), obj.vel() * dt);
 
         obj.clear_forces();
     }
 
-    M_broad.calculate_pairs(M_narrow,
-                            [this](auto h) -> std::pair<detail::dynamic_bvh::node_handle, bool>
-                            {
-                                auto &slot = M_rigid.get_slot(h);
-                                return {slot.broad_handle, slot.obj.is_static()};
-                            });
+    broad_phase().calculate_pairs(
+        narrow_phase(),
+        [this](auto h) -> std::pair<detail::dynamic_bvh::node_handle, bool>
+        {
+            auto &slot = rigids().get_slot(h);
+            return {slot.value.broad_handle, slot.value.obj.is_static()};
+        });
 
-    M_narrow.calculate([this](auto h) -> object & { return M_rigid.get_slot(h).obj; });
-    for (const auto &man : M_narrow.manifolds())
+    narrow_phase().calculate([this](auto h) -> object & { return rigids().get_slot(h).value.obj; });
+    M_constraints.setup_contacts(dt, narrow_phase(), [this](auto h) -> object &
+                                 { return rigids().get_slot(h).value.obj; });
+    M_constraints.solve_constraints(dt);
+    for (auto &slot : rigids().slots)
     {
-        if (!man.man) continue;
-        auto &obj_a = M_rigid.get_slot(man.a).obj;
-        auto &obj_b = M_rigid.get_slot(man.b).obj;
+        if (slot.available || slot.value.obj.is_static()) continue;
 
-        std::println("Collision detected between contacts {}\n",
-                     man.man.contacts() | std::views::transform(
-                                              [](const auto &c)
-                                              {
-                                                  return std::tuple(c.info.local_a, c.info.local_b,
-                                                                    c.info.normal, c.info.depth);
-                                              }));
+        semi_implicit_euler::integrate_pos(slot.value.obj, dt);
     }
 }
+
 } // namespace physkit

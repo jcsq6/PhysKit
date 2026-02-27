@@ -82,8 +82,8 @@ public:
 class physics_obj : public gfx_obj
 {
 public:
-    explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent, physkit::world &world,
-                         physkit::world::handle handle)
+    explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent, physkit::world_base &world,
+                         physkit::world_base::handle handle)
         : gfx_obj(&parent), M_world{&world}, M_handle{handle}
     {
     }
@@ -103,8 +103,8 @@ public:
     }
 
 private:
-    physkit::world *M_world;
-    physkit::world::handle M_handle;
+    physkit::world_base *M_world;
+    physkit::world_base::handle M_handle;
 };
 
 class instanced_drawable;
@@ -222,13 +222,13 @@ template <> struct glz::meta<physkit::body_type>
     static constexpr auto value = enumerate(physkit::body_type::stat, physkit::body_type::dynam);
 };
 
-template <> struct glz::meta<physkit::world_desc::integ_t>
-{
-    using enum physkit::world_desc::integ_t;
-    static constexpr auto value =
-        enumerate(physkit::world_desc::forward_euler, physkit::world_desc::semi_implicit_euler,
-                  physkit::world_desc::rk4);
-};
+// template <> struct glz::meta<physkit::world_desc::integ_t>
+// {
+//     using enum physkit::world_desc::integ_t;
+//     static constexpr auto value =
+//         enumerate(physkit::world_desc::forward_euler, physkit::world_desc::semi_implicit_euler,
+//                   physkit::world_desc::rk4);
+// };
 
 namespace graphics
 {
@@ -287,7 +287,7 @@ public:
         struct world_config
         {
             std::array<double, 3> gravity = {0.0, -9.81, 0.0};
-            physkit::world_desc::integ_t integrator = physkit::world_desc::semi_implicit_euler;
+            // physkit::world_desc::integ_t integrator = physkit::world_desc::semi_implicit_euler;
             std::size_t solver_iterations = 10;
             std::vector<obj> objects{};
             std::optional<std::array<double, 3>> look_at;
@@ -312,7 +312,7 @@ public:
 
         self.M_gravity =
             physkit::vec3{config.gravity[0], config.gravity[1], config.gravity[2]} * m / s / s;
-        self.M_integrator = config.integrator;
+        // self.M_integrator = config.integrator;
         self.M_solver_iterations = config.solver_iterations;
 
         std::map<std::string, std::shared_ptr<physkit::mesh>> mesh_map;
@@ -409,9 +409,9 @@ public:
         }
 
         std::println("  Gravity: {}", *self.M_gravity);
-        std::println("  Integrator: {}",
-                     glz::reflect<physkit::world_desc::integ_t>::keys[static_cast<int>( // NOLINT
-                         config.integrator)]);
+        // std::println("  Integrator: {}",
+        //              glz::reflect<physkit::world_desc::integ_t>::keys[static_cast<int>( // NOLINT
+        //                  config.integrator)]);
         std::println("  Solver iterations: {}", config.solver_iterations);
         std::println("  Objects: {}", config.objects.size());
         for (std::size_t i = 0; i < self.M_objects.size(); ++i)
@@ -548,16 +548,16 @@ public:
         if (!self.M_gravity) self.M_gravity = gravity;
         return std::forward<decltype(self)>(self);
     }
-    auto &&integrator(this auto &&self, physkit::world_desc::integ_t type)
-    {
-        self.M_integrator = type;
-        return std::forward<decltype(self)>(self);
-    }
-    auto &&integrator_or(this auto &&self, physkit::world_desc::integ_t type)
-    {
-        if (!self.M_integrator) self.M_integrator = type;
-        return std::forward<decltype(self)>(self);
-    }
+    // auto &&integrator(this auto &&self, physkit::world_desc::integ_t type)
+    // {
+    //     self.M_integrator = type;
+    //     return std::forward<decltype(self)>(self);
+    // }
+    // auto &&integrator_or(this auto &&self, physkit::world_desc::integ_t type)
+    // {
+    //     if (!self.M_integrator) self.M_integrator = type;
+    //     return std::forward<decltype(self)>(self);
+    // }
     auto &&solver_iterations(this auto &&self, std::size_t iterations)
     {
         self.M_solver_iterations = iterations;
@@ -601,7 +601,7 @@ public:
     {
         auto desc = physkit::world_desc::make();
         if (M_gravity) desc.with_gravity(*M_gravity);
-        if (M_integrator) desc.with_integrator(*M_integrator);
+        // if (M_integrator) desc.with_integrator(*M_integrator);
         if (M_solver_iterations) desc.with_solver_iterations(*M_solver_iterations);
         return desc;
     }
@@ -751,7 +751,7 @@ private:
     std::optional<bool> M_vsync = default_vsync;
     std::optional<physkit::vec3<physkit::si::metre / physkit::si::second / physkit::si::second>>
         M_gravity;
-    std::optional<physkit::world_desc::integ_t> M_integrator;
+    // std::optional<physkit::world_desc::integ_t> M_integrator;
     std::optional<std::size_t> M_solver_iterations;
     std::optional<physkit::quantity<physkit::si::second>> M_time_step;
     bool M_testing{false};
@@ -809,9 +809,9 @@ public:
     /// @param handle Handle to the rigid body in the world.
     /// @param color The color to use for rendering the object.
     /// @return A pointer to the created physics_obj instance.
-    auto add_object(physkit::world::handle handle, Color3 color)
+    auto add_object(physkit::world_base::handle handle, Color3 color)
     {
-        auto *phys_obj = new physics_obj{M_scene, M_world, handle};
+        auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
         auto &obj = phys_obj->obj();
         std::shared_ptr<GL::Mesh> mesh;
         if (auto it = M_phys_mesh_map.find(&obj.mesh()); it == M_phys_mesh_map.end())
@@ -834,10 +834,11 @@ public:
     /// @param mesh The shared GL::Mesh to use for rendering.
     /// @param color The color to use for rendering the object.
     /// @return A pointer to the created physics_obj instance.
-    auto add_object(physkit::world::handle handle, std::shared_ptr<GL::Mesh> mesh, Color3 color)
+    auto add_object(physkit::world_base::handle handle, std::shared_ptr<GL::Mesh> mesh,
+                    Color3 color)
     {
 
-        return M_world.get_rigid(handle)
+        return M_world->get_rigid(handle)
             .transform(
                 [&](auto obj)
                 {
@@ -847,7 +848,7 @@ public:
                         throw std::runtime_error(
                             "graphics_app::add_object: provided mesh does not match "
                             "physkit::object mesh");
-                    auto *phys_obj = new physics_obj{M_scene, M_world, handle};
+                    auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
 
                     internal_add_obj(phys_obj, std::move(mesh), color);
 
@@ -868,7 +869,7 @@ public:
         return obj;
     }
 
-    auto &world() { return M_world; }
+    auto &world() { return *M_world; }
 
     auto &physics_objects() const { return M_physics_objs; }
 
@@ -880,9 +881,12 @@ public:
                   .setSize(config.window_size())},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
-          M_drag(config.drag()), M_world(config.world_desc()), M_testing(config.testing())
+          M_drag(config.drag()), M_testing(config.testing())
     {
         using namespace Math::Literals::ColorLiterals;
+
+        M_world =
+            std::make_unique<physkit::world<physkit::semi_implicit_euler>>(config.world_desc());
 
         M_shader = Shaders::PhongGL{Shaders::PhongGL::Configuration{}.setFlags(
             Shaders::PhongGL::Flag::VertexColor | Shaders::PhongGL::Flag::InstancedTransformation)};
@@ -904,9 +908,9 @@ public:
         if (config.vsync()) set_vsync();
 
         for (const auto &[obj_desc, color] : config.objects())
-            add_object(M_world.create_rigid(obj_desc), color);
+            add_object(M_world->create_rigid(obj_desc), color);
 
-        M_stepper = physkit::stepper(M_world, config.time_step());
+        M_stepper = physkit::stepper(*M_world, config.time_step());
     }
 
     virtual ~graphics_app()
@@ -1071,7 +1075,7 @@ private:
     SceneGraph::Scene<SceneGraph::MatrixTransformation3D> M_scene;
     Shaders::PhongGL M_shader{NoCreate};
     SceneGraph::DrawableGroup3D M_shaded;
-    physkit::world M_world;
+    std::unique_ptr<physkit::world_base> M_world;
     physkit::stepper M_stepper;
     camera M_cam;
     std::unordered_map<const physkit::mesh *, std::shared_ptr<GL::Mesh>> M_phys_mesh_map;

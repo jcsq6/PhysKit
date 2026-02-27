@@ -33,7 +33,7 @@ class stepper
 {
 public:
     stepper() : M_accum(1.0 / 60.0 * si::second), M_w{} {}
-    stepper(world &w, quantity<si::second> dt) : M_accum(dt), M_w(&w) {}
+    stepper(world_base &w, quantity<si::second> dt) : M_accum(dt), M_w(&w) {}
 
     void update(quantity<si::second> dt)
     {
@@ -46,7 +46,7 @@ public:
     [[nodiscard]] auto alpha() const { return M_accum.alpha(); }
 
     // resets accumulator and sets world
-    void reset(world &w, quantity<si::second> dt)
+    void reset(world_base &w, quantity<si::second> dt)
     {
         M_w = &w;
         M_accum = fixed_accum{dt};
@@ -54,7 +54,7 @@ public:
 
 private:
     fixed_accum M_accum;
-    world *M_w;
+    world_base *M_w;
 };
 
 } // namespace physkit

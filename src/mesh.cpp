@@ -364,7 +364,7 @@ vec3<m> mesh::support(const vec3<one> &direction) const
 bool mesh::is_convex() const
 {
     // tolerance
-    auto epsilon = 1e-10 * m;
+    constexpr auto epsilon = 1e-10 * m;
     // TODO: implement convexity test (check all edges, verify all vertices on same side of each
     // face)
     assert(!M_triangles.empty() && "Empty mesh.");

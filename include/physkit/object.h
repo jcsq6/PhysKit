@@ -63,6 +63,18 @@ public:
         return std::forward<decltype(self)>(self);
     }
 
+    auto &&with_restitution(this auto &&self, double restitution)
+    {
+        self.M_restitution = restitution;
+        return std::forward<decltype(self)>(self);
+    }
+
+    auto &&with_friction(this auto &&self, double friction)
+    {
+        self.M_friction = friction;
+        return std::forward<decltype(self)>(self);
+    }
+
     [[nodiscard]] const vec3<si::metre> &pos() const { return M_pos; }
     [[nodiscard]] const vec3<si::metre / si::second> &vel() const { return M_vel; }
     [[nodiscard]] quantity<si::kilogram> mass() const { return M_mass; }
@@ -70,6 +82,9 @@ public:
     [[nodiscard]] const vec3<si::radian / si::second> &ang_vel() const { return M_ang_vel; }
     [[nodiscard]] const mat3<si::kilogram * si::metre * si::metre> &inertia_tensor() const
     { return M_inertia; }
+    [[nodiscard]] double restitution() const { return M_restitution; }
+    [[nodiscard]] double friction() const { return M_friction; }
+
     [[nodiscard]] auto &&mesh(this auto &&self)
     { return std::forward_like<decltype(self)>(self.M_mesh); }
     [[nodiscard]] body_type type() const { return M_type; }
@@ -84,6 +99,8 @@ private:
     mat3<si::kilogram * si::metre * si::metre> M_inertia =
         mat3<si::kilogram * si::metre * si::metre>::identity();
     std::shared_ptr<const physkit::mesh> M_mesh;
+    double M_restitution = 0.5;
+    double M_friction = 0.5;
 };
 
 class object : public particle
@@ -92,7 +109,8 @@ public:
     explicit object(object_desc desc)
         : particle(desc.pos(), desc.vel(), desc.mass(), desc.orientation(), desc.ang_vel(),
                    desc.inertia_tensor()),
-          M_type(desc.type()), M_mesh(std::move(desc).mesh())
+          M_type(desc.type()), M_mesh(std::move(desc).mesh()), M_restitution(desc.restitution()),
+          M_friction(desc.friction())
     {
     }
 
@@ -101,9 +119,15 @@ public:
         assert(M_mesh != nullptr);
         return *M_mesh;
     }
+
     [[nodiscard]] body_type type() const { return M_type; }
     [[nodiscard]] bool is_dynamic() const { return M_type == body_type::dynam; }
     [[nodiscard]] bool is_static() const { return M_type == body_type::stat; }
+    [[nodiscard]] double restitution() const { return M_restitution; }
+    [[nodiscard]] double friction() const { return M_friction; }
+
+    void restitution(double r) { M_restitution = r; }
+    void friction(double f) { M_friction = f; }
 
     /// @brief Return a lightweight view for world-space queries.
     [[nodiscard]] struct mesh::instance instance() const { return {*M_mesh, pos(), orientation()}; }
@@ -111,6 +135,8 @@ public:
 private:
     std::shared_ptr<const struct mesh> M_mesh;
     body_type M_type;
+    double M_restitution;
+    double M_friction;
 };
 
 } // namespace physkit

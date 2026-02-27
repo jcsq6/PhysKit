@@ -64,7 +64,7 @@ public:
         collision_info info;
 
         quantity<si::newton * si::second> normal_impulse{};
-        quantity<si::newton * si::second> tangent_impulse{};
+        std::array<quantity<si::newton * si::second>, 2> tangent_impulses{};
     };
 
     static constexpr std::size_t max_contact_points = 4;
@@ -188,7 +188,7 @@ public:
     {
         auto [a, b] = pair_manager::extract_ids(key);
         M_contact_map[key] = M_manifolds.size();
-        M_manifolds.push_back({a, b});
+        M_manifolds.push_back({.a = a, .b = b});
     }
 
     void on_pair_removed(std::uint64_t key)
@@ -243,12 +243,12 @@ public:
                 {
                     // transfer cached impulses to new point
                     new_contact.normal_impulse = old_contact.normal_impulse;
-                    new_contact.tangent_impulse = old_contact.tangent_impulse;
+                    new_contact.tangent_impulses = old_contact.tangent_impulses;
                     continue;
                 }
 
-                auto world_old_a = obj_a.project_local(old_contact.info.local_a);
-                auto world_old_b = obj_b.project_local(old_contact.info.local_b);
+                auto world_old_a = obj_a.project_to_world(old_contact.info.local_a);
+                auto world_old_b = obj_b.project_to_world(old_contact.info.local_b);
 
                 // Note that world_old_a - world_old_b = old_contact.info.normal *
                 // old_contact.info.depth (if normal points from b to a)
@@ -274,6 +274,7 @@ public:
     }
 
     [[nodiscard]] std::span<const manifold_info> manifolds() const { return M_manifolds; }
+    [[nodiscard]] std::span<manifold_info> manifolds() { return M_manifolds; }
 
 private:
     std::vector<manifold_info> M_manifolds;
