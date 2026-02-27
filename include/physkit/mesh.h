@@ -259,6 +259,8 @@ public:
                               const quat<one> &orientation = quat<one>::identity()) const
     { return {*this, position, orientation}; }
 
+    /// @brief - Add in support to return obb objects -> much more tedious, more research later.
+
 private:
     aabb M_bounds;
     bounding_sphere M_bsphere;

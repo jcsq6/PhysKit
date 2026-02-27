@@ -25,8 +25,16 @@ constexpr double eps = 1e-9;
 template <std::floating_point T> bool approx(T a, T b)
 { return std::abs(a - b) < static_cast<T>(eps); }
 
+template <std::floating_point T> bool approx(T a, T b, T tol) { return std::abs(a - b) < tol; }
+
 template <Quantity Q> bool approx(Q a, Q b)
 { return approx(a.numerical_value_in(Q::reference), b.numerical_value_in(Q::reference)); }
+
+template <Quantity Q> bool approx(Q a, Q b, Q tol)
+{
+    return std::abs((a - b).numerical_value_in(Q::reference)) <
+           tol.numerical_value_in(Q::reference);
+}
 
 template <Quantity Q, int Rows, int Cols>
 bool approx(const unit_mat<Q, Rows, Cols> &a, const unit_mat<Q, Rows, Cols> &b)
@@ -47,6 +55,9 @@ inline bool approx(const ray::hit &a, const ray::hit &b)
 namespace detail
 {
 template <typename A, typename B> bool approx_check(const A &a, const B &b) { return approx(a, b); }
+template <typename A, typename B, typename C>
+bool approx_check(const A &a, const B &b, const C &tol)
+{ return approx(a, b, tol); }
 } // namespace detail
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)

@@ -1,4 +1,3 @@
-#pragma once
 #include "bvh.h"
 #include "physkit/collision.h"
 #include "physkit/object.h"
