@@ -25,7 +25,9 @@ template <typename ShapeA, typename ShapeB>
     requires SupportShape<ShapeA> && SupportShape<ShapeB>
 [[nodiscard]] inline vec3<si::metre> minkowski_support(const ShapeA &a, const ShapeB &b,
                                                        const vec3<one> &direction)
-{ return a.support(direction) - b.support(-direction); }
+{
+    return a.support(direction) - b.support(-direction);
+}
 } // namespace detail
 
 class collision_info // TODO: time of impact for continuous collision detection

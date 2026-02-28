@@ -81,12 +81,16 @@ public:
     [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
     [[nodiscard]] const vec3<si::radian / si::second> &ang_vel() const { return M_ang_vel; }
     [[nodiscard]] const mat3<si::kilogram * si::metre * si::metre> &inertia_tensor() const
-    { return M_inertia; }
+    {
+        return M_inertia;
+    }
     [[nodiscard]] double restitution() const { return M_restitution; }
     [[nodiscard]] double friction() const { return M_friction; }
 
     [[nodiscard]] auto &&mesh(this auto &&self)
-    { return std::forward_like<decltype(self)>(self.M_mesh); }
+    {
+        return std::forward_like<decltype(self)>(self.M_mesh);
+    }
     [[nodiscard]] body_type type() const { return M_type; }
 
 private:
