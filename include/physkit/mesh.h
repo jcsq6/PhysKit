@@ -1,335 +1,107 @@
 #pragma once
+#include "detail/bounds.h"
+#include "detail/bvh.h"
 #include "detail/types.h"
 
 #include <mp-units/framework.h>
 #include <mp-units/math.h>
 #include <mp-units/systems/si/units.h>
 
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <memory>
-#include <numbers>
 #include <span>
 #include <vector>
 
 namespace physkit
 {
-/// @brief An axis-aligned bounding box defined by minimum and maximum corners.
-class aabb
+
+struct triangle_t : std::array<unsigned int, 3>
 {
-public:
-    vec3<si::metre> min;
-    vec3<si::metre> max;
-
-    static aabb from_points(std::span<const vec3<si::metre>> points)
+    [[nodiscard]] std::array<vec3<si::metre>, 3>
+    vertices(std::span<const vec3<si::metre>> verts) const
     {
-        assert(!points.empty());
-        aabb box;
-        box.min = points[0];
-        box.max = points[0];
-        for (std::size_t i = 1; i < points.size(); ++i)
+        return {verts[(*this)[0]], verts[(*this)[1]], verts[(*this)[2]]};
+    }
+
+    [[nodiscard]] std::array<vec3<si::metre>, 3> vertices(const auto &mesh) const
+        requires(requires { mesh.vertex(0U); })
+    {
+        return {mesh.vertex((*this)[0]), mesh.vertex((*this)[1]), mesh.vertex((*this)[2])};
+    }
+
+    [[nodiscard]] auto normal(const auto &ctx) const
+    {
+        auto [a, b, c] = vertices(ctx);
+        return (b - a).cross(c - a).normalized();
+    }
+
+    [[nodiscard]] auto center(const auto &ctx) const
+    {
+        auto [a, b, c] = vertices(ctx);
+        return (a + b + c) / 3.0;
+    }
+
+    [[nodiscard]] auto to_aabb(const auto &ctx) const
+    {
+        auto [a, b, c] = vertices(ctx);
+        return aabb{
+            .min = {std::min({a.x(), b.x(), c.x()}), std::min({a.y(), b.y(), c.y()}),
+                    std::min({a.z(), b.z(), c.z()})},
+            .max = {std::max({a.x(), b.x(), c.x()}), std::max({a.y(), b.y(), c.y()}),
+                    std::max({a.z(), b.z(), c.z()})},
+        };
+    }
+
+    // Closest point on a single triangle to a query point, using barycentric coordinates.
+    // TODO: benchmark against other methods (e.g. Voronoi region tests) to see if this is a
+    // bottleneck.
+    [[nodiscard]] auto closest_point(const vec3<si::metre> &p, const auto &ctx) const
+    {
+        using namespace mp_units::si::unit_symbols;
+
+        auto [a, b, c] = this->vertices(ctx);
+
+        auto ab = b - a;
+        auto ac = c - a;
+        auto ap = p - a;
+
+        auto d00 = ab.dot(ab);
+        auto d01 = ab.dot(ac);
+        auto d11 = ac.dot(ac);
+        auto d20 = ap.dot(ab);
+        auto d21 = ap.dot(ac);
+
+        auto denom = d00 * d11 - d01 * d01;
+        if (abs(denom) < 1e-12 * pow<4>(m)) return a; // degenerate triangle, return a vertex
+
+        auto v = (d11 * d20 - d01 * d21) / denom;
+        auto w = (d00 * d21 - d01 * d20) / denom;
+        auto u = 1.0 - v - w;
+
+        if (u >= 0.0 && v >= 0.0 && w >= 0.0) return u * a + v * b + w * c;
+
+        // Point projects outside the triangle - project onto each edge and pick closest
+        auto candidate = a;
+        auto candidate_dist_sq = (candidate - p).squared_norm();
+        auto check_edge = [&p, &candidate, &candidate_dist_sq](const vec3<m> &e0, const vec3<m> &e1)
         {
-            box.min.x(std::min(box.min.x(), points[i].x()));
-            box.min.y(std::min(box.min.y(), points[i].y()));
-            box.min.z(std::min(box.min.z(), points[i].z()));
-            box.max.x(std::max(box.max.x(), points[i].x()));
-            box.max.y(std::max(box.max.y(), points[i].y()));
-            box.max.z(std::max(box.max.z(), points[i].z()));
-        }
-        return box;
-    }
-
-    [[nodiscard]] constexpr auto size() const { return max - min; }
-    [[nodiscard]] constexpr auto center() const { return (min + max) / 2.0; }
-    [[nodiscard]] constexpr auto extent() const { return (max - min) / 2.0; }
-    [[nodiscard]] constexpr auto volume() const
-    {
-        auto s = size();
-        return s.x() * s.y() * s.z();
-    }
-    [[nodiscard]] constexpr auto surface_area() const
-    {
-        auto s = size();
-        return 2.0 * (s.x() * s.y() + s.y() * s.z() + s.z() * s.x());
-    }
-
-    [[nodiscard]] constexpr auto point(unsigned int index) const
-    {
-        assert(index < 8);
-        return vec3<si::metre>{((index & 1) != 0u) ? max.x() : min.x(),
-                               ((index & 2) != 0u) ? max.y() : min.y(),
-                               ((index & 4) != 0u) ? max.z() : min.z()};
-    }
-
-    [[nodiscard]] constexpr bool contains(const vec3<si::metre> &point) const
-    {
-        return (point.x() >= min.x() && point.x() <= max.x()) &&
-               (point.y() >= min.y() && point.y() <= max.y()) &&
-               (point.z() >= min.z() && point.z() <= max.z());
-    }
-
-    [[nodiscard]] constexpr bool intersects(const aabb &other) const
-    {
-        return (min.x() <= other.max.x() && max.x() >= other.min.x()) &&
-               (min.y() <= other.max.y() && max.y() >= other.min.y()) &&
-               (min.z() <= other.max.z() && max.z() >= other.min.z());
-    }
-
-    [[nodiscard]] constexpr aabb operator+(const vec3<si::metre> &offset) const
-    {
-        return {.min = min + offset, .max = max + offset};
-    }
-
-    [[nodiscard]] constexpr aabb operator-(const vec3<si::metre> &offset) const
-    {
-        return {.min = min - offset, .max = max - offset};
-    }
-
-    [[nodiscard]] constexpr aabb operator*(quantity<one> scale) const
-    {
-        return {.min = min * scale, .max = max * scale};
-    }
-
-    template <Quantity Q>
-        requires(QuantityOf<Q, dimensionless>)
-    [[nodiscard]] aabb operator*(const unit_mat<Q, 3, 3> &transform) const
-    {
-        aabb result{.min = transform * min, .max = transform * min}; // initialize to point(0)
-        for (unsigned int i = 1; i < 8; ++i)
-        {
-            auto pt = transform * point(i);
-            result.min.x(std::min(result.min.x(), pt.x()));
-            result.min.y(std::min(result.min.y(), pt.y()));
-            result.min.z(std::min(result.min.z(), pt.z()));
-            result.max.x(std::max(result.max.x(), pt.x()));
-            result.max.y(std::max(result.max.y(), pt.y()));
-            result.max.z(std::max(result.max.z(), pt.z()));
-        }
-        return result;
-    }
-
-    template <Quantity Q>
-        requires(QuantityOf<Q, dimensionless>)
-    [[nodiscard]] aabb operator*(const unit_quat<Q> &transform) const
-    {
-        aabb result{.min = transform * min, .max = transform * min}; // initialize to point(0)
-        for (unsigned int i = 1; i < 8; ++i)
-        {
-            auto pt = transform * point(i);
-            result.min.x(std::min(result.min.x(), pt.x()));
-            result.min.y(std::min(result.min.y(), pt.y()));
-            result.min.z(std::min(result.min.z(), pt.z()));
-            result.max.x(std::max(result.max.x(), pt.x()));
-            result.max.y(std::max(result.max.y(), pt.y()));
-            result.max.z(std::max(result.max.z(), pt.z()));
-        }
-        return result;
-    }
-
-    [[nodiscard]] constexpr aabb operator/(quantity<one> scale) const
-    {
-        return {.min = min / scale, .max = max / scale};
-    }
-
-    constexpr auto &operator+=(const vec3<si::metre> &offset)
-    {
-        min += offset;
-        max += offset;
-        return *this;
-    }
-
-    constexpr auto &operator-=(const vec3<si::metre> &offset)
-    {
-        min -= offset;
-        max -= offset;
-        return *this;
-    }
-
-    constexpr auto &operator*=(quantity<one> scale)
-    {
-        min *= scale;
-        max *= scale;
-        return *this;
-    }
-
-    constexpr auto &operator/=(quantity<one> scale)
-    {
-        min /= scale;
-        max /= scale;
-        return *this;
-    }
-};
-
-/// @brief A bounding sphere defined by a center and radius.
-class bounding_sphere
-{
-public:
-    vec3<si::metre> center = vec3<si::metre>::zero();
-    quantity<si::metre> radius{};
-
-    /// @brief Ritter's bounding-sphere algorithm.
-    [[nodiscard]] static bounding_sphere from_points(std::span<const vec3<si::metre>> points)
-    {
-        assert(!points.empty());
-
-        // --- Pass 1: find the two most-separated points along each axis ---
-        std::size_t min_x = 0;
-        std::size_t max_x = 0;
-        std::size_t min_y = 0;
-        std::size_t max_y = 0;
-        std::size_t min_z = 0;
-        std::size_t max_z = 0;
-
-        for (std::size_t i = 1; i < points.size(); ++i)
-        {
-            if (points[i].x() < points[min_x].x()) min_x = i;
-            if (points[i].x() > points[max_x].x()) max_x = i;
-            if (points[i].y() < points[min_y].y()) min_y = i;
-            if (points[i].y() > points[max_y].y()) max_y = i;
-            if (points[i].z() < points[min_z].z()) min_z = i;
-            if (points[i].z() > points[max_z].z()) max_z = i;
-        }
-
-        auto span_x = (points[max_x] - points[min_x]).squared_norm();
-        auto span_y = (points[max_y] - points[min_y]).squared_norm();
-        auto span_z = (points[max_z] - points[min_z]).squared_norm();
-
-        auto lo = min_x;
-        auto hi = max_x;
-        auto best = span_x;
-        if (span_y > best)
-        {
-            lo = min_y;
-            hi = max_y;
-            best = span_y;
-        }
-        if (span_z > best)
-        {
-            lo = min_z;
-            hi = max_z;
-        }
-
-        auto c = (points[lo] + points[hi]) / 2.0;
-        auto r = (points[hi] - c).norm();
-
-        for (const auto &pt : points)
-        {
-            auto dist = (pt - c).norm();
-            if (dist > r)
+            auto edge = e1 - e0;
+            auto t =
+                std::clamp(static_cast<double>((p - e0).dot(edge) / edge.squared_norm()), 0.0, 1.0);
+            auto attempt = e0 + t * edge;
+            if (auto attempt_dist_sq = (attempt - p).squared_norm();
+                attempt_dist_sq < candidate_dist_sq)
             {
-                auto new_r = (r + dist) / 2.0;
-                auto shift = dist - r;
-                c = c + (pt - c) * (shift / (2.0 * dist));
-                r = new_r;
+                candidate = attempt;
+                candidate_dist_sq = attempt_dist_sq;
             }
-        }
-
-        return {.center = c, .radius = r};
-    }
-
-    [[nodiscard]] static bounding_sphere from_aabb(const aabb &box)
-    {
-        auto c = box.center();
-        auto r = (box.max - c).norm();
-        return {.center = c, .radius = r};
-    }
-
-    /// @brief Compute the smallest sphere enclosing two spheres.
-    [[nodiscard]] static bounding_sphere merge(const bounding_sphere &a, const bounding_sphere &b)
-    {
-        auto d_vec = b.center - a.center;
-        auto dist = d_vec.norm();
-
-        if (dist + b.radius <= a.radius) return a;
-        if (dist + a.radius <= b.radius) return b;
-
-        auto new_r = (dist + a.radius + b.radius) / 2.0;
-        auto new_c = a.center + d_vec * ((new_r - a.radius) / dist);
-        return {.center = new_c, .radius = new_r};
-    }
-
-    [[nodiscard]] constexpr auto surface_area() const
-    {
-        return 4.0 * std::numbers::pi * radius * radius;
-    }
-
-    [[nodiscard]] constexpr auto volume() const
-    {
-        return (4.0 / 3.0) * std::numbers::pi * radius * radius * radius;
-    }
-
-    [[nodiscard]] bool contains(const vec3<si::metre> &point) const
-    {
-        return (point - center).squared_norm() <= radius * radius;
-    }
-
-    [[nodiscard]] bool intersects(const bounding_sphere &other) const
-    {
-        auto combined = radius + other.radius;
-        return (other.center - center).squared_norm() <= combined * combined;
-    }
-
-    [[nodiscard]] bool intersects(const aabb &box) const
-    {
-        auto closest = closest_point_on_aabb(box);
-        return (closest - center).squared_norm() <= radius * radius;
-    }
-
-    [[nodiscard]] constexpr bounding_sphere operator+(const vec3<si::metre> &offset) const
-    {
-        return {.center = center + offset, .radius = radius};
-    }
-
-    [[nodiscard]] constexpr bounding_sphere operator-(const vec3<si::metre> &offset) const
-    {
-        return {.center = center - offset, .radius = radius};
-    }
-
-    [[nodiscard]] constexpr bounding_sphere operator*(quantity<one> scale) const
-    {
-        return {.center = center, .radius = radius * scale};
-    }
-
-    constexpr auto &operator+=(const vec3<si::metre> &offset)
-    {
-        center += offset;
-        return *this;
-    }
-
-    constexpr auto &operator-=(const vec3<si::metre> &offset)
-    {
-        center -= offset;
-        return *this;
-    }
-
-    constexpr auto &operator*=(quantity<one> scale)
-    {
-        center *= scale;
-        radius = radius * scale;
-        return *this;
-    }
-
-private:
-    [[nodiscard]] vec3<si::metre> closest_point_on_aabb(const aabb &box) const
-    {
-        auto cx = std::clamp(center.x(), box.min.x(), box.max.x());
-        auto cy = std::clamp(center.y(), box.min.y(), box.max.y());
-        auto cz = std::clamp(center.z(), box.min.z(), box.max.z());
-        return {cx, cy, cz};
+        };
+        check_edge(a, b);
+        check_edge(b, c);
+        check_edge(c, a);
+        return candidate;
     }
 };
-
-namespace detail
-{
-struct bvh_node
-{
-    aabb bounds;
-    std::uint32_t start{}; // leaf: first tri index; internal: right child index
-    std::uint16_t count{}; // >0 = leaf (tri count); 0 = internal node
-    std::uint16_t axis{};  // split axis (0/1/2)
-};
-} // namespace detail
 
 class mesh : public std::enable_shared_from_this<mesh>
 {
@@ -338,49 +110,10 @@ class mesh : public std::enable_shared_from_this<mesh>
     };
 
 public:
-    struct instance;
-
-    struct triangle_t : std::array<unsigned int, 3>
-    {
-        [[nodiscard]] auto normal(const mesh &m) const
-        {
-            auto v0 = m.M_vertices[(*this)[0]];
-            auto v1 = m.M_vertices[(*this)[1]];
-            auto v2 = m.M_vertices[(*this)[2]];
-            return (v1 - v0).cross(v2 - v0).normalized();
-        }
-
-        [[nodiscard]] vec3<one> normal(const instance &inst) const;
-
-        [[nodiscard]] std::array<vec3<si::metre>, 3> vertices(const mesh &m) const
-        {
-            return vertices(m.M_vertices);
-        }
-
-        [[nodiscard]] std::array<vec3<si::metre>, 3>
-        vertices(std::span<const vec3<si::metre>> verts) const
-        {
-            return {verts[(*this)[0]], verts[(*this)[1]], verts[(*this)[2]]};
-        }
-
-        [[nodiscard]] std::array<vec3<si::metre>, 3> vertices(const instance &inst) const;
-    };
-
-    struct ray_hit
-    {
-        vec3<si::metre> pos;
-        vec3<one> normal;
-        quantity<si::metre> distance;
-    };
-
-    struct ray
-    {
-        vec3<si::metre> origin;
-        vec3<one> direction;
-    };
-
     /// @brief A view of a mesh placed in world space.
     /// Provides world-space collision queries by transforming into local space and back.
+    /// Instances are meant for temporary use in queries and should not be stored long-term by
+    /// users. Watch out for dangling references.
     class instance
     {
     public:
@@ -391,7 +124,7 @@ public:
         [[nodiscard]] const vec3<si::metre> &position() const { return M_position; }
         [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
 
-        [[nodiscard]] auto vertex(unsigned int index) const
+        [[nodiscard]] vec3<si::metre> vertex(unsigned int index) const
         {
             assert(index < M_mesh->vertices().size());
             return M_orientation * M_mesh->vertices()[index] + M_position;
@@ -408,9 +141,9 @@ public:
             return {.center = M_orientation * local.center + M_position, .radius = local.radius};
         }
 
-        /// @brief Compute the world-space inertia tensor by rotating the local inertia and applying
-        /// the parallel axis theorem. O(log N) time.
-        [[nodiscard]] std::optional<ray_hit>
+        /// @brief Compute the world-space ray intersection by transforming the ray into local space
+        /// and back.
+        [[nodiscard]] std::optional<ray::hit>
         ray_intersect(const ray &r, quantity<si::metre> max_distance =
                                         std::numeric_limits<quantity<si::metre>>::infinity()) const;
 
@@ -420,6 +153,10 @@ public:
 
         /// @brief Point containment test in world space. O(log N) time.
         [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
+
+        /// @brief Gathers indices of triangles whose vertices overlap the given world-space sphere.
+        [[nodiscard]] std::vector<std::uint32_t>
+        overlap_sphere(const bounding_sphere &sphere) const;
 
         /// @brief GJK support function in world space. Rotates the direction into
         /// local frame, queries the mesh, and transforms the result back.
@@ -431,7 +168,7 @@ public:
         inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
 
     private:
-        std::shared_ptr<const mesh> M_mesh; // NOLINT
+        const mesh *M_mesh; // NOLINT
         vec3<si::metre> M_position;
         quat<one> M_orientation;
     };
@@ -442,7 +179,24 @@ public:
         : M_vertices(std::from_range_t{}, vertices), M_triangles(std::from_range_t{}, triangles),
           M_bounds(aabb::from_points(vertices)), M_bsphere(bounding_sphere::from_points(vertices))
     {
-        build_bvh();
+        thread_local std::vector<aabb> bounds;
+        thread_local std::vector<vec3<si::metre>> centroids;
+
+        bounds.clear();
+        centroids.clear();
+        bounds.reserve(M_triangles.size());
+        centroids.reserve(M_triangles.size());
+
+        for (const auto &tri : M_triangles)
+        {
+            bounds.push_back(tri.to_aabb(*this));
+            centroids.push_back(tri.center(*this));
+        }
+
+        auto indices = M_bvh.build(bounds, centroids);
+        std::vector<triangle_t> sorted_tris(M_triangles.size());
+        for (std::size_t i = 0; i < indices.size(); ++i) sorted_tris[i] = M_triangles[indices[i]];
+        M_triangles = std::move(sorted_tris);
     }
 
     mesh(const mesh &) = default;
@@ -474,7 +228,7 @@ public:
 
     [[nodiscard]] std::span<const vec3<si::metre>> vertices() const { return M_vertices; }
     [[nodiscard]] std::span<const triangle_t> triangles() const { return M_triangles; }
-    [[nodiscard]] const auto &vertex(unsigned int index) const
+    [[nodiscard]] const vec3<si::metre> &vertex(unsigned int index) const
     {
         assert(index < M_vertices.size());
         return M_vertices[index];
@@ -489,13 +243,16 @@ public:
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
 
     /// @brief Ray intersection in local (model) space. O(log N) time.
-    [[nodiscard]] std::optional<ray_hit>
+    [[nodiscard]] std::optional<ray::hit>
     ray_intersect(const ray &r, quantity<si::metre> max_distance =
                                     std::numeric_limits<quantity<si::metre>>::infinity()) const;
     /// @brief Closest point on the mesh surface in local space. O(log N) time.
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
     /// @brief Point containment test in local space. O(log N) time.
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
+
+    /// @brief Gathers indices of triangles whose vertices overlap the given sphere.
+    std::vector<std::uint32_t> overlap_sphere(const bounding_sphere &sphere) const;
 
     /// @brief GJK support function in local space.
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const;
@@ -508,30 +265,20 @@ public:
         return {*this, position, orientation};
     }
 
-private:
-    void build_bvh();
+    /// @brief - Add in support to return obb objects -> much more tedious, more research later.
 
+private:
     aabb M_bounds;
     bounding_sphere M_bsphere;
     std::vector<vec3<si::metre>> M_vertices;
     std::vector<triangle_t> M_triangles;
-    std::vector<detail::bvh_node> M_bvh_nodes;
+    detail::static_bvh M_bvh;
 };
 
-inline vec3<one> mesh::triangle_t::normal(const mesh::instance &inst) const
-{
-    return inst.orientation() * this->normal(inst.geometry());
-}
-inline std::array<vec3<si::metre>, 3> mesh::triangle_t::vertices(const instance &inst) const
-{
-    auto local = this->vertices(inst.geometry());
-    return {inst.orientation() * local[0] + inst.position(),
-            inst.orientation() * local[1] + inst.position(),
-            inst.orientation() * local[2] + inst.position()};
-}
 inline mesh::instance::instance(const mesh &msh, const vec3<si::metre> &position,
                                 const quat<one> &orientation)
-    : M_mesh{msh.ptr()}, M_position{position}, M_orientation{orientation}
+    : M_mesh{&msh}, M_position{position}, M_orientation{orientation}
 {
 }
+
 } // namespace physkit

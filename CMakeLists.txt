@@ -30,10 +30,11 @@ include(${CMAKE_SOURCE_DIR}/cmake/EnsureClang.cmake)
 
 
 # ----- PhysKit Library -----
-set(PHYSKIT_SOURCES 
+set(PHYSKIT_SOURCES
 	src/world.cpp
 	src/mesh.cpp
 	src/collision.cpp
+	src/bvh.cpp
 )
 
 set(PHYSKIT_HEADERS
@@ -41,11 +42,13 @@ set(PHYSKIT_HEADERS
 	collision.h
 	integrator.h
 	mesh.h
-	obb.h
 	object.h
 	particle.h
 	physkit.h
 	world.h
+	detail/bounds.h
+	detail/bvh.h
+	detail/collision_phases.h
 	detail/eigen_format.h
 	detail/lin_alg.h
 	detail/types.h
@@ -78,8 +81,10 @@ find_package(mp-units REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 
+find_package(absl REQUIRED)
+
 target_link_libraries(physkit
-    PUBLIC mp-units::mp-units Eigen3::Eigen
+    PUBLIC mp-units::mp-units Eigen3::Eigen absl::flat_hash_map absl::flat_hash_set absl::inlined_vector
 )
 
 add_library(physkit::physkit ALIAS physkit)
