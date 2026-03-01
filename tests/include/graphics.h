@@ -281,6 +281,8 @@ public:
             std::variant<box_type, pyramid_type, sphere_type> mesh =
                 box_type{"box", {0.5f, 0.5f, 0.5f}};
             double mass;
+            double restitution = 0.5;
+            double friction = 0.5;
             std::array<float, 4> color = {1.0, 1.0, 1.0, 1.0};
         };
 
@@ -358,7 +360,9 @@ public:
                                   rad / s)
                     .with_inertia_tensor(inertia)
                     .with_mass(obj.mass * kg)
-                    .with_mesh(mesh_map.at(mesh_name)),
+                    .with_mesh(mesh_map.at(mesh_name))
+                    .with_restitution(obj.restitution)
+                    .with_friction(obj.friction),
                 Color3{obj.color[0], obj.color[1], obj.color[2]});
         }
 

@@ -77,7 +77,11 @@ public:
 
     [[nodiscard]] const vec3<si::metre> &pos() const { return M_pos; }
     [[nodiscard]] const vec3<si::metre / si::second> &vel() const { return M_vel; }
-    [[nodiscard]] quantity<si::kilogram> mass() const { return M_mass; }
+    [[nodiscard]] quantity<si::kilogram> mass() const
+    {
+        return M_type == body_type::dynam ? M_mass
+                                          : std::numeric_limits<quantity<si::kilogram>>::infinity();
+    }
     [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
     [[nodiscard]] const vec3<si::radian / si::second> &ang_vel() const { return M_ang_vel; }
     [[nodiscard]] const mat3<si::kilogram * si::metre * si::metre> &inertia_tensor() const

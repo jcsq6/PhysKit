@@ -14,6 +14,13 @@ namespace physkit
 namespace detail
 {
 
+struct support_pt
+{
+    vec3<si::metre> p;  // minkowski point
+    vec3<si::metre> pa; // point on A
+    vec3<si::metre> pb; // point on b
+};
+
 /// @brief - not a true convex check but just checking for valid furthest point
 template <typename T>
 concept SupportShape = requires(const T &shape, const vec3<one> &dir) {
@@ -23,17 +30,21 @@ concept SupportShape = requires(const T &shape, const vec3<one> &dir) {
 /// @brief minkowski differenec support for convex shapes
 template <typename ShapeA, typename ShapeB>
     requires SupportShape<ShapeA> && SupportShape<ShapeB>
-[[nodiscard]] inline vec3<si::metre> minkowski_support(const ShapeA &a, const ShapeB &b,
-                                                       const vec3<one> &direction)
-{ return a.support(direction) - b.support(-direction); }
+[[nodiscard]] inline support_pt minkowski_support(const ShapeA &a, const ShapeB &b,
+                                                  const vec3<one> &direction)
+{
+    auto pa = a.support(direction);
+    auto pb = b.support(-direction);
+    return support_pt{.p = pa - pb, .pa = pa, .pb = pb};
+}
 } // namespace detail
 
-class collision_info // TODO: time of impact for continuous collision detection
+class collision_info
 {
 public:
     vec3<one> normal = vec3<one>::zero();
-    vec3<si::metre> local_a = vec3<si::metre>::zero();
-    vec3<si::metre> local_b = vec3<si::metre>::zero();
+    vec3<si::metre> world_a = vec3<si::metre>::zero();
+    vec3<si::metre> world_b = vec3<si::metre>::zero();
     quantity<si::metre> depth{};
 };
 

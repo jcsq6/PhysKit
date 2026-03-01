@@ -1,0 +1,71 @@
+{
+    "cam_pos": [0.0, 8.0, 16.0],
+    "look_at": [0.0, 2.0, 0.0],
+    "drag": false,
+    "title": "Collisions Test Config",
+    "objects": [
+        {
+            "mesh": {"name": "box", "half_extents": [15.0, 1.0, 15.0]},
+            "pos": [0.0, -1.0, 0.0],
+            "type": "stat",
+            "mass": 0.0,
+            "color": [0.3, 0.3, 0.35, 1.0]
+        },
+        {
+            "mesh": {"name": "box", "half_extents": [0.5, 0.5, 0.5]},
+            "pos": [0.0, 2.0, 0.0],
+            "type": "dynam",
+            "mass": 1.0,
+            "color": [0.2, 0.6, 0.9, 1.0],
+            "restitution": 0.8
+        },
+        {
+            "mesh": {"name": "box", "half_extents": [0.5, 0.5, 0.5]},
+            "pos": [-0.2, 3.5, 0.1],
+            "type": "dynam",
+            "vel": [0.0, -2.0, 0.0],
+            "orientation": [0.985, 0.174, 0.0, 0.0],
+            "mass": 1.0,
+            "color": [0.8, 0.2, 0.3, 1.0],
+            "restitution": 0.8
+        },
+        {
+            "mesh": {"name": "sphere", "radius": 0.5},
+            "pos": [0.3, 6.0, -0.2],
+            "type": "dynam",
+            "vel": [0.0, -3.0, 0.0],
+            "mass": 1.0,
+            "color": [0.2, 0.8, 0.3, 1.0],
+            "restitution": 0.8
+        },
+        {
+            "mesh": {"name": "pyramid", "height": 1.5, "base_size": 1.2},
+            "pos": [-1.0, 8.0, 0.5],
+            "type": "dynam",
+            "vel": [2.0, 0.0, -1.0],
+            "angular_velocity": [1.0, 2.0, -1.0],
+            "mass": 2.0,
+            "color": [0.9, 0.8, 0.1, 1.0],
+            "restitution": 0.8
+        },
+        {
+            "mesh": {"name": "box", "half_extents": [1.0, 0.25, 1.0]},
+            "pos": [0.0, 12.0, 0.0],
+            "type": "dynam",
+            "vel": [0.0, -5.0, 0.0],
+            "orientation": [0.924, 0.383, 0.0, 0.0],
+            "mass": 10.0,
+            "color": [0.6, 0.1, 0.6, 1.0],
+            "restitution": 0.8
+        },
+        {
+            "mesh": {"name": "sphere", "radius": 0.8},
+            "pos": [2.0, 1.0, 1.0],
+            "type": "dynam",
+            "vel": [-8.0, 2.0, -2.0],
+            "mass": 3.0,
+            "color": [0.9, 0.4, 0.1, 1.0],
+            "restitution": 0.8
+        }
+    ]
+}

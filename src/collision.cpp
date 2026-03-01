@@ -11,23 +11,15 @@ namespace physkit
 {
 /// based off winter dev gjk algorithm implementation
 
-/// @brief add in support vertex - TODO -> Add in support points in the future
-struct support_pt
-{
-    vec3<si::metre> p;  // minkowski point
-    vec3<si::metre> pa; // point on A
-    vec3<si::metre> pb; // point on b
-};
-
-using simplex = absl::InlinedVector<vec3<si::metre>, 4>;
+using simplex = absl::InlinedVector<detail::support_pt, 4>;
 
 inline bool handle_line(simplex &simplex, vec3<one> &direction)
 {
     constexpr auto eps = 1e-12;
     const auto a = simplex[1];
     const auto b = simplex[0];
-    const auto ab = b - a;
-    const auto ao = -a;
+    const auto ab = b.p - a.p;
+    const auto ao = -a.p;
     auto ab_dot_ao = ab.dot(ao);
 
     if (ab_dot_ao > 0.0 * pow<2>(si::metre))
@@ -59,9 +51,9 @@ inline bool handle_triangle(simplex &simplex, vec3<one> &direction)
     const auto b = simplex[1];
     const auto c = simplex[0];
 
-    const auto ab = b - a;
-    const auto ac = c - a;
-    const auto ao = -a;
+    const auto ab = b.p - a.p;
+    const auto ac = c.p - a.p;
+    const auto ao = -a.p;
     const auto abc = ab.cross(ac);
 
     const auto ab_perp = ab.cross(abc);
@@ -105,15 +97,15 @@ inline bool handle_tetrahedron(simplex &simplex, vec3<one> &direction)
     const auto b = simplex[2];
     const auto c = simplex[1];
     const auto d = simplex[0];
-    const auto ao = -a;
+    const auto ao = -a.p;
 
-    auto abc = (b - a).cross(c - a);
-    auto acd = (c - a).cross(d - a);
-    auto adb = (d - a).cross(b - a);
+    auto abc = (b.p - a.p).cross(c.p - a.p);
+    auto acd = (c.p - a.p).cross(d.p - a.p);
+    auto adb = (d.p - a.p).cross(b.p - a.p);
 
     auto orient_face_outward = [](auto &normal, const auto &face_a, const auto &opposite)
     {
-        auto toward_opposite = opposite - face_a;
+        auto toward_opposite = opposite.p - face_a.p;
         auto side = normal.dot(toward_opposite);
         if (side > 0.0 * pow<3>(si::metre)) normal = -normal;
     };
@@ -182,15 +174,15 @@ std::optional<simplex> gjk_collision(const detail::SupportShape auto &a,
     vec3<one> direction = {1.0, 0.0, 0.0};
 
     auto point = detail::minkowski_support(a, b, direction);
-    if (point.squared_norm() < eps * pow<2>(si::metre)) return simplex;
     simplex.push_back(point);
-    direction = -point.normalized();
+    if (point.p.squared_norm() < eps * pow<2>(si::metre)) return simplex;
+    direction = -point.p.normalized();
 
     constexpr int max_iterations = 100;
     for (int iter = 0; iter < max_iterations; ++iter)
     {
         auto new_point = detail::minkowski_support(a, b, direction);
-        auto progress = new_point.dot(direction);
+        auto progress = new_point.p.dot(direction);
         if (progress <= 0 * si::metre) return std::nullopt;
 
         simplex.push_back(new_point);
@@ -211,28 +203,28 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
         auto dir = vec3{1, 0, 0};
         auto p2 = detail::minkowski_support(a, b, dir);
 
-        if ((p2 - simplex[0]).squared_norm() < 1e-6 * pow<2>(si::metre))
+        if ((p2.p - simplex[0].p).squared_norm() < 1e-6 * pow<2>(si::metre))
             p2 = detail::minkowski_support(a, b, -dir);
         simplex.push_back(p2);
     };
     auto on_2 = [](const a_type &a, const b_type &b, physkit::simplex &simplex)
     {
-        auto line = (simplex[1] - simplex[0]);
+        auto line = (simplex[1].p - simplex[0].p);
         auto dir = line.normalized().cross(vec3<one>{0.0, 1.0, 0.0});
         if (dir.squared_norm() < 1e-6) dir = line.normalized().cross(vec3<one>{0.0, 0.0, 1.0});
         dir.normalize();
         auto p3 = detail::minkowski_support(a, b, dir);
-        if (line.cross(p3 - simplex[0]).squared_norm() < 1e-6 * pow<4>(si::metre))
+        if (line.cross(p3.p - simplex[0].p).squared_norm() < 1e-6 * pow<4>(si::metre))
             p3 = detail::minkowski_support(a, b, -dir);
         simplex.push_back(p3);
     };
     auto on_3 = [](const a_type &a, const b_type &b, physkit::simplex &simplex)
     {
-        auto ab = simplex[1] - simplex[0];
-        auto ac = simplex[2] - simplex[0];
+        auto ab = simplex[1].p - simplex[0].p;
+        auto ac = simplex[2].p - simplex[0].p;
         auto dir = ab.cross(ac).normalized();
         auto p4 = detail::minkowski_support(a, b, dir);
-        if (abs((p4 - simplex[0]).dot(dir)) < 1e-6 * si::metre)
+        if (abs((p4.p - simplex[0].p).dot(dir)) < 1e-6 * si::metre)
             p4 = detail::minkowski_support(a, b, -dir);
         simplex.push_back(p4);
     };
@@ -251,14 +243,15 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
         break;
     }
 
-    auto ad = simplex[0] - simplex[3];
-    auto bd = simplex[1] - simplex[3];
-    auto cd = simplex[2] - simplex[3];
+    auto ad = simplex[0].p - simplex[3].p;
+    auto bd = simplex[1].p - simplex[3].p;
+    auto cd = simplex[2].p - simplex[3].p;
     auto triple = ad.dot(bd.cross(cd));
 
     return abs(triple) > 1e-12 * pow<3>(si::metre);
 }
 
+// TODO: hill climbing to find support point in O(\sqrt(n))
 struct epa_solver
 {
     using index_t = std::uint16_t;
@@ -288,8 +281,8 @@ struct epa_solver
         face.vertices = {static_cast<epa_solver::index_t>(i), static_cast<epa_solver::index_t>(j),
                          static_cast<epa_solver::index_t>(k)};
 
-        auto ab = polytope[j] - polytope[i];
-        auto ac = polytope[k] - polytope[i];
+        auto ab = polytope[j].p - polytope[i].p;
+        auto ac = polytope[k].p - polytope[i].p;
         face.normal = ab.cross(ac) / pow<2>(si::metre);
 
         if (face.normal.squared_norm() < 1e-12)
@@ -298,13 +291,13 @@ struct epa_solver
             face.normal.normalize();
 
         if (opposite_index != null_index &&
-            face.normal.dot(polytope[opposite_index] - polytope[i]) > 0.0 * si::metre)
+            face.normal.dot(polytope[opposite_index].p - polytope[i].p) > 0.0 * si::metre)
         {
             std::swap(face.vertices[1], face.vertices[2]);
             face.normal = -face.normal;
         }
 
-        face.distance = face.normal.dot(polytope[i]);
+        face.distance = face.normal.dot(polytope[i].p);
     }
 
     std::size_t allocate_face()
@@ -433,6 +426,38 @@ struct epa_solver
         constexpr auto tolerance = 1e-6 * si::metre;
         constexpr auto degen_threshold = 1e-10 * si::metre;
 
+        auto get_barycentric = [&](const face &f, const detail::support_pt &p)
+        {
+            auto p0 = solver.polytope[f.vertices[0]];
+            auto p1 = solver.polytope[f.vertices[1]];
+            auto p2 = solver.polytope[f.vertices[2]];
+
+            auto p_minkowski = f.normal * f.distance;
+
+            auto v0 = p1.p - p0.p;
+            auto v1 = p2.p - p0.p;
+            auto v2 = p_minkowski - p0.p;
+
+            auto d00 = v0.dot(v0);
+            auto d01 = v0.dot(v1);
+            auto d11 = v1.dot(v1);
+            auto d20 = v2.dot(v0);
+            auto d21 = v2.dot(v1);
+
+            auto denom = d00 * d11 - d01 * d01;
+
+            auto v = (d11 * d20 - d01 * d21) / denom;
+            auto w = (d00 * d21 - d01 * d20) / denom;
+            auto u = 1.0 - v - w;
+
+            return collision_info{
+                .normal = -f.normal,
+                .world_a = u * p0.pa + v * p1.pa + w * p2.pa,
+                .world_b = u * p0.pb + v * p1.pb + w * p2.pb,
+                .depth = f.distance,
+            };
+        };
+
         for (int iter = 0; iter < max_iterations; ++iter)
         {
             std::size_t min_face_idx = solver.pop_face();
@@ -443,14 +468,11 @@ struct epa_solver
             if (min_face.distance < degen_threshold) continue;
 
             auto p = detail::minkowski_support(a, b, min_face.normal);
-            auto p_dist = min_face.normal.dot(p);
+            auto p_dist = min_face.normal.dot(p.p);
             if (p_dist - min_face.distance < tolerance) // convergence
-                return collision_info{
-                    .normal = -min_face.normal,
-                    .depth = min_face.distance,
-                };
+                return get_barycentric(min_face, p);
 
-            auto horizon = solver.find_silhouette(min_face_idx, p);
+            auto horizon = solver.find_silhouette(min_face_idx, p.p);
             if (horizon.empty()) break;
 
             solver.polytope.push_back(p);
@@ -491,14 +513,11 @@ struct epa_solver
         // return best guess if not converged
         std::size_t min_face_idx = solver.pop_face();
         if (min_face_idx == null_index) return std::nullopt;
-        return collision_info{
-            .normal = -solver.faces[min_face_idx].normal,
-            .depth = solver.faces[min_face_idx].distance,
-        };
+        return get_barycentric(solver.faces[min_face_idx], solver.polytope.back());
     }
 
     absl::InlinedVector<face, buffer_size> faces;
-    absl::InlinedVector<vec3<si::metre>, buffer_size> polytope;
+    absl::InlinedVector<detail::support_pt, buffer_size> polytope;
     absl::InlinedVector<std::size_t, buffer_size> face_heap;
 };
 
@@ -507,11 +526,7 @@ std::optional<collision_info> gjk_epa(detail::SupportShape auto const &a,
                                       detail::SupportShape auto const &b)
 {
     auto simplex = gjk_collision(a, b);
-    if (simplex)
-    {
-        auto info = epa_solver::solve(a, b, *simplex);
-        return info;
-    }
+    if (simplex) return epa_solver::solve(a, b, *simplex);
     return std::nullopt;
 }
 

@@ -53,20 +53,32 @@ struct jacobian_row
         accumulated_impulse = std::clamp(old_impulse + lambda, impulse_min, impulse_max);
 
         auto applied_lambda = (accumulated_impulse - old_impulse);
-        a->apply_impulse(J_v * applied_lambda);
-        a->apply_angular_impulse(J_w_a * applied_lambda);
-        b->apply_impulse(-J_v * applied_lambda);
-        b->apply_angular_impulse(J_w_b * applied_lambda);
+        if (!a->is_static())
+        {
+            a->apply_impulse(J_v * applied_lambda);
+            a->apply_angular_impulse(J_w_a * applied_lambda);
+        }
+        if (!b->is_static())
+        {
+            b->apply_impulse(-J_v * applied_lambda);
+            b->apply_angular_impulse(J_w_b * applied_lambda);
+        }
     }
 
     void warm_start() const
     {
         if (accumulated_impulse == 0 * si::newton * si::second) return;
 
-        a->apply_impulse(J_v * accumulated_impulse);
-        a->apply_angular_impulse(J_w_a * accumulated_impulse);
-        b->apply_impulse(-J_v * accumulated_impulse);
-        b->apply_angular_impulse(J_w_b * accumulated_impulse);
+        if (!a->is_static())
+        {
+            a->apply_impulse(J_v * accumulated_impulse);
+            a->apply_angular_impulse(J_w_a * accumulated_impulse);
+        }
+        if (!b->is_static())
+        {
+            b->apply_impulse(-J_v * accumulated_impulse);
+            b->apply_angular_impulse(J_w_b * accumulated_impulse);
+        }
     }
 };
 
@@ -545,10 +557,8 @@ build_contact_jacobian(object &a, object &b, const vec3<si::metre> &local_contac
     auto r_a = a.orientation() * local_contact_a;
     auto r_b = b.orientation() * local_contact_b;
     auto n = b.orientation() * local_normal_b;
-    auto penetration = ((b.pos() + r_b - (a.pos() + r_a))).dot(n);
-    if (penetration <= 0.0 * si::metre)
-        return std::nullopt; // Ensure consistency with collision detection (positive penetration
-                             // means penetration).
+    auto penetration = ((b.pos() + r_b) - (a.pos() + r_a)).dot(n);
+    if (penetration <= 0.0 * si::metre) return std::nullopt;
 
     // Normal constraint: prevent penetration
     {
@@ -681,7 +691,7 @@ public:
             for (auto &contact : man_info.man.contacts())
             {
                 auto jac_opt = build_contact_jacobian(
-                    a, b, contact.info.local_a, contact.info.local_b, contact.info.normal, dt);
+                    a, b, contact.point.local_a, contact.point.local_b, contact.point.normal, dt);
                 if (!jac_opt) continue;
 
                 contact_solver_point p{.jac = *jac_opt,

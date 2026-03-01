@@ -68,17 +68,17 @@ public:
     }
 
     void apply_force(const vec3<si::kilogram * si::metre / si::second / si::second> &force)
-    { M_acc += force / M_mass; }
+    { M_acc += force * M_inv_mass; }
 
     void apply_force(const vec3<si::kilogram * si::metre / si::second / si::second> &force,
                      const vec3<si::metre> &application_point)
     {
-        M_acc += force / M_mass;
+        M_acc += force * M_inv_mass;
         M_torque_acc += (application_point - M_pos).cross(force);
     }
 
     void apply_impulse(const vec3<si::kilogram * si::metre / si::second> &impulse)
-    { M_vel += impulse / M_mass; }
+    { M_vel += impulse * M_inv_mass; }
 
     void
     apply_angular_impulse(const vec3<si::kilogram * si::metre * si::metre / si::second> &impulse)

@@ -56,12 +56,27 @@ private:
     absl::flat_hash_set<std::uint64_t> M_active;
 };
 
+struct contact_point
+{
+    contact_point() = default;
+    contact_point(const collision_info &info, const particle &a, const particle &b)
+        : normal(info.normal), local_a(a.project_to_local(info.world_a)),
+          local_b(b.project_to_local(info.world_b)), depth(info.depth)
+    {
+    }
+
+    vec3<one> normal = vec3<one>::zero();
+    vec3<si::metre> local_a = vec3<si::metre>::zero();
+    vec3<si::metre> local_b = vec3<si::metre>::zero();
+    quantity<si::metre> depth{};
+};
+
 class manifold // TODO: time of impact for continuous collision detection
 {
 public:
     struct contact_info
     {
-        collision_info info;
+        contact_point point;
 
         quantity<si::newton * si::second> normal_impulse{};
         std::array<quantity<si::newton * si::second>, 2> tangent_impulses{};
@@ -111,20 +126,20 @@ private:
 
         std::array<contact_info, 5> pool;
         std::ranges::copy(contacts(), pool.begin());
-        pool[5] = new_pt;
+        pool[4] = new_pt;
 
         std::array<std::size_t, 4> best = {0, 1, 2, 3};
 
         // find deepest point
         for (std::size_t i = 1; i < pool.size(); ++i)
-            if (pool[i].info.depth > pool[best[0]].info.depth) best[0] = i;
+            if (pool[i].point.depth > pool[best[0]].point.depth) best[0] = i;
 
         // point furthest from best[0]
         auto max_dist2 = -1.0 * si::metre * si::metre;
         for (std::size_t i = 0; i < pool.size(); ++i)
         {
             if (i == best[0]) continue;
-            if (auto dist2 = (pool[i].info.local_a - pool[best[0]].info.local_a).squared_norm();
+            if (auto dist2 = (pool[i].point.local_a - pool[best[0]].point.local_a).squared_norm();
                 dist2 > max_dist2)
             {
                 max_dist2 = dist2;
@@ -134,11 +149,11 @@ private:
 
         // Point maximizing area with best[0] and best[1]
         auto max_area2 = -1.0 * pow<4>(si::metre);
-        auto edge0 = pool[best[1]].info.local_a - pool[best[0]].info.local_a;
+        auto edge0 = pool[best[1]].point.local_a - pool[best[0]].point.local_a;
         for (std::size_t i = 0; i < pool.size(); ++i)
         {
             if (i == best[0] || i == best[1]) continue;
-            auto edge1 = pool[i].info.local_a - pool[best[0]].info.local_a;
+            auto edge1 = pool[i].point.local_a - pool[best[0]].point.local_a;
             auto area2 = edge0.cross(edge1).squared_norm();
             if (area2 > max_area2)
             {
@@ -153,7 +168,7 @@ private:
         {
             if (i == best[0] || i == best[1] || i == best[2]) continue;
 
-            auto dist2 = (pool[i].info.local_a - pool[best[2]].info.local_a).squared_norm();
+            auto dist2 = (pool[i].point.local_a - pool[best[2]].point.local_a).squared_norm();
             if (dist2 > max_dist2)
             {
                 max_dist2 = dist2;
@@ -229,16 +244,16 @@ public:
                 continue;
             }
 
-            auto new_contact = manifold::contact_info{.info = {*col_ret}};
+            auto new_contact = manifold::contact_info{.point = {*col_ret, obj_a, obj_b}};
 
             manifold new_man;
 
             for (auto &old_contact : man.man.contacts())
             {
                 // warm start new point
-                if ((new_contact.info.local_a - old_contact.info.local_a).squared_norm() <
+                if ((new_contact.point.local_a - old_contact.point.local_a).squared_norm() <
                         distance2_eps &&
-                    (new_contact.info.local_b - old_contact.info.local_b).squared_norm() <
+                    (new_contact.point.local_b - old_contact.point.local_b).squared_norm() <
                         distance2_eps)
                 {
                     // transfer cached impulses to new point
@@ -247,22 +262,21 @@ public:
                     continue;
                 }
 
-                auto world_old_a = obj_a.project_to_world(old_contact.info.local_a);
-                auto world_old_b = obj_b.project_to_world(old_contact.info.local_b);
+                auto world_old_a = obj_a.project_to_world(old_contact.point.local_a);
+                auto world_old_b = obj_b.project_to_world(old_contact.point.local_b);
 
-                // Note that world_old_a - world_old_b = old_contact.info.normal *
-                // old_contact.info.depth (if normal points from b to a)
-                auto relative = world_old_b - world_old_a; // If normal points from b to a
-                auto depth = relative.dot(new_contact.info.normal);
+                // world_old_a - world_old_b = normal * depth (normal points from b to a)
+                auto relative = world_old_a - world_old_b;
+                auto depth = relative.dot(new_contact.point.normal);
 
                 // how far did the points drift tangentially along contact plane
-                auto projected_a = world_old_a - new_contact.info.normal * depth;
+                auto projected_a = world_old_a - new_contact.point.normal * depth;
                 auto drift2 = (projected_a - world_old_b).squared_norm();
 
                 if (abs(depth) < contact_breaking_threshold && drift2 < distance2_eps)
                 {
-                    old_contact.info.depth = depth;
-                    old_contact.info.normal = new_contact.info.normal;
+                    old_contact.point.depth = depth;
+                    old_contact.point.normal = new_contact.point.normal;
 
                     new_man.add_contact(old_contact);
                 }
@@ -332,7 +346,7 @@ public:
                  std::pair<dynamic_bvh::node_handle, bool>>)
     {
         for (auto it = M_pair_manager.active_pairs().begin();
-             it != M_pair_manager.active_pairs().end(); ++it)
+             it != M_pair_manager.active_pairs().end();)
         {
             auto key = *it;
             auto [a, b] = pair_manager::extract_ids(key);
@@ -344,7 +358,7 @@ public:
             auto bounds_b =
                 is_static_b ? M_static_tree.bounds(node_b) : M_dynamic_tree.bounds(node_b);
 
-            if (bounds_a.intersects(bounds_b))
+            if (!bounds_a.intersects(bounds_b))
             {
                 narrow.on_pair_removed(key);
                 M_pair_manager.remove_pair(it++);
