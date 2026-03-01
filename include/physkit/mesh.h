@@ -71,14 +71,10 @@ public:
     }
 
     [[nodiscard]] constexpr aabb operator+(const vec3<si::metre> &offset) const
-    {
-        return {.min = min + offset, .max = max + offset};
-    }
+    { return {.min = min + offset, .max = max + offset}; }
 
     [[nodiscard]] constexpr aabb operator-(const vec3<si::metre> &offset) const
-    {
-        return {.min = min - offset, .max = max - offset};
-    }
+    { return {.min = min - offset, .max = max - offset}; }
 
     [[nodiscard]] constexpr aabb operator*(float_t scale) const
     {
@@ -284,19 +280,13 @@ public:
     }
 
     [[nodiscard]] constexpr auto surface_area() const
-    {
-        return 4.0 * std::numbers::pi * radius * radius;
-    }
+    { return 4.0 * std::numbers::pi * radius * radius; }
 
     [[nodiscard]] constexpr auto volume() const
-    {
-        return (4.0 / 3.0) * std::numbers::pi * radius * radius * radius;
-    }
+    { return (4.0 / 3.0) * std::numbers::pi * radius * radius * radius; }
 
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const
-    {
-        return (point - center).squared_norm() <= radius * radius;
-    }
+    { return (point - center).squared_norm() <= radius * radius; }
 
     [[nodiscard]] bool intersects(const bounding_sphere &other) const
     {
@@ -311,24 +301,16 @@ public:
     }
 
     [[nodiscard]] constexpr bounding_sphere operator+(const vec3<si::metre> &offset) const
-    {
-        return {.center = center + offset, .radius = radius};
-    }
+    { return {.center = center + offset, .radius = radius}; }
 
     [[nodiscard]] constexpr bounding_sphere operator-(const vec3<si::metre> &offset) const
-    {
-        return {.center = center - offset, .radius = radius};
-    }
+    { return {.center = center - offset, .radius = radius}; }
 
     [[nodiscard]] constexpr bounding_sphere operator*(float_t scale) const
-    {
-        return {.center = center, .radius = radius * scale};
-    }
+    { return {.center = center, .radius = radius * scale}; }
 
     [[nodiscard]] constexpr bounding_sphere operator*(QuantityOf<dimensionless> auto scale) const
-    {
-        return {.center = center, .radius = radius * scale};
-    }
+    { return {.center = center, .radius = radius * scale}; }
 
     constexpr auto &operator+=(const vec3<si::metre> &offset)
     {
@@ -511,9 +493,7 @@ public:
     /// @brief Create an instance view of this mesh at the given position and orientation.
     [[nodiscard]] instance at(const vec3<si::metre> &position,
                               const quat<one> &orientation = quat<one>::identity()) const
-    {
-        return {*this, position, orientation};
-    }
+    { return {*this, position, orientation}; }
 
 private:
     aabb M_bounds;
@@ -523,7 +503,5 @@ private:
 };
 
 inline vec3<one> mesh::triangle_t::normal(const mesh::instance &inst) const
-{
-    return inst.orientation() * this->normal(inst.geometry());
-}
+{ return inst.orientation() * this->normal(inst.geometry()); }
 } // namespace physkit

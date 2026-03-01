@@ -57,9 +57,7 @@ public:
     }
 
     void apply_force(const vec3<si::kilogram * si::metre / si::second / si::second> &force)
-    {
-        M_acc += force / M_mass;
-    }
+    { M_acc += force / M_mass; }
 
     void apply_force(const vec3<si::kilogram * si::metre / si::second / si::second> &force,
                      const vec3<si::metre> &application_point)
@@ -72,9 +70,7 @@ public:
 
     void
     apply_torque(const vec3<si::kilogram * si::metre * si::metre / si::second / si::second> &torque)
-    {
-        M_torque_acc += torque;
-    }
+    { M_torque_acc += torque; }
 
     void clear_forces()
     {
