@@ -232,15 +232,24 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
         auto ac = simplex[2] - simplex[0];
         auto dir = ab.cross(ac).normalized();
         auto p4 = detail::minkowski_support(a, b, dir);
-        if (abs(ab.cross(p4 - simplex[0]).dot(dir)) < 1e-6 * pow<2>(si::metre))
+        if (abs((p4 - simplex[0]).dot(dir)) < 1e-6 * si::metre)
             p4 = detail::minkowski_support(a, b, -dir);
         simplex.push_back(p4);
     };
 
-    auto ons = std::array<void (*)(const a_type &, const b_type &, physkit::simplex &), 3>{
-        on_1, on_2, on_3};
-
-    for (auto i = simplex.size(); i < 4; ++i) ons[i](a, b, simplex);
+    switch (simplex.size())
+    {
+    case 1:
+        on_1(a, b, simplex);
+        [[fallthrough]];
+    case 2:
+        on_2(a, b, simplex);
+        [[fallthrough]];
+    case 3:
+        on_3(a, b, simplex);
+    default:
+        break;
+    }
 
     auto ad = simplex[0] - simplex[3];
     auto bd = simplex[1] - simplex[3];
@@ -250,100 +259,248 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
     return abs(triple) > 1e-12 * pow<3>(si::metre);
 }
 
-/// @brief return information that intersection occured
-inline std::optional<collision_info> epa(const detail::SupportShape auto &a,
-                                         const detail::SupportShape auto &b, simplex &simplex)
+struct epa_solver
 {
-    if (simplex.size() < 4 && !pad_simplex(a, b, simplex))
-        return std::nullopt; // Degenerate case, treat as no collision
-
-    absl::InlinedVector<vec3<si::metre>, 64> polytope(simplex.begin(), simplex.end());
-
+    using index_t = std::uint16_t;
+    static constexpr auto null_index = static_cast<index_t>(-1);
+    static constexpr auto buffer_size = 128;
     struct face
     {
-        std::size_t a{}, b{}, c{};
+        std::array<index_t, 3> vertices{};
+        std::array<index_t, 3> adj = {null_index, null_index, null_index};
+
         vec3<one> normal;
         quantity<si::metre> distance{};
+        bool obsolete = false;
     };
 
-    auto compute_face = [&](std::size_t i, std::size_t j, std::size_t k) -> face
+    struct silhouette_edge
     {
+        index_t start_vertex;
+        index_t end_vertex;
+        index_t adjacent_face;
+    };
+
+    void init_face(std::size_t f_idx, std::size_t i, std::size_t j, std::size_t k,
+                   index_t opposite_index = null_index)
+    {
+        auto &face = faces[f_idx];
+        face.vertices = {static_cast<epa_solver::index_t>(i), static_cast<epa_solver::index_t>(j),
+                         static_cast<epa_solver::index_t>(k)};
+
         auto ab = polytope[j] - polytope[i];
         auto ac = polytope[k] - polytope[i];
-        face f{.a = i, .b = j, .c = k, .normal = ab.cross(ac) / pow<2>(si::metre)};
+        face.normal = ab.cross(ac) / pow<2>(si::metre);
 
-        if (f.normal.squared_norm() < 1e-12)
-            f.normal = vec3<one>::zero();
+        if (face.normal.squared_norm() < 1e-12)
+            face.normal = vec3<one>::zero();
         else
-            f.normal.normalize();
+            face.normal.normalize();
 
-        f.distance = f.normal.dot(polytope[i]);
-        if (f.distance < 0.0 * si::metre)
+        if (opposite_index != null_index &&
+            face.normal.dot(polytope[opposite_index] - polytope[i]) > 0.0 * si::metre)
         {
-            f.normal = -f.normal;
-            f.distance = -f.distance;
-            std::swap(f.b, f.c);
+            std::swap(face.vertices[1], face.vertices[2]);
+            face.normal = -face.normal;
         }
 
-        return f;
-    };
-
-    absl::InlinedVector<face, 64> faces;
-    faces.push_back(compute_face(0, 1, 2));
-    faces.push_back(compute_face(0, 2, 3));
-    faces.push_back(compute_face(0, 3, 1));
-    faces.push_back(compute_face(1, 3, 2));
-
-    constexpr int max_iterations = 32;
-    constexpr auto tolerance = 1e-6 * si::metre;
-    for (int iter = 0; iter < max_iterations; ++iter)
-    {
-        auto min_face = *std::ranges::min_element(faces, [](const face &f1, const face &f2)
-                                                  { return f1.distance < f2.distance; });
-
-        auto p = detail::minkowski_support(a, b, min_face.normal);
-        auto p_dist = min_face.normal.dot(p);
-
-        if (p_dist - min_face.distance < tolerance) // convergence
-            return collision_info{
-                .normal = -min_face.normal,
-                .depth = min_face.distance,
-            };
-
-        absl::InlinedVector<std::pair<std::size_t, std::size_t>, 64> edges;
-        auto add_edge = [&](std::size_t a, std::size_t b)
-        {
-            auto it = std::ranges::find_if(edges, [&](const auto &e)
-                                           { return (e.first == b && e.second == a); });
-            if (it != edges.end())
-                edges.erase(it);
-            else
-                edges.emplace_back(a, b);
-        };
-        for (auto it = faces.begin(); it != faces.end();)
-        {
-            if (it->normal.dot(p) > it->distance + tolerance)
-            {
-                add_edge(it->a, it->b);
-                add_edge(it->b, it->c);
-                add_edge(it->c, it->a);
-                it = faces.erase(it);
-            }
-            else
-                ++it; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        }
-
-        polytope.push_back(p);
-        for (const auto &[i, j] : edges) faces.push_back(compute_face(i, j, polytope.size() - 1));
+        face.distance = face.normal.dot(polytope[i]);
     }
 
-    auto min_face = *std::ranges::min_element(faces, [](const face &f1, const face &f2)
-                                              { return f1.distance < f2.distance; });
-    return collision_info{
-        .normal = -min_face.normal, // negate: point from B toward A
-        .depth = min_face.distance,
-    };
-}
+    std::size_t allocate_face()
+    {
+        faces.emplace_back();
+        return faces.size() - 1;
+    }
+
+    void link_faces(std::size_t f1, std::size_t f2, std::size_t v_a, std::size_t v_b)
+    {
+        auto &a = faces[f1];
+        auto &b = faces[f2];
+        auto edge1 = (a.vertices[0] == v_a) ? 0 : (a.vertices[1] == v_a ? 1 : 2);
+        auto edge2 = (b.vertices[0] == v_b) ? 0 : (b.vertices[1] == v_b ? 1 : 2);
+        a.adj[edge1] = static_cast<index_t>(f2);
+        b.adj[edge2] = static_cast<index_t>(f1);
+    }
+
+    absl::InlinedVector<silhouette_edge, 32> find_silhouette(index_t face_idx,
+                                                             const vec3<si::metre> &p)
+    {
+        constexpr auto tolerance = 1e-6;
+        absl::InlinedVector<std::size_t, 32> stack{face_idx};
+        faces[face_idx].obsolete = true;
+
+        absl::InlinedVector<silhouette_edge, 32> horizon;
+
+        while (!stack.empty())
+        {
+            std::size_t cur = stack.back();
+            stack.pop_back();
+            auto &cur_face = faces[cur];
+
+            for (std::size_t i = 0; i < 3; ++i)
+            {
+                std::size_t n_idx = cur_face.adj[i];
+                if (n_idx == null_index) continue;
+
+                auto &neighbor = faces[n_idx];
+                if (neighbor.obsolete) continue;
+
+                if (neighbor.normal.dot(p) > neighbor.distance + tolerance * si::metre)
+                {
+                    neighbor.obsolete = true;
+                    stack.push_back(n_idx);
+                }
+                else
+                    horizon.push_back({
+                        .start_vertex = cur_face.vertices[i],
+                        .end_vertex = cur_face.vertices[(i + 1) % 3],
+                        .adjacent_face = static_cast<index_t>(n_idx),
+                    });
+            }
+        }
+
+        return horizon;
+    }
+
+    void build_initial_tetrahedron()
+    {
+        auto alloc_init_push =
+            [&](std::size_t i, std::size_t j, std::size_t k, index_t opposite_index)
+        {
+            auto f_idx = allocate_face();
+            init_face(f_idx, i, j, k, opposite_index);
+            push_face(f_idx);
+            return f_idx;
+        };
+        auto f0 = alloc_init_push(0, 1, 2, 3);
+        auto f1 = alloc_init_push(0, 2, 3, 1);
+        auto f2 = alloc_init_push(0, 3, 1, 2);
+        auto f3 = alloc_init_push(1, 3, 2, 0);
+
+        // Brute force initial 4 faces
+        for (std::size_t i = 0; i < 4; ++i)
+            for (std::size_t j = i + 1; j < 4; ++j)
+                for (std::size_t e1 = 0; e1 < 3; ++e1)
+                {
+                    auto u1 = faces[i].vertices[e1];
+                    auto v1 = faces[i].vertices[(e1 + 1) % 3];
+                    for (std::size_t e2 = 0; e2 < 3; ++e2)
+                    {
+                        auto u2 = faces[j].vertices[e2];
+                        auto v2 = faces[j].vertices[(e2 + 1) % 3];
+                        if (u1 == v2 && v1 == u2)
+                        {
+                            faces[i].adj[e1] = static_cast<index_t>(j);
+                            faces[j].adj[e2] = static_cast<index_t>(i);
+                        }
+                    }
+                }
+    }
+
+    void push_face(std::size_t f_idx)
+    {
+        face_heap.push_back(f_idx);
+        std::ranges::push_heap(face_heap, [&](std::size_t f1, std::size_t f2)
+                               { return faces[f1].distance > faces[f2].distance; });
+    }
+
+    auto pop_face()
+    {
+        while (!face_heap.empty())
+        {
+            std::ranges::pop_heap(face_heap, [&](std::size_t f1, std::size_t f2)
+                                  { return faces[f1].distance > faces[f2].distance; });
+            auto f_idx = face_heap.back();
+            face_heap.pop_back();
+            if (!faces[f_idx].obsolete) return f_idx;
+        }
+        return static_cast<std::size_t>(null_index);
+    }
+
+    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
+    static std::optional<collision_info> solve(const detail::SupportShape auto &a,
+                                               const detail::SupportShape auto &b, simplex &simplex)
+    {
+        if (simplex.size() < 4 && !pad_simplex(a, b, simplex))
+            return std::nullopt; // Degenerate case, treat as no collision
+
+        epa_solver solver{.polytope = {simplex.begin(), simplex.end()}};
+
+        solver.build_initial_tetrahedron();
+
+        constexpr int max_iterations = 64;
+        constexpr auto tolerance = 1e-6 * si::metre;
+        constexpr auto degen_threshold = 1e-10 * si::metre;
+
+        for (int iter = 0; iter < max_iterations; ++iter)
+        {
+            std::size_t min_face_idx = solver.pop_face();
+            if (min_face_idx == null_index) break;
+
+            const auto &min_face = solver.faces[min_face_idx];
+
+            if (min_face.distance < degen_threshold) continue;
+
+            auto p = detail::minkowski_support(a, b, min_face.normal);
+            auto p_dist = min_face.normal.dot(p);
+            if (p_dist - min_face.distance < tolerance) // convergence
+                return collision_info{
+                    .normal = -min_face.normal,
+                    .depth = min_face.distance,
+                };
+
+            auto horizon = solver.find_silhouette(min_face_idx, p);
+            if (horizon.empty()) break;
+
+            solver.polytope.push_back(p);
+            auto p_idx = static_cast<index_t>(solver.polytope.size() - 1);
+
+            absl::InlinedVector<std::size_t, 32> new_faces;
+            for (const auto &[start, end, adj_face] : horizon)
+            {
+                auto f = solver.allocate_face();
+                solver.init_face(f, start, end, p_idx);
+                auto &new_face = solver.faces[f];
+                if (new_face.distance < 0.0 * si::metre)
+                {
+                    new_face.normal = -new_face.normal;
+                    new_face.distance = -new_face.distance;
+                }
+                solver.link_faces(f, adj_face, start, end);
+                solver.push_face(f);
+                new_faces.push_back(f);
+            }
+
+            std::size_t n = new_faces.size();
+            for (std::size_t i = 0; i < n; ++i)
+            {
+                for (std::size_t j = i + 1; j < n; ++j)
+                {
+                    auto i_idx = new_faces[i];
+                    auto j_idx = new_faces[j];
+
+                    if (horizon[i].end_vertex == horizon[j].start_vertex)
+                        solver.link_faces(i_idx, j_idx, horizon[i].end_vertex, p_idx);
+                    else if (horizon[i].start_vertex == horizon[j].end_vertex)
+                        solver.link_faces(j_idx, i_idx, horizon[j].end_vertex, p_idx);
+                }
+            }
+        }
+
+        // return best guess if not converged
+        std::size_t min_face_idx = solver.pop_face();
+        if (min_face_idx == null_index) return std::nullopt;
+        return collision_info{
+            .normal = -solver.faces[min_face_idx].normal,
+            .depth = solver.faces[min_face_idx].distance,
+        };
+    }
+
+    absl::InlinedVector<face, buffer_size> faces;
+    absl::InlinedVector<vec3<si::metre>, buffer_size> polytope;
+    absl::InlinedVector<std::size_t, buffer_size> face_heap;
+};
 
 /// @brief return data for obb obb collision
 std::optional<collision_info> gjk_epa(detail::SupportShape auto const &a,
@@ -352,7 +509,7 @@ std::optional<collision_info> gjk_epa(detail::SupportShape auto const &a,
     auto simplex = gjk_collision(a, b);
     if (simplex)
     {
-        auto info = epa(a, b, *simplex);
+        auto info = epa_solver::solve(a, b, *simplex);
         return info;
     }
     return std::nullopt;
@@ -375,7 +532,5 @@ INSTANTIATE_GJK_EPA(mesh::instance, obb)
 #undef INSTANTIATE_GJK_EPA
 
 std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
-{
-    assert(false && "SAT not implemented");
-}
+{ assert(false && "SAT not implemented"); }
 } // namespace physkit
