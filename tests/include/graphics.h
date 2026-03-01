@@ -882,7 +882,8 @@ public:
               config.args(),
               Configuration{}
                   .setTitle(Containers::StringView{config.title().data(), config.title().size()})
-                  .setSize(config.window_size())},
+                  .setSize(config.window_size())
+                  .setWindowFlags(Platform::Application::Configuration::WindowFlag::Focused)},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
           M_drag(config.drag()), M_testing(config.testing())
@@ -906,7 +907,17 @@ public:
         M_mouse.reserve(8);
         M_keys.reserve(128);
 
-        if (!M_drag) setCursor(Cursor::HiddenLocked);
+        if (!M_drag)
+        {
+            auto *session_env = std::getenv("XDG_SESSION_TYPE");
+            if (session_env != nullptr && std::string_view(session_env) == "wayland")
+            {
+                M_drag = true;
+                M_grab_focus = true;
+            }
+            else
+                setCursor(Cursor::HiddenLocked);
+        }
 
         M_timeline.start();
         if (config.vsync()) set_vsync();
@@ -1044,6 +1055,12 @@ private:
     {
         M_mouse[event.pointer()].press();
         pointer_press(event, true);
+
+        if (M_drag && M_grab_focus)
+        {
+            drag(false);
+            M_grab_focus = false;
+        }
     }
 
     void pointerReleaseEvent(PointerEvent &event) final
@@ -1093,6 +1110,7 @@ private:
     bool M_debug = false;
     bool M_drag = false;
     bool M_testing = false;
+    bool M_grab_focus = false;
 };
 
 namespace mesh_objs
