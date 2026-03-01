@@ -900,7 +900,7 @@ public:
                   .setWindowFlags(Platform::Application::Configuration::WindowFlag::Focused)},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
-          M_drag(config.drag()), M_world(config.world_desc())
+          M_drag(true), M_grab_focus(!config.drag()), M_world(config.world_desc())
     {
         using namespace Math::Literals::ColorLiterals;
 
@@ -917,18 +917,6 @@ public:
         GL::Renderer::setClearColor(0x202020_rgbf);
         M_mouse.reserve(8);
         M_keys.reserve(128);
-
-        if (!M_drag)
-        {
-            auto *session_env = std::getenv("XDG_SESSION_TYPE");
-            if (session_env != nullptr && std::string_view(session_env) == "wayland")
-            {
-                M_drag = true;
-                M_grab_focus = true;
-            }
-            else
-                setCursor(Cursor::HiddenLocked);
-        }
 
         M_timeline.start();
         if (config.vsync()) set_vsync();
@@ -954,7 +942,7 @@ protected:
     auto &mouse() const { return M_mouse; } // map to pointer states
     auto &mouse_pos() const { return M_mouse_pos; }
 
-    auto drag() const { return M_drag; }
+    bool drag() const { return M_drag; }
     void drag(bool d)
     {
         if (M_drag == d) return;
@@ -962,10 +950,15 @@ protected:
         {
             setCursor(Cursor::Arrow);
             warpCursor(windowSize() / 2);
+            M_drag = true;
+        }
+        else if (glfwGetWindowAttrib(window(), GLFW_HOVERED) == GLFW_TRUE)
+        {
+            M_drag = false;
+            setCursor(Cursor::HiddenLocked);
         }
         else
-            setCursor(Cursor::HiddenLocked);
-        M_drag = d;
+            M_grab_focus = true;
     }
 
     /// @brief Enable or disable vertical synchronization (vsync).
@@ -1066,8 +1059,8 @@ private:
 
         if (M_drag && M_grab_focus)
         {
-            drag(false);
             M_grab_focus = false;
+            drag(false);
         }
     }
 
