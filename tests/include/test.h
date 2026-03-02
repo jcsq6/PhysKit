@@ -23,12 +23,16 @@ using namespace physkit;
 constexpr double eps = 1e-9;
 
 template <std::floating_point T> bool approx(T a, T b)
-{ return std::abs(a - b) < static_cast<T>(eps); }
+{
+    return std::abs(a - b) < static_cast<T>(eps);
+}
 
 template <std::floating_point T> bool approx(T a, T b, T tol) { return std::abs(a - b) < tol; }
 
 template <Quantity Q> bool approx(Q a, Q b)
-{ return approx(a.numerical_value_in(Q::reference), b.numerical_value_in(Q::reference)); }
+{
+    return approx(a.numerical_value_in(Q::reference), b.numerical_value_in(Q::reference));
+}
 
 template <Quantity Q> bool approx(Q a, Q b, Q tol)
 {
@@ -38,26 +42,38 @@ template <Quantity Q> bool approx(Q a, Q b, Q tol)
 
 template <Quantity Q, int Rows, int Cols>
 bool approx(const unit_mat<Q, Rows, Cols> &a, const unit_mat<Q, Rows, Cols> &b)
-{ return std::abs((a - b).norm().numerical_value_in(Q::reference)) < eps; }
+{
+    return std::abs((a - b).norm().numerical_value_in(Q::reference)) < eps;
+}
 
 template <Quantity Q> bool approx(const unit_quat<Q> &a, const unit_quat<Q> &b)
-{ return std::abs(a.angular_distance(b)) < eps; }
+{
+    return std::abs(a.angular_distance(b)) < eps;
+}
 
 inline bool approx(const aabb &a, const aabb &b)
-{ return approx(a.min, b.min) && approx(a.max, b.max); }
+{
+    return approx(a.min, b.min) && approx(a.max, b.max);
+}
 
 inline bool approx(const bounding_sphere &a, const bounding_sphere &b)
-{ return approx(a.center, b.center) && approx(a.radius, b.radius); }
+{
+    return approx(a.center, b.center) && approx(a.radius, b.radius);
+}
 
 inline bool approx(const ray::hit &a, const ray::hit &b)
-{ return approx(a.pos, b.pos) && approx(a.normal, b.normal) && approx(a.distance, b.distance); }
+{
+    return approx(a.pos, b.pos) && approx(a.normal, b.normal) && approx(a.distance, b.distance);
+}
 
 namespace detail
 {
 template <typename A, typename B> bool approx_check(const A &a, const B &b) { return approx(a, b); }
 template <typename A, typename B, typename C>
 bool approx_check(const A &a, const B &b, const C &tol)
-{ return approx(a, b, tol); }
+{
+    return approx(a, b, tol);
+}
 } // namespace detail
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)

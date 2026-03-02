@@ -16,7 +16,9 @@ public:
     pair_manager(std::size_t initial_capacity = 8192) { M_active.reserve(initial_capacity); }
 
     bool try_add_pair(dynamic_bvh::object_handle a, dynamic_bvh::object_handle b)
-    { return M_active.insert(make_pair_key(a, b)).second; }
+    {
+        return M_active.insert(make_pair_key(a, b)).second;
+    }
     void remove_pair(auto it) { M_active.erase(it); }
 
     void remove_for_object(dynamic_bvh::object_handle id,
@@ -94,7 +96,9 @@ public:
     }
 
     [[nodiscard]] auto contacts(this auto &&self)
-    { return std::span{self.M_contact_buffer.data(), self.M_contacts}; }
+    {
+        return std::span{self.M_contact_buffer.data(), self.M_contacts};
+    }
 
     template <std::ranges::range R>
         requires(std::same_as<std::ranges::range_value_t<R>, contact_info>)
@@ -194,10 +198,12 @@ public:
     };
 
     static constexpr auto distance2_eps = (.005 * .005 * pow<2>(si::metre));
-    static constexpr auto contact_breaking_threshold = .02 * si::metre;
+    static constexpr auto contact_breaking_threshold = 0.05 * si::metre;
 
     narrow_phase(std::size_t initial_capacity = 1024) : M_contact_map(initial_capacity)
-    { M_manifolds.reserve(initial_capacity); }
+    {
+        M_manifolds.reserve(initial_capacity);
+    }
 
     void on_pair_added(std::uint64_t key)
     {
@@ -238,51 +244,54 @@ public:
             auto col_ret = gjk_epa(
                 obj_a.instance(),
                 obj_b.instance()); // TODO: replace with dispatcher with updated shape options
-            if (!col_ret)
-            {
-                man.man = manifold{};
-                continue;
-            }
 
-            auto new_contact = manifold::contact_info{.point = {*col_ret, obj_a, obj_b}};
+            auto new_contact = col_ret.transform(
+                [&](const collision_info &info)
+                { return manifold::contact_info{.point = contact_point(info, obj_a, obj_b)}; });
 
             manifold new_man;
 
+            constexpr auto drift2_eps = 0.06 * si::metre * si::metre;
+
             for (auto &old_contact : man.man.contacts())
             {
-                // warm start new point
-                if ((new_contact.point.local_a - old_contact.point.local_a).squared_norm() <
-                        distance2_eps &&
-                    (new_contact.point.local_b - old_contact.point.local_b).squared_norm() <
-                        distance2_eps)
+                if (new_contact)
                 {
-                    // transfer cached impulses to new point
-                    new_contact.normal_impulse = old_contact.normal_impulse;
-                    new_contact.tangent_impulses = old_contact.tangent_impulses;
-                    continue;
+                    // warm start new point
+                    if ((new_contact->point.local_a - old_contact.point.local_a).squared_norm() <
+                            distance2_eps ||
+                        (new_contact->point.local_b - old_contact.point.local_b).squared_norm() <
+                            distance2_eps)
+                    {
+                        // transfer cached impulses to new point
+                        new_contact->normal_impulse = old_contact.normal_impulse;
+                        new_contact->tangent_impulses = old_contact.tangent_impulses;
+                        continue;
+                    }
                 }
 
                 auto world_old_a = obj_a.project_to_world(old_contact.point.local_a);
                 auto world_old_b = obj_b.project_to_world(old_contact.point.local_b);
 
+                auto normal = new_contact ? new_contact->point.normal : old_contact.point.normal;
+
                 // world_old_b - world_old_a = normal * depth (normal points from b to a)
                 auto relative = world_old_b - world_old_a;
-                auto depth = relative.dot(new_contact.point.normal);
+                auto depth = relative.dot(normal);
 
                 // how far did the points drift tangentially along contact plane
-                auto projected_a = world_old_a + new_contact.point.normal * depth;
+                auto projected_a = world_old_a + normal * depth;
                 auto drift2 = (projected_a - world_old_b).squared_norm();
 
-                if (abs(depth) < contact_breaking_threshold && drift2 < distance2_eps)
+                if (depth > -contact_breaking_threshold && drift2 < drift2_eps)
                 {
                     old_contact.point.depth = depth;
-                    old_contact.point.normal = new_contact.point.normal;
+                    old_contact.point.normal = normal;
 
                     new_man.add_contact(old_contact);
                 }
             }
-
-            new_man.add_contact(new_contact);
+            if (new_contact) new_man.add_contact(*new_contact);
             man.man = new_man;
         }
     }
@@ -302,7 +311,9 @@ public:
                 std::size_t pair_capacity = 8192)
         : M_static_tree(static_capacity), M_dynamic_tree(dynamic_capacity),
           M_pair_manager(pair_capacity)
-    { M_moved.reserve((static_capacity + dynamic_capacity) / 3); }
+    {
+        M_moved.reserve((static_capacity + dynamic_capacity) / 3);
+    }
 
     auto add(dynamic_bvh::object_handle object_id, const aabb &bounds, bool is_static)
     {
