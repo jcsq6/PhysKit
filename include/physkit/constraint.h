@@ -736,11 +736,50 @@ public:
                 pt.jac.normal.apply();
                 auto max_friction = pt.friction_coeff * pt.jac.normal.accumulated_impulse;
 
-                // TODO: implement friction cone (instead of box) projection for better realism
-                pt.jac.tangent1.impulse_min = pt.jac.tangent2.impulse_min = -max_friction;
-                pt.jac.tangent1.impulse_max = pt.jac.tangent2.impulse_max = max_friction;
-                pt.jac.tangent1.apply();
-                pt.jac.tangent2.apply();
+                auto &t1 = pt.jac.tangent1;
+                auto &t2 = pt.jac.tangent2;
+
+                // NOLINTNEXTLINE(readability-identifier-naming)
+                auto Jv1 = t1.J_v.dot(t1.a->vel()) + (t1.J_w_a.dot(t1.a->ang_vel()) / si::radian) -
+                           t1.J_v.dot(t1.b->vel()) + (t1.J_w_b.dot(t1.b->ang_vel()) / si::radian);
+                auto lambda1 = -(Jv1 + t1.bias) * t1.M_eff;
+
+                // NOLINTNEXTLINE(readability-identifier-naming)
+                auto Jv2 = t2.J_v.dot(t2.a->vel()) + (t2.J_w_a.dot(t2.a->ang_vel()) / si::radian) -
+                           t2.J_v.dot(t2.b->vel()) + (t2.J_w_b.dot(t2.b->ang_vel()) / si::radian);
+                auto lambda2 = -(Jv2 + t2.bias) * t2.M_eff;
+
+                auto old_imp1 = t1.accumulated_impulse;
+                auto old_imp2 = t2.accumulated_impulse;
+
+                auto new_imp1 = old_imp1 + lambda1;
+                auto new_imp2 = old_imp2 + lambda2;
+
+                auto mag = hypot(new_imp1, new_imp2);
+
+                if (mag > max_friction)
+                {
+                    new_imp1 = new_imp1 * (max_friction / mag);
+                    new_imp2 = new_imp2 * (max_friction / mag);
+                }
+
+                t1.accumulated_impulse = new_imp1;
+                t2.accumulated_impulse = new_imp2;
+
+                auto applied_lambda1 = new_imp1 - old_imp1;
+                auto applied_lambda2 = new_imp2 - old_imp2;
+                if (!t1.a->is_static())
+                {
+                    t1.a->apply_impulse(t1.J_v * applied_lambda1 + t2.J_v * applied_lambda2);
+                    t1.a->apply_angular_impulse(t1.J_w_a * applied_lambda1 +
+                                                t2.J_w_a * applied_lambda2);
+                }
+                if (!t1.b->is_static())
+                {
+                    t1.b->apply_impulse(-t1.J_v * applied_lambda1 - t2.J_v * applied_lambda2);
+                    t1.b->apply_angular_impulse(t1.J_w_b * applied_lambda1 +
+                                                t2.J_w_b * applied_lambda2);
+                }
             }
         }
 
