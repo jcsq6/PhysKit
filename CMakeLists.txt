@@ -75,6 +75,14 @@ target_compile_definitions(physkit
     PUBLIC PHYSKIT_VERSION="${PROJECT_VERSION}"
 )
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+	if(MSVC)
+		target_compile_options(physkit PRIVATE /O2 /Oi /Ot)
+	else()
+		target_compile_options(physkit PRIVATE -O3)
+	endif()
+endif()
+
 set(MP_UNITS_BUILD_CXX_MODULES ON)
 set(MP_UNITS_API_STD_FORMAT ON)
 find_package(mp-units REQUIRED)

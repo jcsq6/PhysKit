@@ -34,7 +34,7 @@
         },
         {
             "mesh": {"name": "sphere", "radius": 0.3, "stacks": 12, "sectors": 16},
-            "pos": [-0.3, 0.3, 2.02],
+            "pos": [-0.301, 0.3, 2.02],
             "mass": 0.17,
             "restitution": 0.95,
             "friction": 0.05,
@@ -42,7 +42,7 @@
         },
         {
             "mesh": {"name": "sphere", "radius": 0.3, "stacks": 12, "sectors": 16},
-            "pos": [0.3, 0.3, 2.02],
+            "pos": [0.301, 0.3, 2.02],
             "mass": 0.17,
             "restitution": 0.95,
             "friction": 0.05,
@@ -50,7 +50,7 @@
         },
         {
             "mesh": {"name": "sphere", "radius": 0.3, "stacks": 12, "sectors": 16},
-            "pos": [-0.6, 0.3, 2.54],
+            "pos": [-0.602, 0.3, 2.54],
             "mass": 0.17,
             "restitution": 0.95,
             "friction": 0.05,
@@ -66,7 +66,7 @@
         },
         {
             "mesh": {"name": "sphere", "radius": 0.3, "stacks": 12, "sectors": 16},
-            "pos": [0.6, 0.3, 2.54],
+            "pos": [0.602, 0.3, 2.54],
             "mass": 0.17,
             "restitution": 0.95,
             "friction": 0.05,

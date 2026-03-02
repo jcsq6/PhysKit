@@ -265,12 +265,12 @@ public:
                 auto world_old_a = obj_a.project_to_world(old_contact.point.local_a);
                 auto world_old_b = obj_b.project_to_world(old_contact.point.local_b);
 
-                // world_old_a - world_old_b = normal * depth (normal points from b to a)
-                auto relative = world_old_a - world_old_b;
+                // world_old_b - world_old_a = normal * depth (normal points from b to a)
+                auto relative = world_old_b - world_old_a;
                 auto depth = relative.dot(new_contact.point.normal);
 
                 // how far did the points drift tangentially along contact plane
-                auto projected_a = world_old_a - new_contact.point.normal * depth;
+                auto projected_a = world_old_a + new_contact.point.normal * depth;
                 auto drift2 = (projected_a - world_old_b).squared_norm();
 
                 if (abs(depth) < contact_breaking_threshold && drift2 < distance2_eps)

@@ -536,9 +536,6 @@ struct contact_jacobian
     jacobian_row normal;
     jacobian_row tangent1;
     jacobian_row tangent2;
-
-    vec3<one> old_tangent1;
-    vec3<one> old_tangent2;
 };
 
 inline std::optional<contact_jacobian>
@@ -698,12 +695,8 @@ public:
                                        .friction_coeff = std::sqrt(a.friction() * b.friction()),
                                        .cache = &contact};
                 p.jac.normal.accumulated_impulse = contact.normal_impulse;
-                vec3 old_friction_impulse = p.jac.old_tangent1 * contact.tangent_impulses[0] +
-                                            p.jac.old_tangent2 * contact.tangent_impulses[1];
-                p.jac.tangent1.accumulated_impulse = old_friction_impulse.dot(p.jac.tangent1.J_v);
-                p.jac.tangent2.accumulated_impulse = old_friction_impulse.dot(p.jac.tangent2.J_v);
-                p.jac.old_tangent1 = p.jac.tangent1.J_v;
-                p.jac.old_tangent2 = p.jac.tangent2.J_v;
+                p.jac.tangent1.accumulated_impulse = contact.tangent_impulses[0];
+                p.jac.tangent2.accumulated_impulse = contact.tangent_impulses[1];
                 M_contact_rows.push_back(p);
             }
         }
