@@ -886,7 +886,7 @@ public:
                   .setWindowFlags(Platform::Application::Configuration::WindowFlag::Focused)},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
-          M_drag(true), M_grab_focus(!config.drag())
+          M_drag(true), M_grab_focus(!config.drag()), M_testing(config.testing())
     {
         using namespace Math::Literals::ColorLiterals;
 
@@ -1102,8 +1102,8 @@ private:
     physkit::quantity<physkit::si::second> M_frame_limit{};
     bool M_debug = false;
     bool M_drag = false;
-    bool M_testing = false;
     bool M_grab_focus = false;
+    bool M_testing = false;
 };
 
 namespace mesh_objs
