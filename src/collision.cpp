@@ -538,7 +538,5 @@ INSTANTIATE_GJK_EPA(mesh::instance, obb)
 #undef INSTANTIATE_GJK_EPA
 
 std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
-{
-    assert(false && "SAT not implemented");
-}
+{ assert(false && "SAT not implemented"); }
 } // namespace physkit
