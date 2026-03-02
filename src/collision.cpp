@@ -424,7 +424,6 @@ struct epa_solver
 
         constexpr int max_iterations = 64;
         constexpr auto tolerance = 1e-6 * si::metre;
-        // constexpr auto degen_threshold = 1e-10 * si::metre;
 
         auto get_barycentric = [&](const face &f, const detail::support_pt &p)
         {
@@ -465,8 +464,6 @@ struct epa_solver
 
             const auto &min_face = solver.faces[min_face_idx];
 
-            // if (min_face.distance < degen_threshold) continue;
-
             auto p = detail::minkowski_support(a, b, min_face.normal);
             auto p_dist = min_face.normal.dot(p.p);
             if (p_dist - min_face.distance < tolerance) // convergence
@@ -483,12 +480,6 @@ struct epa_solver
             {
                 auto f = solver.allocate_face();
                 solver.init_face(f, start, end, p_idx);
-                auto &new_face = solver.faces[f];
-                if (new_face.distance < 0.0 * si::metre)
-                {
-                    new_face.normal = -new_face.normal;
-                    new_face.distance = -new_face.distance;
-                }
                 solver.link_faces(f, adj_face, start, end);
                 solver.push_face(f);
                 new_faces.push_back(f);
