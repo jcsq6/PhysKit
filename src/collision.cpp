@@ -538,5 +538,62 @@ INSTANTIATE_GJK_EPA(mesh::instance, obb)
 #undef INSTANTIATE_GJK_EPA
 
 std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
-{ assert(false && "SAT not implemented"); }
-} // namespace physkit
+{
+    // SAT must be performed on 2 convex meshes.
+    // if (!a.geometry().is_convex() || !b.geometry().is_convex()) return {};
+    assert(false && "SAT not implemented");
+
+    // tolerance
+    auto epsilon = 1e-24;
+
+    // need to compare projected intersection across every axis of the folling types
+    // 1. The normal of every face from both meshes.
+    // 2. The cross product of every edge from mesh A with every edge from mesh B
+
+    // can optimize by removing parallel axis
+
+    auto a_tris = a.geometry().triangles();
+    auto b_tris = b.geometry().triangles();
+    auto sum_triangle_count = a_tris.size() + b_tris.size();
+
+    // the variables related to edge count assume the following:
+    // Polyhedra are convex
+    // All faces are triangles
+    // Edges are manifold (each edge belongs to exactly 2 faces)
+
+    // The edge count for mesh A
+    auto a_edge_count = (a_tris.size() * 3) / 2;
+    // The edge count for mesh B
+    auto b_edge_count = (b_tris.size() * 3) / 2;
+    // The total number of unique edges in both meshes.
+    auto sum_edge_count = ((sum_triangle_count * 3) / 2);
+    // The maximum possible number of separating axes.
+    auto max_axes = (a_edge_count * b_edge_count) + sum_triangle_count;
+
+    std::vector<vec3<si::metre>> separating_axes;
+    separating_axes.reserve(max_axes);
+    // edge vectors.
+    std::vector<vec3<si::metre>> a_edges, b_edges;
+    a_edges.reserve(a_edge_count);
+    b_edges.reserve(b_edge_count);
+
+    // get edges.
+    for (const auto &tri : a_tris)
+    {
+
+        // triangle_t().normal(tri)
+        // making cheap normal
+        // auto [a, b, c] = vertices(a);
+        // Need to extract edges and normal
+        auto [va, vb, vc] = tri.vertices(a);
+        // auto [e1, e2, e3] = {(vb-va),(vc-va), (vc-vb)};
+        auto e1 = (vb - va);
+        auto e2 = (vc - va); // maybe make cyclical?
+        auto e3 = (vc - vb);
+        auto n = e1.cross(e2);
+        std::println("sup");
+        // if approximately zero vector
+        if (n.squared_norm() <= 1e-24 * (decltype(n.squared_norm()){})) {}
+    }
+    assert(false && "SAT not implemented");
+}
