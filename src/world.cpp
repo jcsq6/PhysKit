@@ -2,17 +2,41 @@
 
 namespace physkit
 {
-void world::step(quantity<si::second> dt)
+template class world<semi_implicit_euler>;
+
+template <> void world<semi_implicit_euler>::step(quantity<si::second> dt)
 {
-    for (auto &slot : M_rigid.slots)
+    for (auto &slot : rigids().slots)
     {
-        if (!slot.available)
+        if (slot.available || slot.value.obj.is_static()) continue;
+
+        auto &obj = slot.value.obj;
+        obj.apply_force(gravity() * obj.mass());
+        semi_implicit_euler::integrate_vel(obj, dt);
+
+        broad_phase().update_node(slot.value.broad_handle, obj.instance().bounds(), obj.vel() * dt);
+
+        obj.clear_forces();
+    }
+
+    broad_phase().calculate_pairs(
+        narrow_phase(),
+        [this](auto h) -> std::pair<detail::dynamic_bvh::node_handle, bool>
         {
-            auto &obj = slot.value;
-            obj.apply_force(M_gravity * obj.mass());
-            M_int->integrate(obj, dt);
-            obj.clear_forces();
-        }
+            auto &slot = rigids().get_slot(h);
+            return {slot.value.broad_handle, slot.value.obj.is_static()};
+        });
+
+    narrow_phase().calculate([this](auto h) -> object & { return rigids().get_slot(h).value.obj; });
+    M_constraints.setup_contacts(dt, narrow_phase(), [this](auto h) -> object &
+                                 { return rigids().get_slot(h).value.obj; });
+    M_constraints.solve_constraints(dt);
+    for (auto &slot : rigids().slots)
+    {
+        if (slot.available || slot.value.obj.is_static()) continue;
+
+        semi_implicit_euler::integrate_pos(slot.value.obj, dt);
     }
 }
+
 } // namespace physkit

@@ -31,35 +31,21 @@ public:
     integrator &operator=(const integrator &) = default;
     integrator(integrator &&) = default;
     integrator &operator=(integrator &&) = default;
-
-    virtual void integrate(object &obj, quantity<si::second> dt) = 0;
-    virtual ~integrator() = default;
-};
-
-class forward_euler : public integrator
-{
-public:
-    void integrate(object &obj, quantity<si::second> dt) override
-    {
-        obj.pos() += obj.vel() * dt;
-        obj.vel() += obj.acc() * dt;
-
-        auto ang_acc = obj.angular_accel();
-
-        obj.orientation() = detail::exp(obj.ang_vel(), dt) * obj.orientation();
-        obj.ang_vel() += ang_acc * dt;
-    }
+    ~integrator() = default;
 };
 
 class semi_implicit_euler : public integrator
 {
 public:
-    void integrate(object &obj, quantity<si::second> dt) override
+    static void integrate_vel(object &obj, quantity<si::second> dt)
     {
         obj.vel() += obj.acc() * dt;
-        obj.pos() += obj.vel() * dt;
-
         obj.ang_vel() += obj.angular_accel() * dt;
+    }
+
+    static void integrate_pos(object &obj, quantity<si::second> dt)
+    {
+        obj.pos() += obj.vel() * dt;
         obj.orientation() = detail::exp(obj.ang_vel(), dt) * obj.orientation();
     }
 };
@@ -67,10 +53,10 @@ public:
 class rk4 : public integrator
 {
 public:
-    void integrate(object & /*obj*/, quantity<si::second> /*dt*/) override
+    static void integrate_vel(object &obj, quantity<si::second> dt)
     {
         // TODO: implement RK4 integration
-        assert(false && "rk4::integrate not yet implemented");
+        assert(false && "rk4::integrate_vel not yet implemented");
     }
 };
 

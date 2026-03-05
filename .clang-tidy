@@ -9,6 +9,7 @@ Checks: |
   -cppcoreguidelines-owning-memory,
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-union-access,
   -modernize-use-trailing-return-type,
   readability-*,
   -readability-identifier-length,

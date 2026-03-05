@@ -502,7 +502,7 @@ auto [pos, rot] = track.at(0.5f * s);
 | Class | Inherits | Description |
 |-------|----------|-------------|
 | `gfx_obj` | Magnum `Object<MatrixTransformation3D>` | Base graphics object with standard transform methods |
-| `physics_obj` | `gfx_obj` | Linked to a `physkit::world::handle`; auto-syncs position/orientation each frame |
+| `physics_obj` | `gfx_obj` | Linked to a `physkit::world_base::handle`; auto-syncs position/orientation each frame |
 | `instanced_drawable` | `gfx_obj` + `Drawable3D` | Internal: objects sharing the same mesh are batched for instanced draw |
 | `colored_drawable` | `instanced_drawable` | Adds per-instance color; created automatically by `add_object()` |
 
@@ -634,7 +634,7 @@ All macros capture the source location and report it on failure.
 | `unit_quat<Q>` | Angular distance < `eps` |
 | `aabb` | Component-wise approximate comparison of `min` and `max` |
 | `bounding_sphere` | Approximate comparison of `center` and `radius` |
-| `mesh::ray_hit` | Approximate comparison of `pos`, `normal`, and `distance` |
+| `ray::hit` | Approximate comparison of `pos`, `normal`, and `distance` |
 
 ### Test Output
 

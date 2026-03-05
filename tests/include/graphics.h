@@ -82,8 +82,8 @@ public:
 class physics_obj : public gfx_obj
 {
 public:
-    explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent, physkit::world &world,
-                         physkit::world::handle handle)
+    explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent, physkit::world_base &world,
+                         physkit::world_base::handle handle)
         : gfx_obj(&parent), M_world{&world}, M_handle{handle}
     {
     }
@@ -92,9 +92,7 @@ public:
 
     physkit::object &obj() { return **M_world->get_rigid(M_handle); }
     [[nodiscard]] const physkit::object &obj() const
-    {
-        return **std::as_const(*M_world).get_rigid(M_handle);
-    }
+    { return **std::as_const(*M_world).get_rigid(M_handle); }
 
     void sync()
     {
@@ -105,8 +103,8 @@ public:
     }
 
 private:
-    physkit::world *M_world;
-    physkit::world::handle M_handle;
+    physkit::world_base *M_world;
+    physkit::world_base::handle M_handle;
 };
 
 class instanced_drawable;
@@ -156,9 +154,7 @@ public:
     explicit instanced_drawable(std::derived_from<gfx_obj_base> auto &parent,
                                 instanced_drawables &group)
         : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}
-    {
-        group.add_object(*this);
-    }
+    { group.add_object(*this); }
 
     instanced_drawable(const instanced_drawable &) = delete;
     instanced_drawable &operator=(const instanced_drawable &) = delete;
@@ -226,13 +222,13 @@ template <> struct glz::meta<physkit::body_type>
     static constexpr auto value = enumerate(physkit::body_type::stat, physkit::body_type::dynam);
 };
 
-template <> struct glz::meta<physkit::world_desc::integ_t>
-{
-    using enum physkit::world_desc::integ_t;
-    static constexpr auto value =
-        enumerate(physkit::world_desc::forward_euler, physkit::world_desc::semi_implicit_euler,
-                  physkit::world_desc::rk4);
-};
+// template <> struct glz::meta<physkit::world_desc::integ_t>
+// {
+//     using enum physkit::world_desc::integ_t;
+//     static constexpr auto value =
+//         enumerate(physkit::world_desc::forward_euler, physkit::world_desc::semi_implicit_euler,
+//                   physkit::world_desc::rk4);
+// };
 
 namespace graphics
 {
@@ -285,13 +281,15 @@ public:
             std::variant<box_type, pyramid_type, sphere_type> mesh =
                 box_type{"box", {0.5f, 0.5f, 0.5f}};
             double mass;
+            double restitution = 0.5;
+            double friction = 0.5;
             std::array<float, 4> color = {1.0, 1.0, 1.0, 1.0};
         };
 
         struct world_config
         {
             std::array<double, 3> gravity = {0.0, -9.81, 0.0};
-            physkit::world_desc::integ_t integrator = physkit::world_desc::semi_implicit_euler;
+            // physkit::world_desc::integ_t integrator = physkit::world_desc::semi_implicit_euler;
             std::size_t solver_iterations = 10;
             std::vector<obj> objects{};
             std::optional<std::array<double, 3>> look_at;
@@ -316,7 +314,7 @@ public:
 
         self.M_gravity =
             physkit::vec3{config.gravity[0], config.gravity[1], config.gravity[2]} * m / s / s;
-        self.M_integrator = config.integrator;
+        // self.M_integrator = config.integrator;
         self.M_solver_iterations = config.solver_iterations;
 
         std::map<std::string, std::shared_ptr<physkit::mesh>> mesh_map;
@@ -362,7 +360,9 @@ public:
                                   rad / s)
                     .with_inertia_tensor(inertia)
                     .with_mass(obj.mass * kg)
-                    .with_mesh(mesh_map.at(mesh_name)),
+                    .with_mesh(mesh_map.at(mesh_name))
+                    .with_restitution(obj.restitution)
+                    .with_friction(obj.friction),
                 Color3{obj.color[0], obj.color[1], obj.color[2]});
         }
 
@@ -413,9 +413,9 @@ public:
         }
 
         std::println("  Gravity: {}", *self.M_gravity);
-        std::println("  Integrator: {}",
-                     glz::reflect<physkit::world_desc::integ_t>::keys[static_cast<int>( // NOLINT
-                         config.integrator)]);
+        // std::println("  Integrator: {}",
+        //              glz::reflect<physkit::world_desc::integ_t>::keys[static_cast<int>( // NOLINT
+        //                  config.integrator)]);
         std::println("  Solver iterations: {}", config.solver_iterations);
         std::println("  Objects: {}", config.objects.size());
         for (std::size_t i = 0; i < self.M_objects.size(); ++i)
@@ -552,16 +552,16 @@ public:
         if (!self.M_gravity) self.M_gravity = gravity;
         return std::forward<decltype(self)>(self);
     }
-    auto &&integrator(this auto &&self, physkit::world_desc::integ_t type)
-    {
-        self.M_integrator = type;
-        return std::forward<decltype(self)>(self);
-    }
-    auto &&integrator_or(this auto &&self, physkit::world_desc::integ_t type)
-    {
-        if (!self.M_integrator) self.M_integrator = type;
-        return std::forward<decltype(self)>(self);
-    }
+    // auto &&integrator(this auto &&self, physkit::world_desc::integ_t type)
+    // {
+    //     self.M_integrator = type;
+    //     return std::forward<decltype(self)>(self);
+    // }
+    // auto &&integrator_or(this auto &&self, physkit::world_desc::integ_t type)
+    // {
+    //     if (!self.M_integrator) self.M_integrator = type;
+    //     return std::forward<decltype(self)>(self);
+    // }
     auto &&solver_iterations(this auto &&self, std::size_t iterations)
     {
         self.M_solver_iterations = iterations;
@@ -605,7 +605,7 @@ public:
     {
         auto desc = physkit::world_desc::make();
         if (M_gravity) desc.with_gravity(*M_gravity);
-        if (M_integrator) desc.with_integrator(*M_integrator);
+        // if (M_integrator) desc.with_integrator(*M_integrator);
         if (M_solver_iterations) desc.with_solver_iterations(*M_solver_iterations);
         return desc;
     }
@@ -755,7 +755,7 @@ private:
     std::optional<bool> M_vsync = default_vsync;
     std::optional<physkit::vec3<physkit::si::metre / physkit::si::second / physkit::si::second>>
         M_gravity;
-    std::optional<physkit::world_desc::integ_t> M_integrator;
+    // std::optional<physkit::world_desc::integ_t> M_integrator;
     std::optional<std::size_t> M_solver_iterations;
     std::optional<physkit::quantity<physkit::si::second>> M_time_step;
     bool M_testing{false};
@@ -813,9 +813,9 @@ public:
     /// @param handle Handle to the rigid body in the world.
     /// @param color The color to use for rendering the object.
     /// @return A pointer to the created physics_obj instance.
-    auto add_object(physkit::world::handle handle, Color3 color)
+    auto add_object(physkit::world_base::handle handle, Color3 color)
     {
-        auto *phys_obj = new physics_obj{M_scene, M_world, handle};
+        auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
         auto &obj = phys_obj->obj();
         std::shared_ptr<GL::Mesh> mesh;
         if (auto it = M_phys_mesh_map.find(&obj.mesh()); it == M_phys_mesh_map.end())
@@ -838,10 +838,11 @@ public:
     /// @param mesh The shared GL::Mesh to use for rendering.
     /// @param color The color to use for rendering the object.
     /// @return A pointer to the created physics_obj instance.
-    auto add_object(physkit::world::handle handle, std::shared_ptr<GL::Mesh> mesh, Color3 color)
+    auto add_object(physkit::world_base::handle handle, std::shared_ptr<GL::Mesh> mesh,
+                    Color3 color)
     {
 
-        return M_world.get_rigid(handle)
+        return M_world->get_rigid(handle)
             .transform(
                 [&](auto obj)
                 {
@@ -851,7 +852,7 @@ public:
                         throw std::runtime_error(
                             "graphics_app::add_object: provided mesh does not match "
                             "physkit::object mesh");
-                    auto *phys_obj = new physics_obj{M_scene, M_world, handle};
+                    auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
 
                     internal_add_obj(phys_obj, std::move(mesh), color);
 
@@ -872,21 +873,25 @@ public:
         return obj;
     }
 
-    auto &world() { return M_world; }
+    auto &world() { return *M_world; }
 
     auto &physics_objects() const { return M_physics_objs; }
 
     graphics_app(const g_config &config)
-        : Magnum::Platform::Application{config.args(),
-                                        Configuration{}
-                                            .setTitle(Containers::StringView{config.title().data(),
-                                                                             config.title().size()})
-                                            .setSize(config.window_size())},
+        : Magnum::Platform::Application{
+              config.args(),
+              Configuration{}
+                  .setTitle(Containers::StringView{config.title().data(), config.title().size()})
+                  .setSize(config.window_size())
+                  .setWindowFlags(Platform::Application::Configuration::WindowFlag::Focused)},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
-          M_drag(config.drag()), M_world(config.world_desc()), M_testing(config.testing())
+          M_drag(true), M_grab_focus(!config.drag()), M_testing(config.testing())
     {
         using namespace Math::Literals::ColorLiterals;
+
+        M_world =
+            std::make_unique<physkit::world<physkit::semi_implicit_euler>>(config.world_desc());
 
         M_shader = Shaders::PhongGL{Shaders::PhongGL::Configuration{}.setFlags(
             Shaders::PhongGL::Flag::VertexColor | Shaders::PhongGL::Flag::InstancedTransformation)};
@@ -902,15 +907,13 @@ public:
         M_mouse.reserve(8);
         M_keys.reserve(128);
 
-        if (!M_drag) setCursor(Cursor::HiddenLocked);
-
         M_timeline.start();
         if (config.vsync()) set_vsync();
 
         for (const auto &[obj_desc, color] : config.objects())
-            add_object(M_world.create_rigid(obj_desc), color);
+            add_object(M_world->create_rigid(obj_desc), color);
 
-        M_stepper = physkit::stepper(M_world, config.time_step());
+        M_stepper = physkit::stepper(*M_world, config.time_step());
     }
 
     virtual ~graphics_app()
@@ -931,7 +934,7 @@ protected:
     auto &mouse() const { return M_mouse; } // map to pointer states
     auto &mouse_pos() const { return M_mouse_pos; }
 
-    auto drag() const { return M_drag; }
+    bool drag() const { return M_drag; }
     void drag(bool d)
     {
         if (M_drag == d) return;
@@ -939,10 +942,15 @@ protected:
         {
             setCursor(Cursor::Arrow);
             warpCursor(windowSize() / 2);
+            M_drag = true;
+        }
+        else if (glfwGetWindowAttrib(window(), GLFW_HOVERED) == GLFW_TRUE)
+        {
+            M_drag = false;
+            setCursor(Cursor::HiddenLocked);
         }
         else
-            setCursor(Cursor::HiddenLocked);
-        M_drag = d;
+            M_grab_focus = true;
     }
 
     /// @brief Enable or disable vertical synchronization (vsync).
@@ -972,14 +980,10 @@ protected:
     }
 
     physkit::quantity<physkit::si::second> dt() const
-    {
-        return M_timeline.previousFrameDuration() * physkit::si::second;
-    }
+    { return M_timeline.previousFrameDuration() * physkit::si::second; }
 
     physkit::quantity<physkit::si::second> current_time() const
-    {
-        return M_timeline.previousFrameTime() * physkit::si::second;
-    }
+    { return M_timeline.previousFrameTime() * physkit::si::second; }
 
 private:
     void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
@@ -1044,6 +1048,12 @@ private:
     {
         M_mouse[event.pointer()].press();
         pointer_press(event, true);
+
+        if (M_drag && M_grab_focus)
+        {
+            M_grab_focus = false;
+            drag(false);
+        }
     }
 
     void pointerReleaseEvent(PointerEvent &event) final
@@ -1079,7 +1089,7 @@ private:
     SceneGraph::Scene<SceneGraph::MatrixTransformation3D> M_scene;
     Shaders::PhongGL M_shader{NoCreate};
     SceneGraph::DrawableGroup3D M_shaded;
-    physkit::world M_world;
+    std::unique_ptr<physkit::world_base> M_world;
     physkit::stepper M_stepper;
     camera M_cam;
     std::unordered_map<const physkit::mesh *, std::shared_ptr<GL::Mesh>> M_phys_mesh_map;
@@ -1092,6 +1102,7 @@ private:
     physkit::quantity<physkit::si::second> M_frame_limit{};
     bool M_debug = false;
     bool M_drag = false;
+    bool M_grab_focus = false;
     bool M_testing = false;
 };
 
@@ -1099,15 +1110,11 @@ namespace mesh_objs
 {
 // radius 1
 inline auto cube()
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid()));
-}
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
 
 // radius 1
 inline auto sphere(unsigned int subdivisions = 3)
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions)));
-}
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions))); }
 
 inline auto cone(unsigned int rings, unsigned int segments, float half_length)
 {
@@ -1124,8 +1131,6 @@ inline auto cylinder(unsigned int rings, unsigned int segments, float half_lengt
 }
 
 inline auto plane()
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid()));
-}
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
 }; // namespace mesh_objs
 } // namespace graphics
