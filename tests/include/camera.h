@@ -69,13 +69,17 @@ struct kf
     /// @param target The world-space position to look at.
     /// @return A keyframe configured to look at the target.
     static kf make_look_at(const physkit::vec3<physkit::si::metre, float> &target)
-    { return kf{look_at_t{target}}; }
+    {
+        return kf{look_at_t{target}};
+    }
 
     /// @brief Create a keyframe with an explicit quaternion orientation.
     /// @param rot The quaternion representing the camera's orientation.
     /// @return A keyframe with the specified orientation.
     static kf make_orient(const physkit::quat<physkit::one, float> &rot)
-    { return kf{orient_t{rot}}; }
+    {
+        return kf{orient_t{rot}};
+    }
 
     /// @brief Create a keyframe with a position.
     /// @param p The world-space position for the camera.
@@ -274,7 +278,9 @@ public:
     /// @param time The time at which to check.
     /// @return Boolean representing if the camera is released.
     [[nodiscard]] bool released(const physkit::quantity<physkit::si::second, float> time)
-    { return (time > M_end_time && M_extrapolation == release); }
+    {
+        return (time > M_end_time && M_extrapolation == release);
+    }
 
     /// @brief Get the total duration of the camera track.
     /// @return The sum of all transition durations in the track.
@@ -588,7 +594,9 @@ public:
     }
 
     void look_at(const physkit::vec3<physkit::si::metre, float> &pos)
-    { set_view((pos - to_physkit_vector<physkit::si::metre, float>(M_pos)) / physkit::si::metre); }
+    {
+        set_view((pos - to_physkit_vector<physkit::si::metre, float>(M_pos)) / physkit::si::metre);
+    }
 
     auto pos() const { return to_physkit_vector<physkit::si::metre, float>(M_pos); }
 
@@ -630,9 +638,13 @@ public:
     }
 
     [[nodiscard]] physkit::quantity<physkit::si::metre / physkit::si::second, float> speed() const
-    { return M_speed; }
+    {
+        return M_speed;
+    }
     void speed(physkit::quantity<physkit::si::metre / physkit::si::second, float> s)
-    { M_speed = s; }
+    {
+        M_speed = s;
+    }
 
     void pointer_move(Platform::Application::PointerMoveEvent &event, bool drag)
     {
@@ -709,7 +721,9 @@ public:
 
 private:
     [[nodiscard]] DualQuaternion transformation() const noexcept
-    { return DualQuaternion::from(M_rot, M_pos); }
+    {
+        return DualQuaternion::from(M_rot, M_pos);
+    }
 
     SceneGraph::Camera3D *M_cam{};
     SceneGraph::AbstractTranslationRotation3D *M_obj{};
@@ -728,11 +742,17 @@ private:
     Vector2i M_window_size{1, 1};
 
     [[nodiscard]] Vector3 right_axis() const noexcept
-    { return M_rot.transformVector(Vector3::xAxis()); }
+    {
+        return M_rot.transformVector(Vector3::xAxis());
+    }
     [[nodiscard]] Vector3 up_axis() const noexcept
-    { return M_rot.transformVector(Vector3::yAxis()); }
+    {
+        return M_rot.transformVector(Vector3::yAxis());
+    }
     [[nodiscard]] Vector3 forward_axis() const noexcept
-    { return M_rot.transformVector(-Vector3::zAxis()); }
+    {
+        return M_rot.transformVector(-Vector3::zAxis());
+    }
 
     void mark_dirty()
     {

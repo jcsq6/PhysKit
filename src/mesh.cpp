@@ -1,4 +1,4 @@
-#include "physkit/mesh.h"
+#include "physkit/collision/mesh.h"
 
 #include <array>
 #include <cmath>

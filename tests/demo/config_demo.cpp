@@ -14,7 +14,9 @@ public:
     explicit app(const Arguments &arguments)
         : graphics_app{g_config{arguments}.title_or("Config Demo")}
     // NOLINT
-    { cam().speed(10 * m / s); }
+    {
+        cam().speed(10 * m / s);
+    }
 
     void update(physkit::quantity<physkit::si::second> dt) override {}
 };

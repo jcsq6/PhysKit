@@ -1,4 +1,4 @@
-#include "physkit/detail/bvh.h"
+#include "physkit/collision/bvh.h"
 
 namespace physkit::detail
 {
