@@ -543,14 +543,11 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
     // SAT must be performed on 2 convex meshes.
     assert(false && "SAT not implemented");
 
-    // tolerance
-    //auto eps = 1e-24;
-
-    // need to compare projected intersection across every axis of the folling types
+    // need to compare projected intersection across every axis of the follosing types
     // 1. The normal of every face from both meshes.
     // 2. The cross product of every edge from mesh A with every edge from mesh B
 
-    // can optimize by removing parallel axis
+    // can optimize by removing parallel axds
 
     auto a_tris = a.geometry().triangles();
     auto b_tris = b.geometry().triangles();
@@ -601,7 +598,6 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
         return (abs(a.x() - b.x()) <= eps) && (abs(a.y() - b.y()) <= eps) && (abs(a.y() - b.y()) <= eps); 
     };
 
-    // // std::unordered_set<glm::vec3, decltype(hashVec3), decltype(equalVec3)>
     // // std::vector<vec3<si::metre>> separating_axes;
     // std::unordered_set<vec3<si::metre>, decltype(vec3_hash), decltype(vec3_equal)>
     // separating_axes(
@@ -636,12 +632,20 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
         auto a = project_mesh(n, a_vertices);
         auto b = project_mesh(n, b_vertices);
         
+        // lost clangd at this point
 
+        // if (a.first < b.second && a.second > b.first) {// successful}
 
-        // separating_axes;
-        //  std::println("sup");
-        // a_edges.
+        // add edges to list
+        // a_edges.insert(e1)
+        // a_edges.insert(e2)
+        // a_edges.insert(e3)
+
     }
+    // do the same for b_tris
+
+    // now go through both a_edges and b_edges and cross them and projection test.
+
     assert(false && "SAT not implemented");
     
 }
