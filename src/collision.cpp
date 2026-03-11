@@ -544,7 +544,7 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
     assert(false && "SAT not implemented");
 
     // tolerance
-    auto epsilon = 1e-24;
+    //auto eps = 1e-24;
 
     // need to compare projected intersection across every axis of the folling types
     // 1. The normal of every face from both meshes.
@@ -595,8 +595,11 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
         return h1 ^ (h2 << 1) ^ (h3 << 2);
     };
 
-    auto vec3_equal = [](auto const &a, auto const &b)
-    { return a.x == b.x && a.y == b.y && a.z == b.z; };
+    auto vec3_equal = [](const vec3<si::metre> &a, const vec3<si::metre> &b)
+    { 
+        constexpr auto eps = 1e-12 * si::metre;
+        return (abs(a.x() - b.x()) <= eps) && (abs(a.y() - b.y()) <= eps) && (abs(a.y() - b.y()) <= eps); 
+    };
 
     // // std::unordered_set<glm::vec3, decltype(hashVec3), decltype(equalVec3)>
     // // std::vector<vec3<si::metre>> separating_axes;
@@ -633,6 +636,7 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
         auto a = project_mesh(n, a_vertices);
         auto b = project_mesh(n, b_vertices);
         
+
 
         // separating_axes;
         //  std::println("sup");
