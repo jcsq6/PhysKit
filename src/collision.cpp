@@ -4,6 +4,7 @@
 #include <cassert>
 #include <mp-units/systems/si/unit_symbols.h>
 #include <optional>
+#include <unordered_set>
 
 #include <absl/container/inlined_vector.h>
 
@@ -540,7 +541,6 @@ INSTANTIATE_GJK_EPA(mesh::instance, obb)
 std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
 {
     // SAT must be performed on 2 convex meshes.
-    // if (!a.geometry().is_convex() || !b.geometry().is_convex()) return {};
     assert(false && "SAT not implemented");
 
     // tolerance
@@ -557,9 +557,9 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
     auto sum_triangle_count = a_tris.size() + b_tris.size();
 
     // the variables related to edge count assume the following:
-    // Polyhedra are convex
-    // All faces are triangles
-    // Edges are manifold (each edge belongs to exactly 2 faces)
+    //  Polyhedra are convex
+    //  All faces are triangles
+    //  Edges are manifold (each edge belongs to exactly 2 faces)
 
     // The edge count for mesh A
     auto a_edge_count = (a_tris.size() * 3) / 2;
@@ -567,33 +567,78 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
     auto b_edge_count = (b_tris.size() * 3) / 2;
     // The total number of unique edges in both meshes.
     auto sum_edge_count = ((sum_triangle_count * 3) / 2);
+    auto sum_vertex_count = ((sum_triangle_count * 3) / 2);
     // The maximum possible number of separating axes.
     auto max_axes = (a_edge_count * b_edge_count) + sum_triangle_count;
 
-    std::vector<vec3<si::metre>> separating_axes;
-    separating_axes.reserve(max_axes);
+    auto a_vertices = a.geometry().vertices(); // std::span<const vec3<si::metre>>
+    auto b_vertices = b.geometry().vertices();
+
+    auto project_mesh = [](auto const &axis, auto const &vertices)
+    {
+        auto minv = axis.dot(vertices[0]);
+        auto maxv = minv;
+        for (size_t i = 1; i < vertices.size(); ++i)
+        {
+            auto p = axis.dot(vertices[i]);
+            if (p < minv) minv = p;
+            if (p > maxv) maxv = p;
+        }
+        return std::pair{minv, maxv};
+    };
+
+    auto vec3_hash = [](const vec3<si::metre> &v)
+    {
+        auto h1 = std::hash<double>{}(v.x().force_numerical_value_in(si::metre));
+        auto h2 = std::hash<double>{}(v.y().force_numerical_value_in(si::metre));
+        auto h3 = std::hash<double>{}(v.z().force_numerical_value_in(si::metre));
+        return h1 ^ (h2 << 1) ^ (h3 << 2);
+    };
+
+    auto vec3_equal = [](auto const &a, auto const &b)
+    { return a.x == b.x && a.y == b.y && a.z == b.z; };
+
+    // // std::unordered_set<glm::vec3, decltype(hashVec3), decltype(equalVec3)>
+    // // std::vector<vec3<si::metre>> separating_axes;
+    // std::unordered_set<vec3<si::metre>, decltype(vec3_hash), decltype(vec3_equal)>
+    // separating_axes(
+    //     0, vec3_hash, vec3_equal);
+    // // std::unordered_set<vec3<si::metre>,> separating_axes;
+    // separating_axes.reserve(max_axes);
+
     // edge vectors.
-    std::vector<vec3<si::metre>> a_edges, b_edges;
+    // std::vector<vec3<si::metre>> a_edges, b_edges;
+    // std::unordered_set<vec3<si::metre>> a_edges, b_edges;
+    std::unordered_set<vec3<si::metre>, decltype(vec3_hash), decltype(vec3_equal)> a_edges(
+        0, vec3_hash, vec3_equal);
+    std::unordered_set<vec3<si::metre>, decltype(vec3_hash), decltype(vec3_equal)> b_edges(
+        0, vec3_hash, vec3_equal);
     a_edges.reserve(a_edge_count);
     b_edges.reserve(b_edge_count);
 
     // get edges.
-    for (const auto &tri : a_tris)
+    for (const auto &a_tri : a_tris)
     {
 
         // triangle_t().normal(tri)
         // making cheap normal
         // auto [a, b, c] = vertices(a);
         // Need to extract edges and normal
-        auto [va, vb, vc] = tri.vertices(a);
-        // auto [e1, e2, e3] = {(vb-va),(vc-va), (vc-vb)};
+        auto [va, vb, vc] = a_tri.vertices(a);
         auto e1 = (vb - va);
         auto e2 = (vc - va); // maybe make cyclical?
         auto e3 = (vc - vb);
         auto n = e1.cross(e2);
-        std::println("sup");
-        // if approximately zero vector
-        if (n.squared_norm() <= 1e-24 * (decltype(n.squared_norm()){})) {}
+
+        auto a = project_mesh(n, a_vertices);
+        auto b = project_mesh(n, b_vertices);
+        
+
+        // separating_axes;
+        //  std::println("sup");
+        // a_edges.
     }
     assert(false && "SAT not implemented");
+    
+}
 }
