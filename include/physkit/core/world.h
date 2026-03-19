@@ -1,7 +1,7 @@
 #pragma once
-#include "constraint.h"
-#include "detail/arena.h"
-#include "detail/collision_phases.h"
+#include "../collision/collision_phases.h"
+#include "../collision/constraint.h"
+#include "../detail/arena.h"
 #include "integrator.h"
 #include "object.h"
 

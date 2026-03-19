@@ -1,6 +1,6 @@
 #include "test.h"
 
-#include <physkit/detail/bvh.h>
+#include <physkit/collision/bvh.h>
 
 #include <algorithm>
 #include <numeric>

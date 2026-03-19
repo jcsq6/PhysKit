@@ -1,5 +1,5 @@
-#include "physkit/collision.h"
-#include "physkit/detail/types.h"
+#include "physkit/collision/collision.h"
+#include "physkit/algebra/types.h"
 
 #include <cassert>
 #include <mp-units/systems/si/unit_symbols.h>
