@@ -33,6 +33,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/EnsureClang.cmake)
 set(PHYSKIT_SOURCES
 	src/world.cpp
 	src/mesh.cpp
+	src/sphere.cpp
 	src/collision.cpp
 	src/bvh.cpp
 )
@@ -48,6 +49,8 @@ set(PHYSKIT_HEADERS
 	collision/collision_phases.h
 	collision/constraint.h
 	collision/mesh.h
+  collision/sphere.h
+  collision/shape.h
 	core/accum.h
 	core/integrator.h
 	core/object.h
