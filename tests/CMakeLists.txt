@@ -21,22 +21,22 @@ add_library(phys_testing INTERFACE)
 target_sources(phys_testing
   INTERFACE
     FILE_SET HEADERS
-    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/helper
     FILES
-      lib/test.h
+      helper/test.h
 )
 
 target_link_libraries(phys_testing INTERFACE physkit)
 
 if (PHYSKIT_BUILD_GRAPHICS_TESTS)
   set(PHYS_GRAPHICS_HEADERS
-    lib/dep/argparse.hpp
-    lib/graphics/detail/magnum_headers.h
-    lib/graphics/detail/macro.h
-    lib/graphics/detail/gmf.h
-    lib/graphics/convert.h
-    lib/graphics/camera.h
-    lib/graphics/graphics.h
+    helper/dep/argparse.hpp
+    helper/graphics/detail/magnum_headers.h
+    helper/graphics/detail/macro.h
+    helper/graphics/detail/gmf.h
+    helper/graphics/convert.h
+    helper/graphics/camera.h
+    helper/graphics/graphics.h
   )
 
   if (PHYSKIT_GRAPHICS_MODULES)
@@ -46,7 +46,7 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
     target_sources(phys_graphics
       PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib
+        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/helper
       FILES
         ${PHYS_GRAPHICS_HEADERS}
     )
@@ -55,10 +55,10 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
       PUBLIC
         FILE_SET modules TYPE CXX_MODULES
       FILES
-        lib/magnum.cpp
-        lib/graphics.cpp
-        lib/camera.cpp
-        lib/convert.cpp
+        helper/src/magnum.cpp
+        helper/src/graphics.cpp
+        helper/src/camera.cpp
+        helper/src/convert.cpp
     )
 
     target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit)
@@ -70,7 +70,7 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
     target_sources(phys_graphics
       INTERFACE
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib
+        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/helper
       FILES
         ${PHYS_GRAPHICS_HEADERS}
     )
