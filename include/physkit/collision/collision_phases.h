@@ -1,13 +1,29 @@
 #pragma once
+
+#ifdef PHYSKIT_IN_MODULE_IMPL
+
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+
+#else
+#include <absl/container/flat_hash_map.h>
+#include <absl/container/flat_hash_set.h>
+
+#include <algorithm>
+#include <array>
+#include <concepts>
+#include <cstdint>
+#include <ranges>
+#include <span>
+#include <utility>
+#endif
+
 #include "bvh.h"
 #include "physkit/collision/collision.h"
 #include "physkit/core/object.h"
 
-#include <absl/container/flat_hash_map.h>
-#include <absl/container/flat_hash_set.h>
-
-#include <array>
-
+PHYSKIT_EXPORT
 namespace physkit::detail
 {
 class pair_manager
@@ -16,9 +32,7 @@ public:
     pair_manager(std::size_t initial_capacity = 8192) { M_active.reserve(initial_capacity); }
 
     bool try_add_pair(dynamic_bvh::object_handle a, dynamic_bvh::object_handle b)
-    {
-        return M_active.insert(make_pair_key(a, b)).second;
-    }
+    { return M_active.insert(make_pair_key(a, b)).second; }
     void remove_pair(auto it) { M_active.erase(it); }
 
     void remove_for_object(dynamic_bvh::object_handle id,
@@ -96,9 +110,7 @@ public:
     }
 
     [[nodiscard]] auto contacts(this auto &&self)
-    {
-        return std::span{self.M_contact_buffer.data(), self.M_contacts};
-    }
+    { return std::span{self.M_contact_buffer.data(), self.M_contacts}; }
 
     template <std::ranges::range R>
         requires(std::same_as<std::ranges::range_value_t<R>, contact_info>)
@@ -201,9 +213,7 @@ public:
     static constexpr auto contact_breaking_threshold = 0.05 * si::metre;
 
     narrow_phase(std::size_t initial_capacity = 1024) : M_contact_map(initial_capacity)
-    {
-        M_manifolds.reserve(initial_capacity);
-    }
+    { M_manifolds.reserve(initial_capacity); }
 
     void on_pair_added(std::uint64_t key)
     {
@@ -311,9 +321,7 @@ public:
                 std::size_t pair_capacity = 8192)
         : M_static_tree(static_capacity), M_dynamic_tree(dynamic_capacity),
           M_pair_manager(pair_capacity)
-    {
-        M_moved.reserve((static_capacity + dynamic_capacity) / 3);
-    }
+    { M_moved.reserve((static_capacity + dynamic_capacity) / 3); }
 
     auto add(dynamic_bvh::object_handle object_id, const aabb &bounds, bool is_static)
     {

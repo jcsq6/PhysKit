@@ -6,15 +6,25 @@ Depends on:
 - `mp-units`
 
 # Build
-With Conan, run:  
-```sh
-conan remote add conan-mpusz https://mpusz.jfrog.io/artifactory/api/conan/conan-oss
-```
-
 Ensure you have a compliant C++26 conan profile, and then run:
 ```sh
 conan build -pr <myprof|default> . -s build_type=<Release|Debug> --build=missing -u
 ```
+
+To build PhysKit as a C++ module, run:
+
+```sh
+conan build -pr <myprof|default> . -s build_type=<Release|Debug> --build=missing -u -o "&:physkit_modules=True"
+```
+
+### Conan Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `physkit_modules` | `True` | Build as C++ modules; consumers `import physkit;` |
+| `import_std` | `False` | Use `import std;` inside module units (experimental) |
+| `build_tests` | `True` | Include tests, demos, and graphical tests |
+| `dev` | `True` | Export `compile_commands.json` and enable header-set verification |
 
 ## Windows (MSYS2)
 
@@ -69,4 +79,4 @@ This installs a pre-commit hook that auto-formats all source files before each c
 ## References
 See the following pages for dependency documentation:
 - [mp-units](https://mpusz.github.io/mp-units/latest/)
-- [Eigen](https://devdocs.io/eigen3/)
+- [Eigen](https://libeigen.gitlab.io/eigen/docs-5.0/)

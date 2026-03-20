@@ -1,11 +1,8 @@
 #include "test.h"
 
+#ifndef PHYSKIT_MODULES
 #include <physkit/collision/bvh.h>
-
-#include <algorithm>
-#include <numeric>
-#include <random>
-#include <set>
+#endif
 
 using namespace testing;
 using dbvh = physkit::detail::dynamic_bvh;

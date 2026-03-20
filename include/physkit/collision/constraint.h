@@ -8,6 +8,7 @@
 // https://www.emergentmind.com/topics/extended-position-based-dynamics-xpbd
 // TODO: Block Gauss-Seidel solver for better convergence
 
+PHYSKIT_EXPORT
 namespace physkit
 {
 
@@ -101,7 +102,7 @@ concept constraint_impl = requires(const std::remove_cvref_t<T> &c, quantity<si:
 };
 
 // "Building an Orthonormal Basis, Revisited" (2017).
-static std::pair<vec3<one>, vec3<one>> build_orthonormal_basis(const vec3<one> &n)
+inline std::pair<vec3<one>, vec3<one>> build_orthonormal_basis(const vec3<one> &n)
 {
     double sign = std::copysign(1.0f, static_cast<double>(n.z()));
 
@@ -123,9 +124,7 @@ public:
         requires(std::derived_from<std::remove_cvref_t<Derived>, constraint_base>)
     void build_jacobian(this Derived &&self, quantity<si::second> dt,
                         std::vector<jacobian_row> &rows)
-    {
-        std::forward<Derived>(self).build_jacobian_impl(dt, rows, {});
-    }
+    { std::forward<Derived>(self).build_jacobian_impl(dt, rows, {}); }
 
     [[nodiscard]] auto &obj_a() const { return *M_a; }
     [[nodiscard]] auto &obj_b() const { return *M_b; }
@@ -277,9 +276,7 @@ public:
                      const vec3<one> &local_axis_b)
         : constraint_base(a, b), M_local_anchor_a(local_anchor_a), M_local_anchor_b(local_anchor_b),
           M_local_axis_a(local_axis_a.normalized()), M_local_axis_b(local_axis_b.normalized())
-    {
-        std::tie(M_local_v_a, M_local_w_a) = detail::build_orthonormal_basis(M_local_axis_a);
-    }
+    { std::tie(M_local_v_a, M_local_w_a) = detail::build_orthonormal_basis(M_local_axis_a); }
 
     void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
                              detail::passkey<constraint_base> /*unused*/) const

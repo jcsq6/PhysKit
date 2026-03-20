@@ -1,9 +1,20 @@
 #pragma once
+
+#ifdef PHYSKIT_IN_MODULE_IMPL
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+#else
+#include "macros.h"
 #include <cassert>
+#include <cstdint>
 #include <optional>
 #include <stack>
+#include <utility>
 #include <vector>
+#endif
 
+PHYSKIT_EXPORT
 namespace physkit::detail
 {
 template <typename T> struct arena

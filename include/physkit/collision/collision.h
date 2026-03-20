@@ -1,13 +1,23 @@
 #pragma once
 
-#include "../algebra/types.h"
-#include "mesh.h"
+#ifdef PHYSKIT_IN_MODULE_IMPL
 
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+
+#else
 #include <mp-units/framework.h>
 #include <mp-units/math.h>
 #include <mp-units/systems/si/units.h>
-#include <optional>
 
+#include <optional>
+#endif
+
+#include "../algebra/types.h"
+#include "mesh.h"
+
+PHYSKIT_EXPORT
 namespace physkit
 {
 

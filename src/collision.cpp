@@ -1,11 +1,7 @@
+#ifndef PHYSKIT_IN_MODULE_IMPL
 #include "physkit/collision/collision.h"
-#include "physkit/algebra/types.h"
-
-#include <cassert>
-#include <mp-units/systems/si/unit_symbols.h>
-#include <optional>
-
 #include <absl/container/inlined_vector.h>
+#endif
 
 namespace physkit
 {
@@ -538,7 +534,5 @@ INSTANTIATE_GJK_EPA(mesh::instance, obb)
 #undef INSTANTIATE_GJK_EPA
 
 std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
-{
-    assert(false && "SAT not implemented");
-}
+{ assert(false && "SAT not implemented"); }
 } // namespace physkit

@@ -1,4 +1,6 @@
+#ifndef PHYSKIT_IN_MODULE_IMPL
 #include "physkit/collision/bvh.h"
+#endif
 
 namespace physkit::detail
 {

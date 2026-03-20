@@ -2,14 +2,17 @@
 
 This directory contains a self-contained graphics and configuration framework for building PhysKit demos and visual tests. It is built on top of [Magnum](https://magnum.graphics/) (OpenGL, GLFW) and provides camera animation, JSON+CLI configuration, instanced rendering, and a ready-made application base class.
 
-**Headers:** [`tests/include/`](include/)
+**Sources:** [`tests/include/`](include/)
 
-| Header | Purpose |
-|--------|---------|
-| [`graphics.h`](include/graphics.h) | Application base class, scene objects, config loader, mesh helpers |
-| [`camera.h`](include/camera.h) | FPS-style camera, keyframe animation tracks |
-| [`convert.h`](include/convert.h) | Conversion utilities between PhysKit and Magnum types |
-| [`test.h`](include/test.h) | Lightweight test runner, assertion macros, approximate comparisons |
+| File | Kind | Purpose |
+|------|------|---------|
+| [`graphics.cpp`](include/graphics.cpp) | C++ module unit (`export module graphics`) | Application base class, scene objects, config loader, mesh helpers |
+| [`camera.cpp`](include/camera.cpp) | C++ module unit (`export module graphics.camera`) | FPS-style camera, keyframe animation tracks |
+| [`convert.cpp`](include/convert.cpp) | C++ module unit (`export module graphics.convert`) | Conversion utilities between PhysKit and Magnum types |
+| [`magnum.cpp`](include/magnum.cpp) | C++ module unit (`export module graphics.magnum`) | Magnum engine bootstrap and window management |
+| [`test.h`](include/test.h) | Header (`#include`) | Lightweight test runner, assertion macros, approximate comparisons |
+
+> **Module requirement:** `graphics.cpp`, `camera.cpp`, `convert.cpp`, and `magnum.cpp` are always compiled as C++ named module units — there is no header fallback. Any target that links against `phys_graphics` must be built with `PHYSKIT_MODULES=ON` (the Conan default).
 
 ---
 
@@ -56,8 +59,8 @@ This directory contains a self-contained graphics and configuration framework fo
 The minimal demo is a subclass of `graphics_app` with an `update()` override:
 
 ```cpp
-#include <graphics.h>
-#include <mp-units/systems/si/unit_symbols.h>
+import graphics;
+import mp_units;
 
 using namespace graphics;
 using namespace physkit;
@@ -72,7 +75,7 @@ public:
         // Set up objects, camera, etc.
     }
 
-    void update(physkit::quantity<physkit::si::second> dt) override
+    void update(physkit::quantity<mp_units::si::second> dt) override
     {
         // Called every frame before drawing.
     }
@@ -285,7 +288,7 @@ public:
         // Initialization: add objects, configure camera, etc.
     }
 
-    void update(physkit::quantity<physkit::si::second> dt) override
+    void update(physkit::quantity<mp_units::si::second> dt) override
     {
         // Per-frame logic. Physics step happens automatically after this.
     }
@@ -555,12 +558,12 @@ Conversion utilities between PhysKit (`physkit::vec`, `physkit::quat`) and Magnu
 using namespace graphics;
 
 // PhysKit → Magnum
-Magnum::Vector3 v = to_magnum_vector<physkit::si::metre, float>(physkit_vec);
-Magnum::Quaternion q = to_magnum_quaternion<physkit::one, float>(physkit_quat);
+Magnum::Vector3 v = to_magnum_vector<mp_units::si::metre, float>(physkit_vec);
+Magnum::Quaternion q = to_magnum_quaternion<mp_units::one, float>(physkit_quat);
 
 // Magnum → PhysKit
-auto pv = to_physkit_vector<physkit::si::metre, float>(magnum_vec);
-auto pq = to_physkit_quaternion<physkit::one, float>(magnum_quat);
+auto pv = to_physkit_vector<mp_units::si::metre, float>(magnum_vec);
+auto pq = to_physkit_quaternion<mp_units::one, float>(magnum_quat);
 
 // PhysKit mesh → Magnum GL::Mesh
 Magnum::GL::Mesh m = to_magnum_mesh(phys_mesh);
@@ -571,7 +574,7 @@ Magnum::GL::Mesh m = to_magnum_mesh(phys_mesh);
 ## Testing Framework
 
 PhysKit includes a lightweight, header-only testing framework in [`test.h`](include/test.h). It provides a simple test runner with grouped test suites, approximate comparisons for quantities and geometric types, and clear PASS/FAIL output.
-
+`test.h` is **module-aware**: when `PHYSKIT_MODULES` is defined (the Conan default), it automatically uses `import physkit;` and `import mp_units;` instead of `#include` directives. Tests that only link against `phys_testing` therefore compile in both header and module modes.
 ### Headers
 
 | Header | Purpose |
@@ -658,10 +661,14 @@ The process exits with code `0` if all tests pass, `1` otherwise. This makes it 
 
 ### CMake Integration
 
-Test executables link against `phys_testing` (for non-graphical tests) or `phys_graphics` (for graphical tests) and are registered with `add_test()`:
+Test executables link against `phys_testing` (for non-graphical tests) or `phys_graphics` (for graphical demos) and are registered with `add_test()`.
+
+`phys_testing` links only against the physkit library and exposes `test.h`. It works in both header and module build modes.
+
+`phys_graphics` compiles its sources as C++ named module units and therefore **requires** that the build was configured with `PHYSKIT_MODULES=ON` (the Conan default). Targets linking against it must not disable module support.
 
 ```cmake
-# Non-graphical tests (test.h only)
+# Non-graphical tests (test.h only — works in header and module modes)
 add_executable(mesh_tests main.cpp)
 target_link_libraries(mesh_tests PRIVATE phys_testing)
 add_test(NAME mesh_tests COMMAND mesh_tests)

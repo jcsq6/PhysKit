@@ -1,24 +1,33 @@
-#include <mp-units/systems/si/unit_symbols.h>
-#include <physkit/physkit.h>
+// Magnum header needed for MAGNUM_APPLICATION_MAIN macro (not exportable from modules)
+#include <Magnum/Platform/GlfwApplication.h>
 
-#include <graphics.h>
+#ifdef PHYSKIT_MODULES
+import physkit;
+import mp_units;
+#else
+#include <physkit/physkit.h>
+#endif
+
+#ifdef PHYSKIT_GRAPHICS_MODULES
+import graphics;
+#else
+#include <graphics/graphics.h>
+#endif
 
 using namespace mp_units;
-using namespace si::unit_symbols;
+using namespace mp_units::si::unit_symbols;
 using namespace physkit;
 using namespace graphics;
 
 class app : public graphics_app
 {
 public:
-    explicit app(const Arguments &arguments)
+    explicit app(const Platform::Application::Arguments &arguments)
         : graphics_app{g_config{arguments}.title_or("Config Demo")}
     // NOLINT
-    {
-        cam().speed(10 * m / s);
-    }
+    { cam().speed(10 * m / s); }
 
-    void update(physkit::quantity<physkit::si::second> dt) override {}
+    void update(mp_units::quantity<mp_units::si::second> dt) override {}
 };
 
 MAGNUM_APPLICATION_MAIN(app) // NOLINT
