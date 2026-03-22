@@ -4,9 +4,19 @@
 
 namespace physkit
 {
+namespace detail
+{
+
+[[nodiscard]] task_scheduler &awaiter::scheduler() const
+{ return world().scheduler(task::_passkey({})); }
+
+void awaiter::queue_task(world_base::task_id id) const
+{ world().queue_task(id, task::_passkey({})); }
+} // namespace detail
+
 template class world<semi_implicit_euler>;
 
-template <> void world<semi_implicit_euler>::step(quantity<si::second> dt)
+template <> void world<semi_implicit_euler>::step_impl(quantity<si::second> dt)
 {
     for (auto &slot : rigids().slots)
     {

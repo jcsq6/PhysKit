@@ -1,5 +1,6 @@
 #pragma once
 #include "../core/object.h"
+#include "../detail/util.h"
 #include "physkit/collision/collision_phases.h"
 #include "physkit/core/integrator.h"
 #include "physkit/detail/arena.h"
@@ -88,18 +89,13 @@ class constraint_base;
 namespace detail
 {
 
-template <typename T> class passkey
-{
-    friend T;
-    passkey() = default;
-};
-
 template <typename T>
-concept constraint_impl = requires(const std::remove_cvref_t<T> &c, quantity<si::second> dt,
-                                   std::vector<jacobian_row> &rows, passkey<constraint_base> pk) {
-    { std::remove_cvref_t<T>::jacobian_dimension } -> std::convertible_to<std::size_t>;
-    { c.build_jacobian_impl(dt, rows, pk) };
-};
+concept constraint_impl =
+    requires(const std::remove_cvref_t<T> &c, quantity<si::second> dt,
+             std::vector<jacobian_row> &rows, ::physkit::detail::passkey<constraint_base> pk) {
+        { std::remove_cvref_t<T>::jacobian_dimension } -> std::convertible_to<std::size_t>;
+        { c.build_jacobian_impl(dt, rows, pk) };
+    };
 
 // "Building an Orthonormal Basis, Revisited" (2017).
 inline std::pair<vec3<one>, vec3<one>> build_orthonormal_basis(const vec3<one> &n)
@@ -153,7 +149,7 @@ public:
     }
 
     auto build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
-                             detail::passkey<constraint_base> /*unused*/) const
+                             ::physkit::detail::passkey<constraint_base> /*unused*/) const
     {
         // NOLINTBEGIN(readability-identifier-naming)
         static constexpr auto dist_epsilon = 1e-6 * si::metre;
@@ -220,7 +216,7 @@ public:
     }
 
     void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
-                             detail::passkey<constraint_base> /*unused*/) const
+                             ::physkit::detail::passkey<constraint_base> /*unused*/) const
     {
         auto &a = obj_a();
         auto &b = obj_b();
@@ -279,7 +275,7 @@ public:
     { std::tie(M_local_v_a, M_local_w_a) = detail::build_orthonormal_basis(M_local_axis_a); }
 
     void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
-                             detail::passkey<constraint_base> /*unused*/) const
+                             ::physkit::detail::passkey<constraint_base> /*unused*/) const
     {
         auto &a = obj_a();
         auto &b = obj_b();
@@ -373,7 +369,7 @@ public:
     }
 
     void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
-                             detail::passkey<constraint_base> /*unused*/) const
+                             ::physkit::detail::passkey<constraint_base> /*unused*/) const
     {
         auto &a = obj_a();
         auto &b = obj_b();
@@ -463,7 +459,7 @@ public:
     }
 
     void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
-                             detail::passkey<constraint_base> /*unused*/) const
+                             ::physkit::detail::passkey<constraint_base> /*unused*/) const
     {
         auto &a = obj_a();
         auto &b = obj_b();

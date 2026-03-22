@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cmath>
 #include <concepts>
+#include <coroutine>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>

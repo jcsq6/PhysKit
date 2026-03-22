@@ -102,13 +102,23 @@ public:
     constexpr unit_mat(Eigen::Index dim) : M_data(dim) {}
     constexpr unit_mat(Eigen::Index rows, Eigen::Index cols) : M_data(rows, cols) {}
 
-    constexpr unit_mat(Q scalar) : M_data(scalar.numerical_value_in(ref)) {}
-    constexpr unit_mat(Q x, Q y) : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref)) {}
+    constexpr unit_mat(Q scalar)
+        requires(_rows == 1 && _cols == 1)
+        : M_data(scalar.numerical_value_in(ref))
+    {
+    }
+    constexpr unit_mat(Q x, Q y)
+        requires((_rows == 2 && _cols == 1) || (_rows == 1 && _cols == 2))
+        : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref))
+    {
+    }
     constexpr unit_mat(Q x, Q y, Q z)
+        requires((_rows == 3 && _cols == 1) || (_rows == 1 && _cols == 3))
         : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref))
     {
     }
     constexpr unit_mat(Q x, Q y, Q z, Q w)
+        requires((_rows == 4 && _cols == 1) || (_rows == 1 && _cols == 4))
         : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref),
                  w.numerical_value_in(ref))
     {

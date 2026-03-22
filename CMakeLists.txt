@@ -57,6 +57,8 @@ set(PHYSKIT_HEADERS
 	collision/constraint.h
 	collision/mesh.h
 	core/accum.h
+	core/awaitables.h
+	core/co.h
 	core/integrator.h
 	core/object.h
 	core/particle.h

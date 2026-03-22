@@ -77,5 +77,12 @@ PHYSKIT_EXPORT inline bool is_debugger_present()
     }();
     return present;
 }
+
+template <typename... T> class passkey
+{
+    friend T...;
+    passkey() = default;
+};
+
 } // namespace physkit::detail
 #endif

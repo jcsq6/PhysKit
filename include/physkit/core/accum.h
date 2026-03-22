@@ -13,7 +13,7 @@ public:
 
     void update(quantity<si::second> dt)
     {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(PHYSKIT_NO_DEBUG_LIMITER)
         if (detail::is_debugger_present()) dt = std::min(dt, 0.1 * si::second);
 #endif
         M_accum += dt;
