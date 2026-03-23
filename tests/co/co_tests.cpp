@@ -10,10 +10,11 @@ using namespace mp_units::si::unit_symbols;
 using namespace physkit;
 using namespace testing;
 
+namespace tests
+{
 static constexpr auto time_eps = .01 * s;
 
 const auto box_mesh = mesh::box(vec3{1, 1, 1} * m);
-
 void wait()
 {
     static constexpr auto frame_ds = 5.0 * ms;
@@ -63,12 +64,13 @@ void collision()
     stepper stepper(w, frame_ds);
     stepper.update(5 * s);
 }
+} // namespace tests
 
 int main()
 {
     suite s;
 
-    s.group("Coroutine waits").test("wait", wait);
-    s.group("Coroutine waits").test("collision", collision);
+    s.group("Coroutine waits").test("wait", tests::wait);
+    s.group("Coroutine waits").test("collision", tests::collision);
     return s.run();
 }
