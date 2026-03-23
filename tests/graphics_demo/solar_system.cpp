@@ -1,7 +1,10 @@
 // Magnum header needed for MAGNUM_APPLICATION_MAIN macro and math types
+
+#ifdef PHYSKIT_GRAPHICS_MODULES
 #include <Magnum/Math/Angle.h>
 #include <Magnum/Platform/GlfwApplication.h>
 #include <cmath>
+#endif
 
 #ifdef PHYSKIT_MODULES
 import physkit;

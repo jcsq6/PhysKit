@@ -3,7 +3,7 @@ module;
 #define GRAPHICS_IN_MODULE_IMPL
 #include "graphics/detail/gmf.h"
 
-export module graphics.magnum;
+export module graphics:magnum;
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  Corrade::Containers

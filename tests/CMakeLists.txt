@@ -41,7 +41,7 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
 
   if (PHYSKIT_GRAPHICS_MODULES)
     set(CMAKE_CXX_SCAN_FOR_MODULES ON)
-    add_library(phys_graphics)
+    add_library(phys_graphics SHARED)
 
     target_sources(phys_graphics
       PUBLIC
@@ -55,35 +55,42 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
       PUBLIC
         FILE_SET modules TYPE CXX_MODULES
       FILES
-        helper/src/magnum.cpp
-        helper/src/graphics.cpp
-        helper/src/camera.cpp
-        helper/src/convert.cpp
+        helper/src/modules/magnum_m.cpp
+        helper/src/modules/graphics_m.cpp
+        helper/src/modules/camera_m.cpp
+        helper/src/modules/convert_m.cpp
     )
 
     target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit)
     target_compile_definitions(phys_graphics PUBLIC PHYSKIT_GRAPHICS_MODULES)
     target_include_directories(phys_graphics PRIVATE graphics dep)
   else()
-    add_library(phys_graphics INTERFACE)
+    set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+    add_library(phys_graphics SHARED)
+
+    set(PHYS_GRAPHICS_SOURCES
+      helper/src/graphics.cpp
+    )
 
     target_sources(phys_graphics
-      INTERFACE
+      PUBLIC
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/helper
       FILES
         ${PHYS_GRAPHICS_HEADERS}
+        PUBLIC
+        ${PHYS_GRAPHICS_SOURCES} 
     )
 
     if (NOT PHYSKIT_MODULES)
-      target_precompile_headers(phys_graphics INTERFACE
+      target_precompile_headers(phys_graphics PUBLIC
         [["graphics/detail/magnum_headers.h"]]
         <GLFW/glfw3.h>
         <glaze/glaze.hpp>
       )
     endif()
-    target_link_libraries(phys_graphics INTERFACE ${TEST_LIBRARIES} physkit)
-    target_include_directories(phys_graphics INTERFACE graphics dep)
+    target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit)
+    target_include_directories(phys_graphics PUBLIC graphics dep)
   endif()
 endif()
 

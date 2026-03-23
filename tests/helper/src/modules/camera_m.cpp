@@ -7,10 +7,10 @@ module;
 #include <physkit/physkit.h>
 #endif
 
-export module graphics.camera;
+export module graphics:camera;
 
-import graphics.convert;
-import graphics.magnum;
+import :convert;
+
 #ifdef PHYSKIT_MODULES
 import physkit;
 import mp_units;
