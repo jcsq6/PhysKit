@@ -56,7 +56,7 @@ void collision()
         auto col = co_await wait_for_collision(a);
         CHECK(col.other == b);
         CHECK(col.contact_manifold.contacts().size() > 0);
-        auto other = co_await wait_for_collision_exit(b);
+        auto other = co_await wait_for_separation(b);
         CHECK(other == a);
     };
     w.add_task(t(a, b));

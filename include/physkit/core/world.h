@@ -152,7 +152,8 @@ public:
     {
     }
 
-    auto add_constraint(const auto &con) { return M_constraints.add_constraint(con); }
+    template <typename T> auto add_constraint(const T &con)
+    { return M_constraints.template add_constraint<T::static_type>(con); }
 
 private:
     impulse::constraint_solver<Integrator> M_constraints;

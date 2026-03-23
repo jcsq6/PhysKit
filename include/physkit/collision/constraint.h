@@ -21,7 +21,6 @@ enum class constraint_type : std::uint8_t
     slider,
     weld,
     contact,
-    DetailCount,
 };
 
 namespace impulse
@@ -635,7 +634,7 @@ inline auto make_tuple_helper(std::size_t initial_capacity, std::index_sequence<
             initial_capacity)...};
 }
 
-constexpr auto constraint_count = static_cast<std::size_t>(constraint_type::DetailCount);
+constexpr auto constraint_count = static_cast<std::size_t>(constraint_type::contact);
 using constraint_arenas =
     decltype(make_tuple_helper({}, std::make_index_sequence<constraint_count>{}));
 } // namespace detail

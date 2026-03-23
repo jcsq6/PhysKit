@@ -9,5 +9,11 @@ add_executable(track_demo
 )
 target_link_libraries(track_demo PRIVATE phys_graphics)
 
+add_executable(constraint_demo
+    constraint_demo.cpp
+)
+target_link_libraries(constraint_demo PRIVATE phys_graphics)
+
 add_test(NAME solar_system COMMAND solar_system --testing)
 add_test(NAME track_demo COMMAND track_demo --testing)
+add_test(NAME constraint_demo COMMAND constraint_demo --testing)
