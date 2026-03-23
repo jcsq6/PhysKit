@@ -241,7 +241,10 @@ public:
         M_contact_map.erase(it);
     }
 
-    void calculate(std::regular_invocable<dynamic_bvh::object_handle> auto &&get_object)
+    void calculate(std::regular_invocable<dynamic_bvh::object_handle> auto &&get_object,
+                   std::regular_invocable<const manifold_info &> auto &&on_coll_beg,
+                   std::regular_invocable<dynamic_bvh::object_handle,
+                                          dynamic_bvh::object_handle> auto &&on_coll_end)
         requires(std::same_as<
                  std::invoke_result_t<decltype(get_object), dynamic_bvh::object_handle>, object &>)
     {
@@ -302,7 +305,17 @@ public:
                 }
             }
             if (new_contact) new_man.add_contact(*new_contact);
+
+            bool was_colliding = !man.man.empty();
+            bool is_colliding = !new_man.empty();
+
             man.man = new_man;
+
+            // collision started
+            if (!was_colliding && is_colliding) on_coll_beg(man);
+            // collision ended
+            else if (was_colliding && !is_colliding)
+                on_coll_end(man.a, man.b);
         }
     }
 

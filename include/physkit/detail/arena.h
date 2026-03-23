@@ -18,6 +18,8 @@ import std;
 PHYSKIT_EXPORT
 namespace physkit::detail
 {
+using handle_id_t = std::uint64_t;
+
 template <typename T> struct arena
 {
     struct slot
@@ -30,7 +32,7 @@ template <typename T> struct arena
     class handle
     {
     public:
-        using id_type = std::uint64_t;
+        using id_type = handle_id_t;
 
         static constexpr std::uint32_t null = std::numeric_limits<std::uint32_t>::max();
 
@@ -47,6 +49,9 @@ template <typename T> struct arena
 
         [[nodiscard]] constexpr auto index() const { return M_idx; }
         [[nodiscard]] constexpr auto generation() const { return M_gen; }
+
+        bool operator==(const handle &other) const
+        { return M_idx == other.M_idx && M_gen == other.M_gen; }
 
     private:
         std::uint32_t M_idx;
@@ -104,6 +109,13 @@ template <typename T> struct arena
     {
         assert(idx < self.slots.size());
         return self.slots[idx];
+    }
+
+    handle get_slot_handle(this auto &&self, std::uint32_t idx)
+    {
+        assert(idx < self.slots.size());
+        auto &slot = self.slots[idx];
+        return handle{idx, slot.gen, {}};
     }
 };
 } // namespace physkit::detail

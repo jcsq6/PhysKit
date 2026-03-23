@@ -6,17 +6,15 @@ namespace physkit
 {
 namespace detail
 {
-
-[[nodiscard]] task_scheduler &awaiter::scheduler() const
-{ return world().scheduler(task::_passkey({})); }
-
-void awaiter::queue_task(world_base::task_id id) const
-{ world().queue_task(id, task::_passkey({})); }
+task_handler &awaiter::handler() const
+{
+    assert(M_promise.world != nullptr);
+    return M_promise.world->handler({});
+}
 } // namespace detail
-
 template class world<semi_implicit_euler>;
 
-template <> void world<semi_implicit_euler>::step_impl(quantity<si::second> dt)
+template <> void world<semi_implicit_euler>::step_impl(const quantity<si::second> dt)
 {
     for (auto &slot : rigids().slots)
     {
@@ -39,7 +37,9 @@ template <> void world<semi_implicit_euler>::step_impl(quantity<si::second> dt)
             return {slot.value.broad_handle, slot.value.obj.is_static()};
         });
 
-    narrow_phase().calculate([this](auto h) -> object & { return rigids().get_slot(h).value.obj; });
+    narrow_phase().calculate([this](auto h) -> object & { return rigids().get_slot(h).value.obj; },
+                             [this](auto &man_info) { on_collision(man_info); },
+                             [this](auto a, auto b) { on_collision_exit(a, b); });
     M_constraints.setup_contacts(dt, narrow_phase(), [this](auto h) -> object &
                                  { return rigids().get_slot(h).value.obj; });
     M_constraints.solve_constraints(dt);

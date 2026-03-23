@@ -59,6 +59,8 @@ class world_base
         detail::dynamic_bvh::node_handle broad_handle{};
     };
 
+    using task_id = detail::arena<task>::handle::id_type;
+
 public:
     explicit world_base(const world_desc &desc) : M_gravity(desc.gravity()) {}
     world_base(const world_base &) = delete;
@@ -67,7 +69,6 @@ public:
     world_base &operator=(world_base &&) = default;
 
     using handle = detail::arena<obj_node>::handle;
-    using task_id = detail::arena<task>::handle::id_type;
     enum class err_t : std::uint8_t
     {
         stale_handle
@@ -96,31 +97,19 @@ public:
         return std::unexpected(err_t::stale_handle);
     }
 
-    void add_task(task t)
-    {
-        auto handle = M_tasks.add(std::move(t));
-        auto id = handle.id();
+    [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
 
-        auto *allocated_task = M_tasks.get(handle);
-        allocated_task->set_id(id, {});
-        allocated_task->set_world(*this, {});
-
-        M_pending_tasks.push_back(id);
-    }
-
-    // Queue task for execution in the next frame
-    void queue_task(task_id handle, detail::passkey<task> /*key*/)
-    { M_pending_tasks.push_back(handle); }
-    auto &scheduler(detail::passkey<task> /*key*/) { return M_scheduler; }
-
-    [[nodiscard]] quantity<si::second> time() const { return M_scheduler.time(); }
+    void add_task(task t) { M_task_handler.add_task(std::move(t), *this, {}); }
 
     void step(quantity<si::second> dt)
     {
-        process_tasks();
+        M_task_handler.process_tasks({});
         step_impl(dt);
-        M_scheduler.increment(dt);
+        M_task_handler.increment(dt, {});
     }
+
+    detail::task_handler &handler(detail::passkey<detail::awaiter> /*key*/)
+    { return M_task_handler; }
 
     virtual ~world_base() = default;
 
@@ -130,32 +119,30 @@ protected:
     auto &narrow_phase(this auto &&self) { return self.M_narrow; }
     auto &gravity(this auto &&self) { return self.M_gravity; }
 
+    void on_collision(const detail::narrow_phase::manifold_info &man_info)
+    {
+        M_task_handler.on_collision(man_info, M_rigid.get_slot_handle(man_info.a).id(),
+                                    M_rigid.get_slot_handle(man_info.b).id());
+    }
+
+    void on_collision_exit(detail::dynamic_bvh::object_handle a,
+                           detail::dynamic_bvh::object_handle b)
+    {
+        M_task_handler.on_collision_exit(M_rigid.get_slot_handle(a).id(),
+                                         M_rigid.get_slot_handle(b).id());
+    }
+
     virtual void step_impl(quantity<si::second> dt) = 0;
 
 private:
-    detail::task_scheduler M_scheduler;
+    detail::task_handler M_task_handler;
     detail::arena<obj_node> M_rigid;
     detail::broad_phase M_broad;
     detail::narrow_phase M_narrow;
     vec3<si::metre / si::second / si::second> M_gravity;
-    detail::arena<task> M_tasks;
-    std::vector<task_id> M_pending_tasks;
-
-    void resume_task(task_id id)
-    {
-        auto handle = detail::arena<task>::handle::from_id(id);
-        if (auto *t = M_tasks.get(handle))
-            if (t->resume({})) M_tasks.remove(handle);
-    }
-
-    void process_tasks()
-    {
-        for (auto id : M_pending_tasks) resume_task(id);
-        M_pending_tasks.clear();
-
-        while (auto t = M_scheduler.next_task()) resume_task(t->id());
-    }
 };
+
+using object_handle = world_base::handle;
 
 template <std::derived_from<integrator> Integrator> class world : public world_base
 {
