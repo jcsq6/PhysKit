@@ -144,11 +144,11 @@ struct wait_for_collision
     world_base::handle object;
 };
 
-struct wait_for_collision_exit
+struct wait_for_separation
 {
     struct awaiter_type : detail::awaiter
     {
-        awaiter_type(detail::task_promise &promise, wait_for_collision_exit aw)
+        awaiter_type(detail::task_promise &promise, wait_for_separation aw)
             : detail::awaiter(promise), object(aw.object)
         {
         }

@@ -642,6 +642,7 @@ using constraint_arenas =
 
 template <std::derived_from<integrator> Integrator> class constraint_solver;
 
+// TODO: Islands with multithreading, potentially disjoint set union for island management.
 template <> class constraint_solver<semi_implicit_euler>
 {
 public:
