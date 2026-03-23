@@ -1,13 +1,20 @@
 // Coroutine-orchestrated missile demo
 // Demonstrates how coroutines simplify complex multi-phase scene sequencing
 // that would otherwise require brittle state machines.
+#ifdef PHYSKIT_GRAPHICS_MODULES
+#include <Magnum/Platform/GlfwApplication.h>
+
+#ifndef PHYSKIT_IMPORT_STD
+#include <cmath>
+#include <coroutine>
+#include <numbers>
+#endif
+#endif
 
 #ifdef PHYSKIT_MODULES
 import physkit;
 import mp_units;
 #else
-#include <cmath>
-#include <numbers>
 #include <physkit/physkit.h>
 #endif
 
