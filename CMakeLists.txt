@@ -66,7 +66,20 @@ set(PHYSKIT_HEADERS
 
 list(TRANSFORM PHYSKIT_HEADERS PREPEND "include/physkit/")
 
-add_library(physkit)
+option(PHYSKIT_MODULES "Build PhysKit as C++ modules" OFF)
+option(PHYSKIT_BUILD_STATIC "Build PhysKit as a static library" OFF)
+
+if (PHYSKIT_MODULES)
+	set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+else()
+	set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+endif()
+
+if (PHYSKIT_BUILD_STATIC)
+	add_library(physkit STATIC)
+else()
+	add_library(physkit SHARED)
+endif()
 
 target_sources(physkit
   	PUBLIC

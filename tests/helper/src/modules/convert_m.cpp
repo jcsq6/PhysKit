@@ -7,9 +7,9 @@ module;
 #include <physkit/physkit.h>
 #endif
 
-export module graphics.convert;
+export module graphics:convert;
 
-import graphics.magnum;
+import :magnum;
 #ifdef PHYSKIT_MODULES
 import physkit;
 import mp_units;
