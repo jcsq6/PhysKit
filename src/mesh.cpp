@@ -161,8 +161,44 @@ mat3<kg * pow<2>(m)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 mesh::inertia_tensor(quantity<kg / pow<3>(m)> /*density*/) const
 {
-    // TODO: implement inertia tensor via canonical tetrahedron integrals
-    throw std::runtime_error("mesh::inertia_tensor not yet implemented");
+    mat3<kg * pow<2>(m)> I = mat3 < kg * pow<2>(m)::Zero();
+    vec3<m> = mass_center = 0.0 * kg;
+    quantity<kg> total_mass = 0.0 * kg;
+
+    for (const auto &tri : M_triangles)
+    {
+        const auto &v0 = M_verticies[tri[0]];
+        const auto &v1 = M_verticies[tri[1]];
+        const auto &v2 = M_verticies[tri[2]];
+
+        // compute the signed vol. of tetrahedron
+        auto signed_volume = v0.dot(v1.cross(v2)) / 6.0;
+        auto mass = density * abs(signed_volume);
+        total_mass += mass;
+        mass_center += center * mass;
+        // accumulate the remaining mass properties for centroid, inertia tensor for this.
+
+        // not right at the moment for the tensor math.
+        double Ixx_tri = (v1.y() * v1.y() + v1.z() * v1.z() + v2.y() * v2.y() + v2.z() * v2.z() +
+                          v3.y() * v3.y() + v3.z() * v3.z()) /
+                         3.0;
+        double Iyy_tri = (v1.x() * v1.x() + v1.z() * v1.z() + v2.x() * v2.x() + v2.z() * v2.z() +
+                          v3.x() * v3.x() + v3.z() * v3.z()) /
+                         3.0;
+        double Izz_tri = (v1.x() * v1.x() + v1.y() * v1.y() + v2.x() * v2.x() + v2.y() * v2.y() +
+                          v3.x() * v3.x() + v3.y() * v3.y()) /
+                         3.0;
+
+        double Ixy_tri = (v1.x() * v1.y() + v2.x() * v2.y() + v3.x() * v3.y()) / 3.0;
+        double Ixz_tri = (v1.x() * v1.z() + v2.x() * v2.z() + v3.x() * v3.z()) / 3.0;
+        double Iyz_tri = (v1.y() * v1.z() + v2.y() * v2.z() + v3.y() * v3.z()) / 3.0;
+
+        // Shift to global origin using parallel-axis theorem (future TODO)
+    }
+
+    // finish by computing center of mass and apply PAT from origin to center of mass
+
+    return I;
 }
 
 // BVH-accelerated ray intersection

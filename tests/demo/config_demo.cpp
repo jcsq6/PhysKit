@@ -27,7 +27,9 @@ public:
     explicit app(const Platform::Application::Arguments &arguments)
         : graphics_app{g_config{arguments}.title_or("Config Demo")}
     // NOLINT
-    { cam().speed(10 * m / s); }
+    {
+        cam().speed(10 * m / s);
+    }
 
     void update(mp_units::quantity<mp_units::si::second> dt) override {}
 };
