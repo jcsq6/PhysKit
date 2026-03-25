@@ -2,6 +2,7 @@
 
 #include "detail/types.h"
 #include "mesh.h"
+#include "shape.h"
 
 #include <mp-units/framework.h>
 #include <mp-units/math.h>

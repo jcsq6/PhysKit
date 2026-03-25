@@ -1,33 +1,64 @@
 #pragma once
 #include "mesh.h"
 #include "sphere.h"
+#include "detail/bounds.h"
+#include "detail/bvh.h"
+#include "detail/types.h"
+
+#include <mp-units/framework.h>
+#include <mp-units/math.h>
+#include <mp-units/systems/si/units.h>
+
+#include <cstdio>
+#include <cassert>
+#include <memory>
+#include <span>
+#include <vector>
+
+#include <cstdio>
+
 namespace physkit
 {
 
 enum shape_type {shape_sphere=0, shape_box=1, shape_cylinder=2, shape_pill=3, shape_convex_hull=4, shape_mesh=5};
 
-class shape
+class shape : public std::enable_shared_from_this<shape>
 {
 public:
-    shape(const std::shared_ptr<mesh> &m) : M_type{shape_mesh}
+
+    shape(const shape &) = default;
+    shape &operator=(const shape &) = default;
+    shape(shape &&) = default;
+    shape &operator=(shape &&) = default;
+    ~shape() = default;
+
+    shape(const std::shared_ptr<const mesh> &m) : M_type(shape_mesh), M_mesh(m) {}
+    shape(const std::shared_ptr<const sphere> &s) : M_type(shape_sphere), M_sphere(s) {}
+
+    static std::shared_ptr<shape> make(const std::shared_ptr<const mesh> &m) { return std::make_shared<shape>(m);}
+    static std::shared_ptr<shape> make(const std::shared_ptr<const sphere> &s) { return std::make_shared<shape>(s);}
+
+
+    [[nodiscard]] std::shared_ptr<const struct mesh> get_mesh() const
     {
-        M_item.mesh = m;
+        assert(M_type == shape_mesh);
+        return M_mesh;
     }
-    shape (const std::shared_ptr<sphere> &s) :M_type{shape_sphere}
+    [[nodiscard]] std::shared_ptr<const struct sphere> get_sphere() const
     {
-        M_item.sphere = s;
+        assert(M_type == shape_sphere);
+        return M_sphere;
     }
+
     [[nodiscard]] const aabb &bounds() const
     {
         switch (M_type)
         {
         default:
         case shape_mesh:
-            return M_item.mesh->bounds();
-            break;
+            return M_mesh->bounds();
         case shape_type::shape_sphere:
-            return  M_item.sphere->bounds();
-            break;
+            return  M_sphere->bounds();
         }
     }
 
@@ -37,10 +68,9 @@ public:
         {
         default:
         case shape_mesh:
-            return M_item.mesh->bsphere();
-            break;
+            return M_mesh->bsphere();
         case shape_sphere:
-            return M_item.sphere->bsphere();
+            return M_sphere->bsphere();
         }
     }
 
@@ -50,11 +80,9 @@ public:
         {
         default:
         case shape_mesh:
-            return M_item.mesh->volume();
-            break;
+            return M_mesh->volume();
         case shape_sphere:
-            return M_item.sphere->volume();
-            break;
+            return M_sphere->volume();
         }
 
     }
@@ -65,11 +93,9 @@ public:
         {
         default:
         case shape_mesh:
-            return M_item.mesh->mass_center();
-            break;
+            return M_mesh->mass_center();
         case shape_sphere:
-            return M_item.sphere->mass_center();
-            break;
+            return M_sphere->mass_center();
         }
     }
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
@@ -79,10 +105,10 @@ public:
         {
         default:
         case shape_mesh:
-            return M_item.mesh->inertia_tensor(density);
+            return M_mesh->inertia_tensor(density);
             break;
         case shape_sphere:
-            return M_item.sphere->inertia_tensor(density);
+            return M_sphere->inertia_tensor(density);
             break;
         }
     }
@@ -96,11 +122,9 @@ public:
         {
         default:
         case shape_mesh:
-            return M_item.mesh->ray_intersect(r, max_distance);
-            break;
+            return M_mesh->ray_intersect(r, max_distance);
         case shape_sphere:
-            return M_item.sphere->ray_intersect(r, max_distance);
-            break;
+            return M_sphere->ray_intersect(r, max_distance);
         }
     }
     /// @brief Closest point on the surface
@@ -110,11 +134,9 @@ public:
         {
         default:
         case shape_mesh:
-            return M_item.mesh->closest_point(point);
-            break;
+            return M_mesh->closest_point(point);
         case shape_sphere:
-            return M_item.sphere->closest_point(point);
-            break;
+            return M_sphere->closest_point(point);
         }
     }
     /// @brief Point containment test in local space.
@@ -124,23 +146,21 @@ public:
         {
         default:
         case shape_mesh:
-            return M_item.mesh->contains(point);
-            break;
+            return M_mesh->contains(point);
         case shape_sphere:
-            return M_item.sphere->contains(point);
-            break;
+            return M_sphere->contains(point);
         }
     }
 
     /// @brief Gathers indices of triangles whose vertices overlap the given sphere.
     std::vector<std::uint32_t> overlap_sphere(const bounding_sphere &sphere) const
     {
+        assert(M_type == shape_mesh);
         switch (M_type)
         {
         default:
         case shape_mesh:
-            return M_item.mesh->overlap_sphere(sphere);
-            break;
+            return M_mesh->overlap_sphere(sphere);
         }
     }
 
@@ -151,11 +171,9 @@ public:
         {
         default:
         case shape_mesh:
-            return M_item.mesh->support(direction);
-            break;
+            return M_mesh->support(direction);
         case shape_sphere:
-            return M_item.sphere->support(direction);
-            break;
+            return M_sphere->support(direction);
         }
     }
     [[nodiscard]] bool is_convex() const
@@ -164,41 +182,36 @@ public:
         {
         default:
         case shape_mesh:
-            return M_item.mesh->is_convex();
-            break;
+            return M_mesh->is_convex();
         case shape_sphere:
             return true;
-            break;
         }
     }
 
     [[nodiscard]] shape_type type() const { return M_type;};
 
-    //mesh only methods
+    //mesh only methods for compatibility
     [[nodiscard]] std::span<const vec3<si::metre>> vertices() const
     {
         assert(M_type == shape_mesh);
-        return M_item.mesh->vertices();
+        return M_mesh->vertices();
     }
     [[nodiscard]] std::span<const triangle_t> triangles() const
     {
         assert(M_type == shape_mesh);
-        return M_item.mesh->triangles();
+        return M_mesh->triangles();
     }
     [[nodiscard]] const vec3<si::metre> &vertex(unsigned int index) const
     {
         assert(M_type == shape_mesh);
-        assert(index < M_item.mesh->vertices().size());
-        return M_item.mesh->vertices()[index];
+        assert(index < M_mesh->vertices().size());
+        return M_mesh->vertices()[index];
     }
 
 private:
     shape_type M_type;
-    union
-    {
-        std::shared_ptr<physkit::mesh> mesh;
-        std::shared_ptr<physkit::sphere> sphere;
-    } M_item;
+    std::shared_ptr<const mesh> M_mesh;
+    std::shared_ptr<const sphere> M_sphere;
 };
 
 /// @brief A view of a collision shape placed in world space
@@ -217,6 +230,7 @@ public:
 
     [[nodiscard]] vec3<si::metre> vertex(unsigned int index) const
     {
+        assert(M_shape->type() == shape_mesh);
         assert(index < M_shape->vertices().size());
         return M_orientation * M_shape->vertices()[index] + M_position;
     }
@@ -298,11 +312,12 @@ public:
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
     {
+        throw std::runtime_error("not implemented");
         if (M_shape->type() == shape_mesh)
             throw std::runtime_error("mesh::instance::inertia_tensor not yet implemented");
 
-        //TODO is this correct???
-        return M_orientation * M_shape->inertia_tensor(density);
+        //TODO is this correct??? no but i'll get back to this later
+        //return M_orientation * M_shape->inertia_tensor(density);
     }
 
 private:
@@ -310,4 +325,11 @@ private:
     vec3<si::metre> M_position;
     quat<one> M_orientation;
 };
+
+inline instance::instance(const shape &shp, const vec3<si::metre> &position,
+                                const quat<one> &orientation)
+    : M_shape{&shp}, M_position{position}, M_orientation{orientation}
+{
+}
+
 }
