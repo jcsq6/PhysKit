@@ -16,7 +16,7 @@ struct wait_for
 {
     struct awaiter_type : detail::awaiter
     {
-        awaiter_type(detail::task_promise &promise, wait_for aw)
+        awaiter_type(detail::task_promise_base &promise, wait_for aw)
             : detail::awaiter(promise), duration(aw.duration), start_time(handler().time())
         {
         }
@@ -26,9 +26,10 @@ struct wait_for
 
         [[nodiscard]] bool await_ready() const noexcept
         { return duration <= 0.0 * mp_units::si::second; }
-        void await_suspend(std::coroutine_handle<detail::task_promise> handle)
-        { handler().schedule_task_after(handle.promise().id, duration); }
-        [[nodiscard]] mp_units::quantity<mp_units::si::second> await_resume() const noexcept
+        void await_suspend(std::coroutine_handle<> handle)
+        { handler().schedule_task_after(promise().id, duration); }
+        // NOLINTNEXTLINE(modernize-use-nodiscard)
+        mp_units::quantity<mp_units::si::second> await_resume() const noexcept
         { return handler().time() - start_time; }
     };
 
@@ -39,7 +40,7 @@ struct wait_until
 {
     struct awaiter_type : detail::awaiter
     {
-        awaiter_type(detail::task_promise &promise, wait_until aw)
+        awaiter_type(detail::task_promise_base &promise, wait_until aw)
             : detail::awaiter(promise), time{aw.time}, start_time(handler().time())
         {
         }
@@ -47,9 +48,10 @@ struct wait_until
         mp_units::quantity<mp_units::si::second> start_time;
 
         [[nodiscard]] bool await_ready() const noexcept { return time <= start_time; }
-        void await_suspend(std::coroutine_handle<detail::task_promise> handle)
-        { handler().schedule_task_at(handle.promise().id, time); }
-        [[nodiscard]] mp_units::quantity<mp_units::si::second> await_resume() const noexcept
+        void await_suspend(std::coroutine_handle<> handle)
+        { handler().schedule_task_at(promise().id, time); }
+        // NOLINTNEXTLINE(modernize-use-nodiscard)
+        mp_units::quantity<mp_units::si::second> await_resume() const noexcept
         { return handler().time() - start_time; }
     };
 
@@ -60,7 +62,7 @@ struct next_frame
 {
     struct awaiter_type : detail::awaiter
     {
-        awaiter_type(detail::task_promise &promise, next_frame /*unused*/)
+        awaiter_type(detail::task_promise_base &promise, next_frame /*unused*/)
             : detail::awaiter(promise), start_time(handler().time())
         {
         }
@@ -69,9 +71,9 @@ struct next_frame
 
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
         [[nodiscard]] bool await_ready() noexcept { return false; }
-        void await_suspend(std::coroutine_handle<detail::task_promise> /**/)
-        { handler().queue_task(promise().id); }
-        [[nodiscard]] mp_units::quantity<mp_units::si::second> await_resume() const noexcept
+        void await_suspend(std::coroutine_handle<> /**/) { handler().queue_task(promise().id); }
+        // NOLINTNEXTLINE(modernize-use-nodiscard)
+        mp_units::quantity<mp_units::si::second> await_resume() const noexcept
         { return handler().time() - start_time; }
     };
 };
@@ -120,7 +122,7 @@ struct wait_for_collision
 
     struct awaiter_type : detail::awaiter
     {
-        awaiter_type(detail::task_promise &promise, wait_for_collision aw)
+        awaiter_type(detail::task_promise_base &promise, wait_for_collision aw)
             : detail::awaiter(promise), object(aw.object)
         {
         }
@@ -129,9 +131,10 @@ struct wait_for_collision
         detail::narrow_phase::manifold_info result;
 
         [[nodiscard]] bool await_ready() const { return !world().get_rigid(object); }
-        void await_suspend(std::coroutine_handle<detail::task_promise> /*handle*/)
+        void await_suspend(std::coroutine_handle<> /*handle*/)
         { handler().add_collision_waiter(object.id(), promise().id, &result); }
-        [[nodiscard]] result_type await_resume() const noexcept
+        // NOLINTNEXTLINE(modernize-use-nodiscard)
+        result_type await_resume() const noexcept
         {
             if (result.a == object.index())
                 return {.other = world_base::handle::from_id(result.b),
@@ -148,7 +151,7 @@ struct wait_for_separation
 {
     struct awaiter_type : detail::awaiter
     {
-        awaiter_type(detail::task_promise &promise, wait_for_separation aw)
+        awaiter_type(detail::task_promise_base &promise, wait_for_separation aw)
             : detail::awaiter(promise), object(aw.object)
         {
         }
@@ -159,9 +162,10 @@ struct wait_for_separation
 
         // TODO: maybe make sure it's actually colliding?
         [[nodiscard]] bool await_ready() const { return !world().get_rigid(object); }
-        void await_suspend(std::coroutine_handle<detail::task_promise> /*handle*/)
+        void await_suspend(std::coroutine_handle<> /*handle*/)
         { handler().add_collision_exit_waiter(object.id(), promise().id, &result_a, &result_b); }
-        [[nodiscard]] world_base::handle await_resume() const noexcept
+        // NOLINTNEXTLINE(modernize-use-nodiscard)
+        world_base::handle await_resume() const noexcept
         { return world_base::handle::from_id((result_a == object.id()) ? result_b : result_a); }
     };
 
@@ -181,5 +185,10 @@ struct wait_for_separation
 // TODO:
 // wait_until_destroyed(object)
 // threading...
+
+// --------- META ---------
+// TODO:
+// after_all(...tasks)
+// when_any(...tasks)
 
 } // namespace physkit

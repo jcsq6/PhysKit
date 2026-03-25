@@ -25,22 +25,25 @@ namespace physkit
 {
 
 class world_base;
-class task;
+
+template <typename T = void> class task;
 
 namespace detail
 {
-using task_id = arena<task>::handle::id_type;
+using task_id = arena<task<>>::handle::id_type;
 
-struct task_promise;
+struct task_promise_base;
+template <typename T> class task_promise;
+template <typename T> class task_awaiter;
 class task_handler;
 
 class awaiter
 {
 public:
-    awaiter(task_promise &promise) : M_promise(promise) {}
+    awaiter(task_promise_base &promise) : M_promise(promise) {}
 
 protected:
-    [[nodiscard]] task_promise &promise() const { return M_promise; }
+    [[nodiscard]] task_promise_base &promise() const { return M_promise; }
     [[nodiscard]] task_handler &handler() const;
     [[nodiscard]] world_base &world() const;
 
@@ -48,35 +51,50 @@ protected:
 
 private:
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
-    task_promise &M_promise;
+    task_promise_base &M_promise;
 };
 
 template <typename Awaitable> using awaitable_awaiter_t = Awaitable::awaiter_type;
 template <typename Awaiter>
 concept awaiter_t = std::derived_from<Awaiter, awaiter> &&
-                    requires(Awaiter aw, std::coroutine_handle<task_promise> handle) {
+                    requires(Awaiter aw, std::coroutine_handle<task_promise_base> handle) {
                         { aw.await_ready() } -> std::convertible_to<bool>;
                         { aw.await_suspend(handle) };
                         { aw.await_resume() };
                     };
 
 template <typename Awaitable>
-concept awaitable = requires(task_promise &p, Awaitable &&aw) {
+concept awaitable = requires(task_promise_base &p, Awaitable &&aw) {
     requires awaiter_t<awaitable_awaiter_t<Awaitable>>;
     awaitable_awaiter_t<Awaitable>(p, std::forward<Awaitable>(aw));
 };
 
-struct task_promise
+struct task_promise_base
 {
-    // TODO: operator new()
+    struct final_awaiter
+    {
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
+        task_promise_base &promise;
 
-    task get_return_object();
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        [[nodiscard]] bool await_ready() const noexcept { return false; }
+        [[nodiscard]] std::coroutine_handle<>
+        await_suspend(std::coroutine_handle<> handle) const noexcept
+        {
+            if (promise.continuation)
+            {
+                *promise.root_leaf_ptr = promise.continuation;
+                return promise.continuation;
+            }
+            return std::noop_coroutine();
+        }
+        void await_resume() noexcept {}
+    };
+
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     std::suspend_always initial_suspend() noexcept { return {}; }
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    std::suspend_always final_suspend() noexcept { return {}; }
-    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    void return_void() noexcept {}
+    final_awaiter final_suspend() noexcept { return {*this}; }
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     void unhandled_exception() { throw; } // TODO: change on multithread support
 
@@ -84,23 +102,47 @@ struct task_promise
     detail::awaitable_awaiter_t<Awaitable> await_transform(Awaitable &&request)
     { return {*this, std::forward<Awaitable>(request)}; }
 
+    template <typename T> task_awaiter<T> await_transform(task<T> &&t);
+
     auto await_transform(auto &&other) = delete;
 
     world_base *world{};
     task_id id = detail::arena<task_id>::handle::null;
+
+    std::coroutine_handle<> root_leaf;
+    std::coroutine_handle<> *root_leaf_ptr = &root_leaf;
+    std::coroutine_handle<> continuation;
 };
 
 inline bool awaiter::has_world() const { return M_promise.world != nullptr; }
 inline world_base &awaiter::world() const { return *M_promise.world; }
 
+template <typename T> struct task_promise : public task_promise_base
+{
+    task<T> get_return_object();
+    void return_value(T value) { result.emplace(std::move(value)); }
+    T get_result() { return std::move(*result); }
+    std::optional<T> result;
+};
+
+template <> struct task_promise<void> : public task_promise_base
+{
+    task<void> get_return_object();
+    void return_void() noexcept {}
+    void get_result() const {}
+};
+
 } // namespace detail
 
-class task
+template <typename T> class task
 {
 public:
-    using promise_type = detail::task_promise;
+    using promise_type = detail::task_promise<T>;
 
-    explicit task(std::coroutine_handle<promise_type> h) : M_handle(h) {}
+    explicit task(std::coroutine_handle<promise_type> h) : M_handle(h)
+    {
+        if (M_handle) M_handle.promise().root_leaf = M_handle;
+    }
     task(const task &) = delete;
     task(task &&other) noexcept : M_handle(other.M_handle) { other.M_handle = nullptr; }
     task &operator=(const task &) = delete;
@@ -129,7 +171,9 @@ public:
     {
         if (M_handle)
         {
-            M_handle.resume();
+            auto leaf = *M_handle.promise().root_leaf_ptr;
+            if (leaf && !leaf.done()) leaf.resume();
+
             if (M_handle.done())
             {
                 M_handle.destroy();
@@ -145,14 +189,51 @@ public:
     { return M_handle; }
 
 private:
-    std::coroutine_handle<promise_type> M_handle;
-};
+    [[nodiscard]] detail::task_promise_base &promise_base() const { return M_handle.promise(); }
+    T get_result() const { return M_handle.promise().get_result(); }
 
-inline task detail::task_promise::get_return_object()
-{ return task{std::coroutine_handle<detail::task_promise>::from_promise(*this)}; }
+    std::coroutine_handle<promise_type> M_handle;
+
+    template <typename U> friend struct detail::task_awaiter;
+};
 
 namespace detail
 {
+
+template <typename T> struct task_awaiter
+{
+    task<T> t;
+
+    [[nodiscard]] bool await_ready() const noexcept { return t.done(); }
+
+    template <typename Promise>
+    std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> caller) noexcept
+    {
+        auto &child_promise = t.promise_base();
+        auto &parent_promise = caller.promise();
+
+        child_promise.world = parent_promise.world;
+        child_promise.id = parent_promise.id;
+
+        child_promise.root_leaf_ptr = parent_promise.root_leaf_ptr;
+        child_promise.continuation = caller;
+
+        *child_promise.root_leaf_ptr = t.M_handle;
+
+        return t.M_handle;
+    }
+
+    T await_resume() const { return t.get_result(); }
+};
+
+template <typename T> task_awaiter<T> task_promise_base::await_transform(task<T> &&t)
+{ return {std::move(t)}; }
+
+template <typename T> task<T> task_promise<T>::get_return_object()
+{ return task<T>{std::coroutine_handle<task_promise<T>>::from_promise(*this)}; }
+
+inline task<void> task_promise<void>::get_return_object()
+{ return task<void>{std::coroutine_handle<task_promise<void>>::from_promise(*this)}; }
 
 class task_handler
 {
@@ -175,7 +256,7 @@ public:
     void increment(const mp_units::quantity<mp_units::si::second> dt, passkey<world_base> /*key*/)
     { M_current_time += dt; }
 
-    void add_task(task t, world_base &world, passkey<world_base> /*key*/)
+    void add_task(task<> t, world_base &world, passkey<world_base> /*key*/)
     {
         auto handle = M_tasks.add(std::move(t));
         auto id = handle.id();
@@ -189,8 +270,10 @@ public:
 
     void process_tasks(passkey<world_base> /*key*/)
     {
-        for (auto id : M_pending_tasks) resume_task(id);
-        M_pending_tasks.clear();
+        M_pending_swap.clear();
+        M_pending_swap.swap(M_pending_tasks);
+
+        for (auto id : M_pending_swap) resume_task(id);
 
         while (auto t = next_task()) resume_task(*t);
     }
@@ -260,8 +343,9 @@ private:
         std::vector<collision_exit_res> coll_exit;
     };
 
-    detail::arena<task> M_tasks;
+    detail::arena<task<>> M_tasks;
     std::vector<handle_id_t> M_pending_tasks;
+    std::vector<handle_id_t> M_pending_swap;
     absl::flat_hash_map<handle_id_t, object_waiter> M_object_waiters;
 
     std::vector<std::pair<mp_units::quantity<mp_units::si::second>, handle_id_t>>
@@ -270,7 +354,7 @@ private:
 
     void resume_task(handle_id_t id)
     {
-        auto handle = detail::arena<task>::handle::from_id(id);
+        auto handle = detail::arena<task<>>::handle::from_id(id);
         if (auto *t = M_tasks.get(handle))
             if (t->resume({})) M_tasks.remove(handle);
     }

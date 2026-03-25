@@ -1,13 +1,18 @@
 // Coroutine-orchestrated missile demo
-// Demonstrates how coroutines simplify complex multi-phase scene sequencing
-// that would otherwise require brittle state machines.
+// Demonstrates how sub-task coroutines compose complex multi-phase scene sequencing:
+//   - task<T> sub-tasks that return values (grenade detonation position flows into missile
+//   targeting)
+//   - Nested sub-task composition (launch_guided → guide_to_target)
+//   - Per-frame steering via next_frame inside a sub-task
+//   - Fire-and-forget parallel task spawning (MIRV sub-munitions via add_task)
 #ifdef PHYSKIT_GRAPHICS_MODULES
 #include <Magnum/Platform/GlfwApplication.h>
 
 #ifndef PHYSKIT_IMPORT_STD
 #include <cmath>
-#include <coroutine>
+#include <coroutine> // IWYU pragma: keep
 #include <numbers>
+#include <print>
 #endif
 #endif
 
@@ -69,38 +74,10 @@ public:
                                                .with_friction(0.7));
         add_object(bunker, {0.5f, 0.45f, 0.4f});
 
-        // Camera track to follow the action
-        cam().set_move_track(camera_track({
-                                              // Start: wide overview
-                                              kf::make_pos(fvec3{0, 18, -60} * m)
-                                                  .look_at(fvec3{0, 3, 0} * m)
-                                                  .transition(2.0f * s),
-                                              // Grenade throw — follow arc
-                                              kf::make_pos(fvec3{-5, 20, -50} * m)
-                                                  .look_at(fvec3{2, 6, 0} * m)
-                                                  .transition(2.5f * s),
-                                              // Grenade explosion
-                                              kf::make_pos(fvec3{5, 14, -35} * m)
-                                                  .look_at(fvec3{6, 10, 0} * m)
-                                                  .transition(1.0f * s),
-                                              // Pan to right side — missile launch
-                                              kf::make_pos(fvec3{10, 14, -38} * m)
-                                                  .look_at(fvec3{12, 4, 0} * m)
-                                                  .transition(1.0f * s),
-                                              // Follow missile flight
-                                              kf::make_pos(fvec3{0, 16, -42} * m)
-                                                  .look_at(fvec3{-5, 3, 0} * m)
-                                                  .transition(1.0f * s),
-                                              // Missile explosion — wide shot of aftermath
-                                              kf::make_pos(fvec3{-2, 20, -45} * m)
-                                                  .look_at(fvec3{0, 1, 0} * m)
-                                                  .transition(4.0f * s),
-                                              // Final overview
-                                              kf::make_pos(fvec3{0, 22, -50} * m)
-                                                  .look_at(fvec3{0, 0, 0} * m)
-                                                  .transition(0.0f * s),
-                                          })
-                                 .with_extrap(camera_track::release));
+        // Dynamic camera track — keyframes are appended by the scene coroutine
+        cam().set_move_track(
+            camera_track(kf::make_pos(fvec3{0, 18, -60} * m).look_at(fvec3{0, 3, 0} * m))
+                .with_extrap(camera_track::release));
 
         world().add_task(scene(this));
     }
@@ -121,7 +98,7 @@ private:
         for (int i = 0; i < count; ++i)
         {
             double angle = static_cast<double>(i) * 2.0 * std::numbers::pi / count;
-            double elevation = up_speed * (0.6 + 0.4 * static_cast<double>(i % 3));
+            double elevation = up_speed * (0.6 + (0.4 * static_cast<double>(i % 3)));
             auto vel = vec3{speed * std::cos(angle), elevation, speed * std::sin(angle)} * m / s;
 
             auto dh = self->world().create_rigid(
@@ -136,60 +113,245 @@ private:
                     .with_friction(0.4));
 
             float t = static_cast<float>(i) / static_cast<float>(count);
-            Color3 color{base_color[0] + 0.15f * t, base_color[1] + 0.1f * t, base_color[2]};
+            Color3 color{base_color[0] + (0.15f * t), base_color[1] + (0.1f * t), base_color[2]};
             self->add_object(dh, color);
         }
     }
 
-    static task scene(app *self)
+    // -----------------------------------------------------------------------
+    // Sub-task coroutines — each encapsulates one logical phase as a reusable
+    // building block that can be co_await-ed from the main scene.
+    // -----------------------------------------------------------------------
+
+    /// Throw a grenade with a timed fuse.  Returns the detonation position.
+    static task<vec3<si::metre>> throw_grenade(app *self, vec3<si::metre> origin,
+                                               vec3<si::metre / si::second> velocity,
+                                               mp_units::quantity<si::second> fuse)
     {
         using namespace mp_units::si::unit_symbols;
         auto &w = self->world();
 
-        // --- Phase 1: Throw grenade from the left bunker ---
-        (void) co_await wait_for(1.5 * s);
+        auto gmesh = mesh::sphere(0.3 * m, 8, 16);
+        auto gh = w.create_rigid(object_desc::dynam()
+                                     .with_pos(origin)
+                                     .with_vel(velocity)
+                                     .with_ang_vel(vec3{5, 2, 3} * rad / s)
+                                     .with_mass(0.5 * kg)
+                                     .with_mesh(gmesh)
+                                     .with_restitution(0.4)
+                                     .with_friction(0.5));
+        auto *gfx = self->add_object(gh, {0.2f, 0.35f, 0.15f});
 
-        auto grenade_mesh = mesh::sphere(0.3 * m, 8, 16);
-        auto grenade_h = w.create_rigid(object_desc::dynam()
-                                            .with_pos(vec3{-10, 3.5, 0} * m)
-                                            .with_vel(vec3{11, 15, 0} * m / s)
-                                            .with_ang_vel(vec3{5, 2, 3} * rad / s)
-                                            .with_mass(0.5 * kg)
-                                            .with_mesh(grenade_mesh)
-                                            .with_restitution(0.4)
-                                            .with_friction(0.5));
-        auto *grenade_gfx = self->add_object(grenade_h, {0.2f, 0.35f, 0.15f});
+        co_await wait_for(fuse);
 
-        // --- Phase 2: Fuse timer, then detonate ---
-        (void) co_await wait_for(2.0 * s);
+        auto pos = (*w.get_rigid(gh))->pos();
+        auto _ = w.remove_rigid(gh);
+        hide(gfx);
+        spawn_debris(self, pos, 14, 7.0, 8.0, 0.12f, {0.9f, 0.45f, 0.1f});
+        co_return pos;
+    }
 
-        auto grenade_pos = (*w.get_rigid(grenade_h))->pos();
-        auto _ = w.remove_rigid(grenade_h);
-        hide(grenade_gfx);
+    /// Steer a rigid body toward `target` each frame.
+    static task<vec3<si::metre>> guide_to_target(app *self, world_base::handle handle, gfx_obj *gfx,
+                                                 vec3<si::metre> target, int debris_count,
+                                                 float debris_size, Color3 debris_color,
+                                                 bool explode_on_impact = false)
+    {
+        using namespace mp_units::si::unit_symbols;
+        auto &w = self->world();
 
-        spawn_debris(self, grenade_pos, 14, 7.0, 8.0, 0.12f, {0.9f, 0.45f, 0.1f});
+        bool collided = false;
+        if (explode_on_impact)
+            w.add_task(
+                [&collided, handle](this auto) -> task<>
+                {
+                    co_await wait_for_collision{.object = handle};
+                    collided = true;
+                }());
 
-        // --- Phase 3: Retaliation — launch missile from the right ---
-        (void) co_await wait_for(2.0 * s);
+        auto time_s = 0.0 * s;
+        constexpr auto corrective_accel_factor = 5 / s / s;
+        constexpr auto desired_accel_delta = 20 * m / s / s;
+        auto desired_speed = (*w.get_rigid(handle))->vel().norm();
+        while (true)
+        {
+            auto dt = co_await next_frame{};
+            time_s += dt;
+            desired_speed += desired_accel_delta * dt;
 
-        auto missile_mesh = mesh::box(vec3{0.9, 0.2, 0.2} * m);
-        auto missile_h = w.create_rigid(object_desc::dynam()
-                                            .with_pos(vec3{10, 5, 0} * m)
-                                            .with_vel(vec3{-20, 2, 0} * m / s)
-                                            .with_mass(3.0 * kg)
-                                            .with_mesh(missile_mesh)
+            auto rigid = w.get_rigid(handle);
+            if (!rigid) co_return target;
+
+            auto *obj = *rigid;
+            auto to_target = target - obj->pos();
+            auto dist = to_target.norm();
+
+            if (dist < 2.0 * m || collided)
+            {
+                auto _ = w.remove_rigid(handle);
+                hide(gfx);
+                spawn_debris(self, obj->pos(), debris_count, 8.0, 9.0, debris_size, debris_color);
+                co_return obj->pos();
+            }
+
+            auto desired_vel = (to_target / dist) * desired_speed;
+            auto vel_error = desired_vel - obj->vel();
+            auto correction_factor = time_s * corrective_accel_factor;
+
+            obj->apply_acceleration(vel_error * correction_factor);
+        }
+    }
+
+    /// Launch a guided cruise missile from `origin` toward `target`.
+    /// Composes object creation + guide_to_target sub-task.
+    /// Returns the impact position.
+    static task<vec3<si::metre>>
+    launch_guided(app *self, vec3<si::metre> origin, vec3<si::metre> target,
+                  vec3<si::metre / si::second> initial_vel = vec3{0, 0, 0} * si::metre / si::second,
+                  bool explode_on_impact = false)
+    {
+        using namespace mp_units::si::unit_symbols;
+        auto &w = self->world();
+
+        auto mmesh = mesh::box(vec3{0.6, 0.15, 0.15} * m);
+
+        auto mh = w.create_rigid(object_desc::dynam()
+                                     .with_pos(origin)
+                                     .with_vel(initial_vel)
+                                     .with_mass(2.0 * kg)
+                                     .with_mesh(mmesh)
+                                     .with_restitution(0.1)
+                                     .with_friction(0.3));
+        auto *gfx = self->add_object(mh, {0.8f, 0.3f, 0.1f});
+
+        // Delegate steering to a nested sub-task
+        co_return co_await guide_to_target(self, mh, gfx, target, 20, 0.15f, {0.95f, 0.5f, 0.1f},
+                                           true);
+    }
+
+    /// Fire-and-forget guided sub-munition (spawned via add_task).
+    static task<> submunition(app *self, vec3<si::metre> origin, vec3<si::metre> target,
+                              vec3<si::metre / si::second> initial_vel, Color3 body_color)
+    {
+        using namespace mp_units::si::unit_symbols;
+        auto &w = self->world();
+
+        auto mmesh = mesh::box(vec3{0.4, 0.1, 0.1} * m);
+
+        auto mh = w.create_rigid(object_desc::dynam()
+                                     .with_pos(origin)
+                                     .with_vel(initial_vel)
+                                     .with_mass(1.0 * kg)
+                                     .with_mesh(mmesh)
+                                     .with_restitution(0.1)
+                                     .with_friction(0.3));
+        auto *gfx = self->add_object(mh, body_color);
+
+        // Reuse guide_to_target — even fire-and-forget tasks compose sub-tasks
+        co_await guide_to_target(self, mh, gfx, target, 12, 0.12f, {0.85f, 0.2f, 0.05f});
+    }
+
+    /// MIRV strike: launch carrier upward, split at apex into guided sub-munitions.
+    /// Sub-munitions are spawned as independent fire-and-forget tasks via add_task.
+    static task<> mirv_strike(app *self, vec3<si::metre> launch_pos, vec3<si::metre> target_a,
+                              vec3<si::metre> target_b, vec3<si::metre> target_c)
+    {
+        using namespace mp_units::si::unit_symbols;
+        auto &w = self->world();
+
+        // Launch carrier rocket upward
+        auto carrier_mesh = mesh::box(vec3{0.5, 1.2, 0.5} * m);
+        auto carrier_h = w.create_rigid(object_desc::dynam()
+                                            .with_pos(launch_pos)
+                                            .with_vel(vec3{0, 20, 0} * m / s)
+                                            .with_mass(5.0 * kg)
+                                            .with_mesh(carrier_mesh)
                                             .with_restitution(0.1)
                                             .with_friction(0.3));
-        auto *missile_gfx = self->add_object(missile_h, {0.65f, 0.12f, 0.08f});
+        auto *carrier_gfx = self->add_object(carrier_h, {0.4f, 0.4f, 0.5f});
 
-        // --- Phase 4: Missile impact ---
-        (void) co_await wait_for_collision(missile_h);
+        // Wait for apex — vertical velocity flips sign
+        while (true)
+        {
+            co_await next_frame{};
+            auto rigid = w.get_rigid(carrier_h);
+            if (!rigid) co_return;
+            if ((*rigid)->vel().y() <= 0 * m / s) break;
+        }
 
-        auto missile_pos = (*w.get_rigid(missile_h))->pos();
-        auto _ = w.remove_rigid(missile_h);
-        hide(missile_gfx);
+        // Remove carrier at apex
+        auto apex_pos = (*w.get_rigid(carrier_h))->pos();
+        auto _ = w.remove_rigid(carrier_h);
+        hide(carrier_gfx);
 
-        spawn_debris(self, missile_pos, 24, 9.0, 10.0, 0.18f, {0.85f, 0.2f, 0.05f});
+        // Flash at split point
+        spawn_debris(self, apex_pos, 6, 3.0, 2.0, 0.06f, {1.0f, 0.9f, 0.3f});
+
+        // Spawn three independent sub-munitions — each is its own coroutine
+        w.add_task(
+            submunition(self, apex_pos, target_a, vec3{0, -2, -18} * m / s, {0.9f, 0.15f, 0.05f}));
+        w.add_task(
+            submunition(self, apex_pos, target_b, vec3{0, -2, 18} * m / s, {0.85f, 0.25f, 0.1f}));
+        w.add_task(
+            submunition(self, apex_pos, target_c, vec3{-18, -2, 0} * m / s, {0.95f, 0.1f, 0.0f}));
+
+        // Let sub-munitions play out before scene continues
+        co_await wait_for(3.0 * s);
+    }
+
+    // -----------------------------------------------------------------------
+    // Main scene — reads like a screenplay, each phase is a single co_await.
+    // -----------------------------------------------------------------------
+    static task<> scene(app *self)
+    {
+        using namespace mp_units::si::unit_symbols;
+        auto &track = self->cam().move_track();
+
+        // --- Phase 1: Mortar barrage from the bunker toward the target wall ---
+        //     Each grenade is a sub-task returning its detonation position.
+        track.append(
+            kf::make_pos(fvec3{-5, 20, -50} * m).look_at(fvec3{2, 8, 0} * m).transition(1.5f * s));
+        co_await wait_for(1.5 * s);
+
+        auto crater1 =
+            co_await throw_grenade(self, vec3{-10, 3.5, 0} * m, vec3{12, 10, 2} * m / s, 2.2 * s);
+        std::println("Grenade 1 crater at: {}", crater1);
+
+        // Pan toward missile area while grenade 2 flies
+        track.append(
+            kf::make_pos(fvec3{12, 12, -40} * m).look_at(fvec3{5, 4, 0} * m).transition(3.5f * s));
+
+        auto crater2 = co_await throw_grenade(self, vec3{-10, 2.5, 0} * m,
+                                              vec3{14, 10.4, -1} * m / s, 2.1 * s);
+        std::println("Grenade 2 crater at: {}", crater2);
+
+        // --- Phase 2: Guided cruise missile retaliates ---
+        //     Targets the bunker that fired the grenades.
+        //     launch_guided internally co_awaits guide_to_target (nested sub-task).
+        track.append(
+            kf::make_pos(fvec3{0, 16, -42} * m).look_at(fvec3{0, 3, 0} * m).transition(2.0f * s));
+        co_await wait_for(1.0 * s);
+
+        auto bunker_pos = vec3{-10.0, 1.5, 0.0} * m;
+        auto impact = co_await launch_guided(self, vec3{14, 5, 0} * m, bunker_pos,
+                                             vec3{0, 20, 0} * m / s, true);
+        std::println("Missile impact at: {}", impact);
+
+        // --- Phase 3: MIRV strike finishing off the bunker area ---
+        //     Carrier splits into 3 independently guided sub-munitions
+        //     spawned as fire-and-forget tasks via world().add_task().
+        track.append(
+            kf::make_pos(fvec3{0, 20, -55} * m).look_at(fvec3{0, 15, 0} * m).transition(2.0f * s));
+        track.append(
+            kf::make_pos(fvec3{0, 30, -50} * m).look_at(fvec3{0, 10, 0} * m).transition(3.0f * s));
+        track.append(
+            kf::make_pos(fvec3{0, 22, -50} * m).look_at(fvec3{0, 3, 0} * m).transition(2.0f * s));
+        track.append(
+            kf::make_pos(fvec3{0, 25, -55} * m).look_at(fvec3{0, 0, 0} * m).transition(3.0f * s));
+        co_await wait_for(1.5 * s);
+
+        co_await mirv_strike(self, vec3{12, 1, -12} * m, vec3{-12, 1.5, 2} * m,
+                             vec3{-8, 1.5, -2} * m, vec3{-10, 1.5, 0} * m);
     }
 };
 

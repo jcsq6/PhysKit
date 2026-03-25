@@ -59,8 +59,6 @@ class world_base
         detail::dynamic_bvh::node_handle broad_handle{};
     };
 
-    using task_id = detail::arena<task>::handle::id_type;
-
 public:
     explicit world_base(const world_desc &desc) : M_gravity(desc.gravity()) {}
     world_base(const world_base &) = delete;
@@ -99,7 +97,7 @@ public:
 
     [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
 
-    void add_task(task t) { M_task_handler.add_task(std::move(t), *this, {}); }
+    void add_task(task<> t) { M_task_handler.add_task(std::move(t), *this, {}); }
 
     void step(quantity<si::second> dt)
     {
