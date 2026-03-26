@@ -6,7 +6,6 @@
 
 #ifndef PHYSKIT_IMPORT_STD
 #include <cstdlib>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -14,7 +13,6 @@
 #include <utility>
 #endif
 
-#include "detail/magnum_headers.h"
 #include <GLFW/glfw3.h>
 #ifndef PHYSKIT_MODULES
 #include <mp-units/framework.h>
@@ -441,11 +439,12 @@ GRAPHICS_EXPORT namespace graphics
         /// @return A shared pointer to the GL::Mesh corresponding to the given physkit::mesh.
         std::shared_ptr<GL::Mesh> get_mesh(const physkit::mesh &phys_mesh)
         {
-            if (auto it = M_phys_mesh_map.find(&phys_mesh); it != M_phys_mesh_map.end())
+            auto shared = phys_mesh.ptr();
+            if (auto it = M_phys_mesh_map.find(shared); it != M_phys_mesh_map.end())
                 return it->second;
-            return M_phys_mesh_map
-                .emplace(&phys_mesh, std::make_shared<GL::Mesh>(to_magnum_mesh(phys_mesh)))
-                .first->second;
+            auto mesh = std::make_shared<GL::Mesh>(to_magnum_mesh(phys_mesh));
+            M_phys_mesh_map[std::move(shared)] = mesh;
+            return mesh;
         }
 
         /// @brief Add a physics object to the scene with the specified color. This method will
@@ -458,16 +457,8 @@ GRAPHICS_EXPORT namespace graphics
         {
             auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
             auto &obj = phys_obj->obj();
-            std::shared_ptr<GL::Mesh> mesh;
-            if (auto it = M_phys_mesh_map.find(&obj.mesh()); it == M_phys_mesh_map.end())
-                mesh = M_phys_mesh_map
-                           .emplace(&obj.mesh(),
-                                    std::make_shared<GL::Mesh>(to_magnum_mesh(obj.mesh())))
-                           .first->second;
-            else
-                mesh = it->second;
 
-            internal_add_obj(phys_obj, std::move(mesh), color);
+            internal_add_obj(phys_obj, get_mesh(obj.mesh()), color);
 
             M_physics_objs.push_back(phys_obj);
             return phys_obj;
@@ -488,9 +479,9 @@ GRAPHICS_EXPORT namespace graphics
                 .transform(
                     [&](auto obj)
                     {
-                        if (auto it = M_phys_mesh_map.find(&obj->mesh());
+                        if (auto it = M_phys_mesh_map.find(obj->mesh_ptr());
                             it == M_phys_mesh_map.end())
-                            M_phys_mesh_map.emplace(&obj->mesh(), mesh);
+                            M_phys_mesh_map[obj->mesh_ptr()] = mesh;
                         else if (it->second != mesh)
                             throw std::runtime_error(
                                 "graphics_app::add_object: provided mesh does not match "
@@ -738,7 +729,8 @@ GRAPHICS_EXPORT namespace graphics
         std::unique_ptr<physkit::world_base> M_world;
         physkit::stepper M_stepper;
         camera M_cam;
-        std::unordered_map<const physkit::mesh *, std::shared_ptr<GL::Mesh>> M_phys_mesh_map;
+        std::unordered_map<std::shared_ptr<const physkit::mesh>, std::shared_ptr<GL::Mesh>>
+            M_phys_mesh_map;
         std::unordered_map<std::shared_ptr<GL::Mesh>, instanced_drawables *> M_mesh_drawables;
         std::vector<physics_obj *> M_physics_objs;
         std::unordered_map<Key, key_state> M_keys;

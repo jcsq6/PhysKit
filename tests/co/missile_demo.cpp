@@ -174,7 +174,6 @@ private:
         while (true)
         {
             auto res = co_await after_any{next_frame{}, wait_for_collision{.object = handle}};
-            // auto dt = co_await next_frame{};
             auto rigid = w.get_rigid(handle);
             auto *obj = *rigid;
             if (!rigid) co_return target;
@@ -254,7 +253,7 @@ private:
         auto &w = self->world();
 
         // Launch carrier rocket upward
-        auto carrier_mesh = mesh::box(vec3{0.5, 1.2, 0.5} * m);
+        auto carrier_mesh = mesh::box(vec3{0.25, .75, 0.25} * m);
         auto carrier_h = w.create_rigid(object_desc::dynam()
                                             .with_pos(launch_pos)
                                             .with_vel(vec3{0, 20, 0} * m / s)

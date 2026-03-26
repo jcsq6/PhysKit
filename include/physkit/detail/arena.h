@@ -24,9 +24,10 @@ template <typename T> struct arena
 {
     struct slot
     {
-        T value;
+        std::optional<T> value;
         std::uint16_t gen;
-        bool available;
+
+        [[nodiscard]] bool available() const { return !value.has_value(); }
     };
 
     class handle
@@ -67,15 +68,13 @@ template <typename T> struct arena
     {
         if (free.empty())
         {
-            slots.push_back(
-                {.value = std::forward<decltype(value)>(value), .gen = 0, .available = false});
+            slots.push_back({.value = std::move(value), .gen = 0});
             return handle{static_cast<std::uint32_t>(slots.size() - 1), 0, {}};
         }
 
         auto idx = free.top();
         free.pop();
-        slots[idx].value = std::forward<decltype(value)>(value);
-        slots[idx].available = false;
+        slots[idx].value.emplace(std::move(value));
         return handle{idx, slots[idx].gen, {}};
     }
 
@@ -90,8 +89,7 @@ template <typename T> struct arena
     {
         assert(h.index() < slots.size());
         auto &slot = slots[h.index()];
-        if (slot.gen != h.generation() || slot.available) return std::nullopt;
-        slot.available = true;
+        if (slot.gen != h.generation() || slot.available()) return std::nullopt;
         slot.gen++;
         free.push(h.index());
         return std::move(slot.value);
@@ -101,8 +99,9 @@ template <typename T> struct arena
     {
         assert(h.index() < self.slots.size());
         auto &slot = self.slots[h.index()];
-        if (slot.gen != h.generation() || slot.available) return decltype(&slot.value)(nullptr);
-        return &slot.value;
+        if (slot.gen != h.generation() || slot.available())
+            return decltype(&(*slot.value))(nullptr);
+        return &(*slot.value);
     }
 
     auto &get_slot(this auto &&self, std::uint32_t idx)

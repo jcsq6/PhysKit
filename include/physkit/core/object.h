@@ -122,6 +122,7 @@ public:
     }
 
     [[nodiscard]] const struct mesh &mesh() const { return *M_mesh; }
+    [[nodiscard]] const std::shared_ptr<const struct mesh> &mesh_ptr() const { return M_mesh; }
 
     [[nodiscard]] body_type type() const { return M_type; }
     [[nodiscard]] bool is_dynamic() const { return M_type == body_type::dynam; }

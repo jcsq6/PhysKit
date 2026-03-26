@@ -42,6 +42,12 @@ class awaiter
 public:
     awaiter(task_promise_base &promise) : M_promise(promise) {}
 
+    auto await_resume(this auto &&self)
+    {
+        self.promise().check_rethrow();
+        return self.on_resume();
+    }
+
 protected:
     [[nodiscard]] task_promise_base &promise() const { return M_promise; }
     [[nodiscard]] task_handler &handler() const;
@@ -64,7 +70,9 @@ concept awaiter_t = requires(Awaiter aw, std::coroutine_handle<task_promise_base
     { aw.await_ready() } -> std::convertible_to<bool>;
     { aw.await_suspend(handle) };
     { aw.await_resume() };
-};
+} && (!std::derived_from<Awaiter, detail::awaiter> || requires(Awaiter aw) {
+                        { aw.on_resume() };
+                    });
 
 template <typename Awaitable>
 concept awaitable = requires(task_promise_base &p, Awaitable &&aw) {
@@ -99,7 +107,7 @@ struct task_promise_base
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     final_awaiter final_suspend() noexcept { return {*this}; }
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    void unhandled_exception() { throw; } // TODO: change on multithread support
+    void unhandled_exception() { exception = std::current_exception(); }
 
     template <awaitable Awaitable>
     detail::awaitable_awaiter_t<Awaitable> await_transform(Awaitable &&request)
@@ -107,12 +115,18 @@ struct task_promise_base
 
     auto await_transform(auto &&other) = delete;
 
+    void check_rethrow() const
+    {
+        if (exception) std::rethrow_exception(exception);
+    }
+
     world_base *world{};
     task_id id = detail::arena<task_id>::handle::null;
 
     std::coroutine_handle<> root_leaf;
     std::coroutine_handle<> *root_leaf_ptr = &root_leaf;
     std::coroutine_handle<> continuation;
+    std::exception_ptr exception;
 };
 
 inline bool awaiter::has_world() const { return M_promise.world != nullptr; }
@@ -336,6 +350,7 @@ public:
             if (it == M_object_waiters.end()) return;
             for (auto [tid, a, b] : it->second.coll_exit)
             {
+                // TODO: clean up stale waiters before this
                 if (!M_tasks.get(detail::arena<task<>>::handle::from_id(tid))) continue;
                 if (a) *a = obj_a;
                 if (b) *b = obj_b;

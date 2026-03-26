@@ -709,8 +709,8 @@ public:
                 (std::ranges::for_each(vecs.slots,
                                        [&](auto &s)
                                        {
-                                           if (!s.available)
-                                               s.value.build_jacobian(dt, M_jacobian_rows);
+                                           if (!s.available())
+                                               s.value->build_jacobian(dt, M_jacobian_rows);
                                        }),
                  ...);
             },

@@ -29,7 +29,7 @@ struct wait_for
         void await_suspend(std::coroutine_handle<> handle)
         { handler().schedule_task_after(promise().id, duration); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
-        mp_units::quantity<mp_units::si::second> await_resume() const noexcept
+        mp_units::quantity<mp_units::si::second> on_resume() const noexcept
         { return handler().time() - start_time; }
     };
 
@@ -51,7 +51,7 @@ struct wait_until
         void await_suspend(std::coroutine_handle<> handle)
         { handler().schedule_task_at(promise().id, time); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
-        mp_units::quantity<mp_units::si::second> await_resume() const noexcept
+        mp_units::quantity<mp_units::si::second> on_resume() const noexcept
         { return handler().time() - start_time; }
     };
 
@@ -73,7 +73,7 @@ struct next_frame
         [[nodiscard]] bool await_ready() noexcept { return false; }
         void await_suspend(std::coroutine_handle<> /**/) { handler().queue_task(promise().id); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
-        mp_units::quantity<mp_units::si::second> await_resume() const noexcept
+        mp_units::quantity<mp_units::si::second> on_resume() const noexcept
         { return handler().time() - start_time; }
     };
 };
@@ -134,7 +134,7 @@ struct wait_for_collision
         void await_suspend(std::coroutine_handle<> /*handle*/)
         { handler().add_collision_waiter(object.id(), promise().id, &result); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
-        result_type await_resume() const noexcept
+        result_type on_resume() const noexcept
         {
             if (result.a == object.index())
                 return {.other = world_base::handle::from_id(result.b),
@@ -165,7 +165,7 @@ struct wait_for_separation
         void await_suspend(std::coroutine_handle<> /*handle*/)
         { handler().add_collision_exit_waiter(object.id(), promise().id, &result_a, &result_b); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
-        world_base::handle await_resume() const noexcept
+        world_base::handle on_resume() const noexcept
         { return world_base::handle::from_id((result_a == object.id()) ? result_b : result_a); }
     };
 
@@ -235,27 +235,41 @@ struct after_all
     {
         awaiter_type(detail::task_promise_base &promise, after_all aw)
             : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
+        { std::ranges::fill(child_ids, detail::arena<task<>>::handle::null); }
+
+        awaiter_type(const awaiter_type &) = delete;
+        awaiter_type &operator=(const awaiter_type &) = delete;
+        awaiter_type(awaiter_type &&) = delete;
+        awaiter_type &operator=(awaiter_type &&) = delete;
+
+        ~awaiter_type()
         {
+            for (auto id : child_ids)
+                if (id != detail::arena<task<>>::handle::null) cancel_task(id);
         }
 
         std::tuple<detail::awaitable_result_t<Awaitables>...> results;
         std::tuple<Awaitables...> awaitables;
-        std::shared_ptr<detail::completion_barrier> barrier; // TODO: memory optimization
+        std::optional<detail::completion_barrier> barrier;
+        std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
 
         [[nodiscard]] bool await_ready() const noexcept { return false; }
 
         void await_suspend(std::coroutine_handle<> /*handle*/)
         {
-            barrier = std::make_shared<detail::completion_barrier>(sizeof...(Awaitables),
-                                                                   promise().id, &handler());
+            barrier.emplace(sizeof...(Awaitables), promise().id, &handler());
             spawn_children(std::index_sequence_for<Awaitables...>{});
         }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
-        auto await_resume() const noexcept { return std::move(results); }
+        auto on_resume() const noexcept { return std::move(results); }
 
     private:
         template <std::size_t... Is> void spawn_children(std::index_sequence<Is...> /*unused*/)
-        { (add_task_eager(wrap_awaitable<Is>(std::get<Is>(std::move(awaitables)))), ...); }
+        {
+            ((child_ids[Is] =
+                  add_task_eager(wrap_awaitable<Is>(std::get<Is>(std::move(awaitables))))),
+             ...);
+        }
 
         template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
         {
@@ -281,25 +295,36 @@ struct after_any
     {
         awaiter_type(detail::task_promise_base &promise, after_any aw)
             : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
+        { std::ranges::fill(child_ids, detail::arena<task<>>::handle::null); }
+
+        awaiter_type(const awaiter_type &) = delete;
+        awaiter_type &operator=(const awaiter_type &) = delete;
+        awaiter_type(awaiter_type &&) = delete;
+        awaiter_type &operator=(awaiter_type &&) = delete;
+
+        ~awaiter_type()
         {
+            for (auto id : child_ids)
+                if (id != detail::arena<task<>>::handle::null) cancel_task(id);
         }
 
         std::variant<detail::awaitable_result_t<Awaitables>...> result;
         std::tuple<Awaitables...> awaitables;
         std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
-        std::shared_ptr<detail::race_barrier> barrier; // TODO: memory optimization
+        std::optional<detail::race_barrier> barrier;
 
         [[nodiscard]] bool await_ready() const noexcept { return false; }
 
         void await_suspend(std::coroutine_handle<> /*handle*/)
         {
-            barrier = std::make_shared<detail::race_barrier>(false, promise().id, &handler());
+            barrier.emplace(false, promise().id, &handler());
             spawn_children(std::index_sequence_for<Awaitables...>{});
         }
 
-        auto await_resume()
+        auto on_resume()
         {
-            for (auto id : child_ids) cancel_task(id);
+            for (auto id : child_ids)
+                if (id != detail::arena<task<>>::handle::null) cancel_task(id);
             return std::move(result);
         }
 
