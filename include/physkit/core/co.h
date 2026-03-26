@@ -47,6 +47,10 @@ protected:
     [[nodiscard]] task_handler &handler() const;
     [[nodiscard]] world_base &world() const;
 
+    task_id add_task(task<> t);
+    task_id add_task_eager(task<> t);
+    void cancel_task(task_id id);
+
     [[nodiscard]] bool has_world() const;
 
 private:
@@ -56,12 +60,11 @@ private:
 
 template <typename Awaitable> using awaitable_awaiter_t = Awaitable::awaiter_type;
 template <typename Awaiter>
-concept awaiter_t = std::derived_from<Awaiter, awaiter> &&
-                    requires(Awaiter aw, std::coroutine_handle<task_promise_base> handle) {
-                        { aw.await_ready() } -> std::convertible_to<bool>;
-                        { aw.await_suspend(handle) };
-                        { aw.await_resume() };
-                    };
+concept awaiter_t = requires(Awaiter aw, std::coroutine_handle<task_promise_base> handle) {
+    { aw.await_ready() } -> std::convertible_to<bool>;
+    { aw.await_suspend(handle) };
+    { aw.await_resume() };
+};
 
 template <typename Awaitable>
 concept awaitable = requires(task_promise_base &p, Awaitable &&aw) {
@@ -102,8 +105,6 @@ struct task_promise_base
     detail::awaitable_awaiter_t<Awaitable> await_transform(Awaitable &&request)
     { return {*this, std::forward<Awaitable>(request)}; }
 
-    template <typename T> task_awaiter<T> await_transform(task<T> &&t);
-
     auto await_transform(auto &&other) = delete;
 
     world_base *world{};
@@ -138,6 +139,7 @@ template <typename T> class task
 {
 public:
     using promise_type = detail::task_promise<T>;
+    using awaiter_type = detail::task_awaiter<T>;
 
     explicit task(std::coroutine_handle<promise_type> h) : M_handle(h)
     {
@@ -202,6 +204,8 @@ namespace detail
 
 template <typename T> struct task_awaiter
 {
+    task_awaiter(detail::task_promise_base & /*unused*/, task<T> t) : t(std::move(t)) {}
+
     task<T> t;
 
     [[nodiscard]] bool await_ready() const noexcept { return t.done(); }
@@ -226,9 +230,6 @@ template <typename T> struct task_awaiter
     T await_resume() const { return t.get_result(); }
 };
 
-template <typename T> task_awaiter<T> task_promise_base::await_transform(task<T> &&t)
-{ return {std::move(t)}; }
-
 template <typename T> task<T> task_promise<T>::get_return_object()
 { return task<T>{std::coroutine_handle<task_promise<T>>::from_promise(*this)}; }
 
@@ -249,14 +250,17 @@ public:
     { schedule_task_at(id, M_current_time + delay); }
 
     // Queue task for execution in the next frame
-    void queue_task(const handle_id_t task_id) { M_pending_tasks.push_back(task_id); }
+    void queue_task(const task_id id) { M_pending_tasks.push(id); }
+
+    // Queue task for immediate execution within the current process_tasks call
+    void queue_task_immediate(const task_id id) { M_immediate_tasks.push(id); }
 
     [[nodiscard]] auto time() const { return M_current_time; }
 
     void increment(const mp_units::quantity<mp_units::si::second> dt, passkey<world_base> /*key*/)
     { M_current_time += dt; }
 
-    void add_task(task<> t, world_base &world, passkey<world_base> /*key*/)
+    task_id add_task(task<> t, world_base &world, passkey<world_base, detail::awaiter> /*key*/)
     {
         auto handle = M_tasks.add(std::move(t));
         auto id = handle.id();
@@ -265,17 +269,43 @@ public:
         allocated_task->set_id(id, {});
         allocated_task->set_world(world, {});
 
-        M_pending_tasks.push_back(id);
+        M_pending_tasks.push(id);
+        return id;
+    }
+
+    // Add and immediately start a task (runs to its first suspension point)
+    task_id add_task_eager(task<> t, world_base &world,
+                           passkey<world_base, detail::awaiter> /*key*/)
+    {
+        auto handle = M_tasks.add(std::move(t));
+        auto id = handle.id();
+
+        auto *allocated_task = M_tasks.get(handle);
+        allocated_task->set_id(id, {});
+        allocated_task->set_world(world, {});
+
+        if (allocated_task->resume({})) M_tasks.remove(handle);
+
+        return id;
+    }
+
+    void cancel_task(const task_id id, passkey<world_base, detail::awaiter> /*key*/)
+    {
+        auto handle = detail::arena<task<>>::handle::from_id(id);
+        M_tasks.remove(handle);
     }
 
     void process_tasks(passkey<world_base> /*key*/)
     {
-        M_pending_swap.clear();
-        M_pending_swap.swap(M_pending_tasks);
+        M_pending_tasks.swap_and_clear();
 
-        for (auto id : M_pending_swap) resume_task(id);
+        drain_immediate();
+
+        for (auto id : M_pending_tasks.swap) resume_task(id);
 
         while (auto t = next_task()) resume_task(*t);
+
+        drain_immediate();
     }
 
     void on_collision(const narrow_phase::manifold_info &man_info, handle_id_t obj_a,
@@ -285,11 +315,13 @@ public:
         {
             auto it = M_object_waiters.find(object_id);
             if (it == M_object_waiters.end()) return;
-            for (auto [task, result_storage] : it->second.coll_enter)
+            for (auto [tid, result_storage] : it->second.coll_enter)
             {
+                if (!M_tasks.get(detail::arena<task<>>::handle::from_id(tid))) continue;
                 if (result_storage) *result_storage = man_info;
-                queue_task(task);
+                queue_task_immediate(tid);
             }
+            it->second.coll_enter.clear();
         };
 
         on_obj(obj_a);
@@ -302,12 +334,14 @@ public:
         {
             auto it = M_object_waiters.find(object_id);
             if (it == M_object_waiters.end()) return;
-            for (auto [task, a, b] : it->second.coll_exit)
+            for (auto [tid, a, b] : it->second.coll_exit)
             {
+                if (!M_tasks.get(detail::arena<task<>>::handle::from_id(tid))) continue;
                 if (a) *a = obj_a;
                 if (b) *b = obj_b;
-                queue_task(task);
+                queue_task_immediate(tid);
             }
+            it->second.coll_exit.clear();
         };
 
         on_obj(obj_a);
@@ -343,14 +377,36 @@ private:
         std::vector<collision_exit_res> coll_exit;
     };
 
+    struct swappable_queue
+    {
+        std::vector<handle_id_t> main;
+        std::vector<handle_id_t> swap;
+
+        void push(handle_id_t id) { main.push_back(id); }
+        void swap_and_clear()
+        {
+            swap.clear();
+            swap.swap(main);
+        }
+    };
+
     detail::arena<task<>> M_tasks;
-    std::vector<handle_id_t> M_pending_tasks;
-    std::vector<handle_id_t> M_pending_swap;
+    swappable_queue M_pending_tasks;
+    swappable_queue M_immediate_tasks;
     absl::flat_hash_map<handle_id_t, object_waiter> M_object_waiters;
 
     std::vector<std::pair<mp_units::quantity<mp_units::si::second>, handle_id_t>>
         M_timer_heap; // TODO: memory management
     mp_units::quantity<mp_units::si::second> M_current_time{0.0 * mp_units::si::second};
+
+    void drain_immediate()
+    {
+        while (!M_immediate_tasks.main.empty())
+        {
+            M_immediate_tasks.swap_and_clear();
+            for (auto id : M_immediate_tasks.swap) resume_task(id);
+        }
+    }
 
     void resume_task(handle_id_t id)
     {
@@ -370,5 +426,10 @@ private:
         return t.second;
     }
 };
+
+inline task_id awaiter::add_task(task<> t) { return handler().add_task(std::move(t), world(), {}); }
+inline task_id awaiter::add_task_eager(task<> t)
+{ return handler().add_task_eager(std::move(t), world(), {}); }
+inline void awaiter::cancel_task(task_id id) { handler().cancel_task(id, {}); }
 } // namespace detail
 } // namespace physkit

@@ -154,45 +154,40 @@ private:
     /// Steer a rigid body toward `target` each frame.
     static task<vec3<si::metre>> guide_to_target(app *self, world_base::handle handle, gfx_obj *gfx,
                                                  vec3<si::metre> target, int debris_count,
-                                                 float debris_size, Color3 debris_color,
-                                                 bool explode_on_impact = false)
+                                                 float debris_size, Color3 debris_color)
     {
         using namespace mp_units::si::unit_symbols;
         auto &w = self->world();
-
-        bool collided = false;
-        if (explode_on_impact)
-            w.add_task(
-                [&collided, handle](this auto) -> task<>
-                {
-                    co_await wait_for_collision{.object = handle};
-                    collided = true;
-                }());
 
         auto time_s = 0.0 * s;
         constexpr auto corrective_accel_factor = 5 / s / s;
         constexpr auto desired_accel_delta = 20 * m / s / s;
         auto desired_speed = (*w.get_rigid(handle))->vel().norm();
+
+        auto end = [&](auto &obj)
+        {
+            auto _ = w.remove_rigid(handle);
+            hide(gfx);
+            spawn_debris(self, obj.pos(), debris_count, 8.0, 9.0, debris_size, debris_color);
+            return obj.pos();
+        };
         while (true)
         {
-            auto dt = co_await next_frame{};
-            time_s += dt;
-            desired_speed += desired_accel_delta * dt;
-
+            auto res = co_await after_any{next_frame{}, wait_for_collision{.object = handle}};
+            // auto dt = co_await next_frame{};
             auto rigid = w.get_rigid(handle);
-            if (!rigid) co_return target;
-
             auto *obj = *rigid;
+            if (!rigid) co_return target;
+            if (res.index() == 1) co_return end(*obj);
+
+            auto dt = std::get<0>(res);
+            time_s += dt;
+
+            desired_speed += desired_accel_delta * dt;
             auto to_target = target - obj->pos();
             auto dist = to_target.norm();
 
-            if (dist < 2.0 * m || collided)
-            {
-                auto _ = w.remove_rigid(handle);
-                hide(gfx);
-                spawn_debris(self, obj->pos(), debris_count, 8.0, 9.0, debris_size, debris_color);
-                co_return obj->pos();
-            }
+            if (dist < 2.0 * m) co_return end(*obj);
 
             auto desired_vel = (to_target / dist) * desired_speed;
             auto vel_error = desired_vel - obj->vel();
@@ -225,8 +220,7 @@ private:
         auto *gfx = self->add_object(mh, {0.8f, 0.3f, 0.1f});
 
         // Delegate steering to a nested sub-task
-        co_return co_await guide_to_target(self, mh, gfx, target, 20, 0.15f, {0.95f, 0.5f, 0.1f},
-                                           true);
+        co_return co_await guide_to_target(self, mh, gfx, target, 20, 0.15f, {0.95f, 0.5f, 0.1f});
     }
 
     /// Fire-and-forget guided sub-munition (spawned via add_task).
@@ -287,16 +281,12 @@ private:
         // Flash at split point
         spawn_debris(self, apex_pos, 6, 3.0, 2.0, 0.06f, {1.0f, 0.9f, 0.3f});
 
-        // Spawn three independent sub-munitions — each is its own coroutine
-        w.add_task(
-            submunition(self, apex_pos, target_a, vec3{0, -2, -18} * m / s, {0.9f, 0.15f, 0.05f}));
-        w.add_task(
-            submunition(self, apex_pos, target_b, vec3{0, -2, 18} * m / s, {0.85f, 0.25f, 0.1f}));
-        w.add_task(
-            submunition(self, apex_pos, target_c, vec3{-18, -2, 0} * m / s, {0.95f, 0.1f, 0.0f}));
-
-        // Let sub-munitions play out before scene continues
-        co_await wait_for(3.0 * s);
+        co_await after_all{submunition(self, apex_pos + vec3{0, 0, -.5} * m, target_a,
+                                       vec3{0, -2, -18} * m / s, {0.9f, 0.15f, 0.05f}),
+                           submunition(self, apex_pos + vec3{0, 0, .5} * m, target_b,
+                                       vec3{0, -2, 18} * m / s, {0.85f, 0.25f, 0.1f}),
+                           submunition(self, apex_pos + vec3{-.5, 0, 0} * m, target_c,
+                                       vec3{-18, -2, 0} * m / s, {0.95f, 0.1f, 0.0f})};
     }
 
     // -----------------------------------------------------------------------

@@ -187,8 +187,148 @@ struct wait_for_separation
 // threading...
 
 // --------- META ---------
-// TODO:
-// after_all(...tasks)
-// when_any(...tasks)
+
+namespace detail
+{
+struct completion_barrier
+{
+    std::atomic<std::size_t> remaining; // atomic to prepare for threading support
+    task_id parent;
+    task_handler *handler;
+
+    void arrive()
+    {
+        if (--remaining == 0) handler->queue_task_immediate(parent);
+    }
+};
+
+struct race_barrier
+{
+    std::atomic<bool> finished{false};
+    task_id parent;
+    task_handler *handler;
+
+    bool arrive()
+    {
+        bool expected = false;
+        if (finished.compare_exchange_strong(expected, true))
+        {
+            handler->queue_task_immediate(parent);
+            return true;
+        }
+        return false;
+    }
+};
+
+template <awaitable Awaitable>
+using awaitable_result_t = std::conditional_t<
+    std::is_void_v<decltype(std::declval<awaitable_awaiter_t<Awaitable>>().await_resume())>,
+    std::monostate, decltype(std::declval<awaitable_awaiter_t<Awaitable>>().await_resume())>;
+
+} // namespace detail
+
+template <detail::awaitable... Awaitables>
+    requires(sizeof...(Awaitables) > 1)
+struct after_all
+{
+    struct awaiter_type : detail::awaiter
+    {
+        awaiter_type(detail::task_promise_base &promise, after_all aw)
+            : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
+        {
+        }
+
+        std::tuple<detail::awaitable_result_t<Awaitables>...> results;
+        std::tuple<Awaitables...> awaitables;
+        std::shared_ptr<detail::completion_barrier> barrier; // TODO: memory optimization
+
+        [[nodiscard]] bool await_ready() const noexcept { return false; }
+
+        void await_suspend(std::coroutine_handle<> /*handle*/)
+        {
+            barrier = std::make_shared<detail::completion_barrier>(sizeof...(Awaitables),
+                                                                   promise().id, &handler());
+            spawn_children(std::index_sequence_for<Awaitables...>{});
+        }
+        // NOLINTNEXTLINE(modernize-use-nodiscard)
+        auto await_resume() const noexcept { return std::move(results); }
+
+    private:
+        template <std::size_t... Is> void spawn_children(std::index_sequence<Is...> /*unused*/)
+        { (add_task_eager(wrap_awaitable<Is>(std::get<Is>(std::move(awaitables)))), ...); }
+
+        template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
+        {
+            if constexpr (std::is_void_v<decltype(std::declval<detail::awaitable_awaiter_t<Aw>>()
+                                                      .await_resume())>)
+                co_await std::move(aw);
+            else
+                std::get<I>(results) = co_await std::move(aw);
+            barrier->arrive();
+        }
+    };
+
+    after_all(Awaitables &&...awaitables) : awaitables(std::move(awaitables)...) {}
+
+    std::tuple<Awaitables...> awaitables;
+};
+
+template <detail::awaitable... Awaitables>
+    requires(sizeof...(Awaitables) > 1)
+struct after_any
+{
+    struct awaiter_type : detail::awaiter
+    {
+        awaiter_type(detail::task_promise_base &promise, after_any aw)
+            : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
+        {
+        }
+
+        std::variant<detail::awaitable_result_t<Awaitables>...> result;
+        std::tuple<Awaitables...> awaitables;
+        std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
+        std::shared_ptr<detail::race_barrier> barrier; // TODO: memory optimization
+
+        [[nodiscard]] bool await_ready() const noexcept { return false; }
+
+        void await_suspend(std::coroutine_handle<> /*handle*/)
+        {
+            barrier = std::make_shared<detail::race_barrier>(false, promise().id, &handler());
+            spawn_children(std::index_sequence_for<Awaitables...>{});
+        }
+
+        auto await_resume()
+        {
+            for (auto id : child_ids) cancel_task(id);
+            return std::move(result);
+        }
+
+    private:
+        template <std::size_t... Is> void spawn_children(std::index_sequence<Is...> /*unused*/)
+        {
+            (((child_ids[Is] =
+                   add_task_eager(wrap_awaitable<Is>(std::get<Is>(std::move(awaitables))))),
+              ...));
+        }
+
+        template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
+        {
+            if constexpr (std::is_void_v<decltype(std::declval<detail::awaitable_awaiter_t<Aw>>()
+                                                      .await_resume())>)
+            {
+                co_await std::move<Aw>(aw);
+                if (barrier->arrive()) result.template emplace<I>(std::monostate{});
+            }
+            else
+            {
+                auto res = co_await std::move(aw);
+                if (barrier->arrive()) result.template emplace<I>(std::move(res));
+            }
+        }
+    };
+
+    after_any(Awaitables &&...awaitables) : awaitables(std::move(awaitables)...) {}
+    std::tuple<Awaitables...> awaitables;
+};
 
 } // namespace physkit
