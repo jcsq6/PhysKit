@@ -85,15 +85,14 @@ public:
     void update(mp_units::quantity<mp_units::si::second> /*dt*/) override {}
 
 private:
-    // Hide a graphics object by scaling to zero.
-    // After remove_rigid(), sync() becomes a no-op so the transform persists.
-    static void hide(gfx_obj *obj) { obj->resetTransformation().scale({0, 0, 0}); }
-
-    static void spawn_debris(app *self, vec3<si::metre> origin, int count, double speed,
-                             double up_speed, float debris_size, Color3 base_color)
+    static task<void> spawn_debris(app *self, vec3<si::metre> origin, int count, double speed,
+                                   double up_speed, float debris_size, Color3 base_color)
     {
         using namespace mp_units::si::unit_symbols;
         auto dmesh = mesh::box(vec3{1, 1, 1} * debris_size * m);
+
+        std::vector<physics_obj *> debris_handles;
+        debris_handles.reserve(count);
 
         for (int i = 0; i < count; ++i)
         {
@@ -114,8 +113,12 @@ private:
 
             float t = static_cast<float>(i) / static_cast<float>(count);
             Color3 color{base_color[0] + (0.15f * t), base_color[1] + (0.1f * t), base_color[2]};
-            self->add_object(dh, color);
+            debris_handles.push_back(self->add_object(dh, color));
         }
+
+        co_await wait_for(3.0 * s);
+
+        for (auto *dh : debris_handles) delete dh;
     }
 
     // -----------------------------------------------------------------------
@@ -145,9 +148,8 @@ private:
         co_await wait_for(fuse);
 
         auto pos = (*w.get_rigid(gh))->pos();
-        auto _ = w.remove_rigid(gh);
-        hide(gfx);
-        spawn_debris(self, pos, 14, 7.0, 8.0, 0.12f, {0.9f, 0.45f, 0.1f});
+        delete gfx;
+        w.add_task(spawn_debris(self, pos, 14, 7.0, 8.0, 0.12f, {0.9f, 0.45f, 0.1f}));
         co_return pos;
     }
 
@@ -166,14 +168,14 @@ private:
 
         auto end = [&](auto &obj)
         {
-            auto _ = w.remove_rigid(handle);
-            hide(gfx);
-            spawn_debris(self, obj.pos(), debris_count, 8.0, 9.0, debris_size, debris_color);
+            delete gfx;
+            w.add_task(
+                spawn_debris(self, obj.pos(), debris_count, 8.0, 9.0, debris_size, debris_color));
             return obj.pos();
         };
         while (true)
         {
-            auto res = co_await after_any{next_frame{}, wait_for_collision{.object = handle}};
+            auto res = co_await wait_for_any{next_frame{}, wait_for_collision{.object = handle}};
             auto rigid = w.get_rigid(handle);
             auto *obj = *rigid;
             if (!rigid) co_return target;
@@ -274,18 +276,17 @@ private:
 
         // Remove carrier at apex
         auto apex_pos = (*w.get_rigid(carrier_h))->pos();
-        auto _ = w.remove_rigid(carrier_h);
-        hide(carrier_gfx);
+        delete carrier_gfx;
 
         // Flash at split point
-        spawn_debris(self, apex_pos, 6, 3.0, 2.0, 0.06f, {1.0f, 0.9f, 0.3f});
+        w.add_task(spawn_debris(self, apex_pos, 6, 3.0, 2.0, 0.06f, {1.0f, 0.9f, 0.3f}));
 
-        co_await after_all{submunition(self, apex_pos + vec3{0, 0, -.5} * m, target_a,
-                                       vec3{0, -2, -18} * m / s, {0.9f, 0.15f, 0.05f}),
-                           submunition(self, apex_pos + vec3{0, 0, .5} * m, target_b,
-                                       vec3{0, -2, 18} * m / s, {0.85f, 0.25f, 0.1f}),
-                           submunition(self, apex_pos + vec3{-.5, 0, 0} * m, target_c,
-                                       vec3{-18, -2, 0} * m / s, {0.95f, 0.1f, 0.0f})};
+        co_await wait_for_all{submunition(self, apex_pos + vec3{0, 0, -.5} * m, target_a,
+                                          vec3{0, -2, -18} * m / s, {0.9f, 0.15f, 0.05f}),
+                              submunition(self, apex_pos + vec3{0, 0, .5} * m, target_b,
+                                          vec3{0, -2, 18} * m / s, {0.85f, 0.25f, 0.1f}),
+                              submunition(self, apex_pos + vec3{-.5, 0, 0} * m, target_c,
+                                          vec3{-18, -2, 0} * m / s, {0.95f, 0.1f, 0.0f})};
     }
 
     // -----------------------------------------------------------------------

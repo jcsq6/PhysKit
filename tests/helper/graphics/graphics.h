@@ -5,6 +5,7 @@
 #ifndef GRAPHICS_IN_MODULE_IMPL
 
 #ifndef PHYSKIT_IMPORT_STD
+#include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <string>
@@ -63,31 +64,28 @@ GRAPHICS_EXPORT namespace graphics
     //     Vector3 M_absolute_position;
     // };
 
+    class graphics_app;
+
     class physics_obj : public gfx_obj
     {
     public:
-        explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent,
-                             physkit::world_base &world, physkit::world_base::handle handle)
-            : gfx_obj(&parent), M_world{&world}, M_handle{handle}
+        explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent, graphics_app &app,
+                             physkit::world_base::handle handle)
+            : gfx_obj(&parent), M_app{&app}, M_handle{handle}
         {
         }
+
+        ~physics_obj();
 
         [[nodiscard]] auto handle() const { return M_handle; }
 
-        physkit::object &obj() { return **M_world->get_rigid(M_handle); }
-        [[nodiscard]] const physkit::object &obj() const
-        { return **std::as_const(*M_world).get_rigid(M_handle); }
+        physkit::object &obj();
+        [[nodiscard]] const physkit::object &obj() const;
 
-        void sync()
-        {
-            if (auto res = M_world->get_rigid(M_handle))
-                resetTransformation()
-                    .rotate(to_magnum_quaternion<mp_units::one, float>(res.value()->orientation()))
-                    .translate(to_magnum_vector<mp_units::si::metre, float>(res.value()->pos()));
-        }
+        void sync();
 
     private:
-        physkit::world_base *M_world;
+        graphics_app *M_app;
         physkit::world_base::handle M_handle;
     };
 
@@ -121,6 +119,18 @@ GRAPHICS_EXPORT namespace graphics
             M_added = true;
         }
 
+        void remove_object(instanced_drawable &drawable)
+        {
+            auto *it = std::ranges::find(M_objects, &drawable);
+            if (it != M_objects.end())
+            {
+                auto index = std::distance(M_objects.begin(), it);
+                Containers::arrayRemove(M_instances, index);
+                Containers::arrayRemove(M_objects, index);
+                M_added = true;
+            }
+        }
+
     private:
         Containers::Array<instance_data> M_instances;
         Containers::Array<instanced_drawable *> M_objects;
@@ -137,7 +147,7 @@ GRAPHICS_EXPORT namespace graphics
     public:
         explicit instanced_drawable(std::derived_from<gfx_obj_base> auto &parent,
                                     instanced_drawables &group)
-            : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}
+            : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}, M_group{&group}
         { group.add_object(*this); }
 
         instanced_drawable(const instanced_drawable &) = delete;
@@ -150,10 +160,19 @@ GRAPHICS_EXPORT namespace graphics
 
         friend instanced_drawables;
 
-        virtual ~instanced_drawable() = default;
+        virtual ~instanced_drawable()
+        {
+            if (M_group != nullptr)
+            {
+                M_group->remove_object(*this);
+                M_group = nullptr;
+            }
+        }
 
     private:
         void draw(const Matrix4 &transformation, SceneGraph::Camera3D &camera) override {}
+
+        instanced_drawables *M_group;
     };
 
     inline void instanced_drawables::draw(const Matrix4 &transformation,
@@ -455,7 +474,7 @@ GRAPHICS_EXPORT namespace graphics
         /// @return A pointer to the created physics_obj instance.
         auto add_object(physkit::world_base::handle handle, Color3 color)
         {
-            auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
+            auto *phys_obj = new physics_obj{M_scene, *this, handle};
             auto &obj = phys_obj->obj();
 
             internal_add_obj(phys_obj, get_mesh(obj.mesh()), color);
@@ -486,7 +505,7 @@ GRAPHICS_EXPORT namespace graphics
                             throw std::runtime_error(
                                 "graphics_app::add_object: provided mesh does not match "
                                 "physkit::object mesh");
-                        auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
+                        auto *phys_obj = new physics_obj{M_scene, *this, handle};
 
                         internal_add_obj(phys_obj, std::move(mesh), color);
 
@@ -494,6 +513,19 @@ GRAPHICS_EXPORT namespace graphics
                         return phys_obj;
                     })
                 .value_or(nullptr);
+        }
+
+        void remove_object(physics_obj *obj, physkit::detail::passkey<physics_obj> /*key*/)
+        {
+            if (!M_world) return;
+
+            auto _ = M_world->remove_rigid(obj->handle());
+            auto it = std::ranges::find(M_physics_objs, obj);
+            if (it != M_physics_objs.end())
+            {
+                std::ranges::iter_swap(it, M_physics_objs.end() - 1);
+                M_physics_objs.pop_back();
+            }
         }
 
         /// @brief Add a graphics object to the scene with the specified color and shared mesh.
@@ -508,6 +540,7 @@ GRAPHICS_EXPORT namespace graphics
         }
 
         auto &world() { return *M_world; }
+        auto &world() const { return std::as_const(*M_world); }
 
         auto &physics_objects() const { return M_physics_objs; }
 
@@ -743,6 +776,20 @@ GRAPHICS_EXPORT namespace graphics
         bool M_grab_focus = false;
         bool M_testing = false;
     };
+
+    inline physkit::object &physics_obj::obj() { return **M_app->world().get_rigid(M_handle); }
+    inline const physkit::object &physics_obj::obj() const
+    { return **std::as_const(*M_app).world().get_rigid(M_handle); }
+
+    inline void physics_obj::sync()
+    {
+        if (auto res = M_app->world().get_rigid(M_handle))
+            resetTransformation()
+                .rotate(to_magnum_quaternion<mp_units::one, float>(res.value()->orientation()))
+                .translate(to_magnum_vector<mp_units::si::metre, float>(res.value()->pos()));
+    }
+
+    inline physics_obj::~physics_obj() { M_app->remove_object(this, {}); }
 
     namespace mesh_objs
     {

@@ -226,8 +226,44 @@ struct wait_for_separation
 
 // --------- STRUCTURAL ---------
 // TODO:
-// wait_until_destroyed(object)
 // threading...
+
+struct wait_until_destroyed
+{
+    struct awaiter_type : detail::awaiter
+    {
+        awaiter_type(detail::task_promise_base &promise, wait_until_destroyed aw)
+            : detail::awaiter(promise), object(aw.object)
+        {
+        }
+
+        ~awaiter_type()
+        {
+            if (is_suspended) handler().remove_destruction_waiter(object.id(), promise().id);
+        }
+
+        awaiter_type(const awaiter_type &) = delete;
+        awaiter_type &operator=(const awaiter_type &) = delete;
+        awaiter_type(awaiter_type &&) = delete;
+        awaiter_type &operator=(awaiter_type &&) = delete;
+
+        world_base::handle object;
+        bool is_suspended = false;
+
+        [[nodiscard]] bool await_ready() const
+        {
+            if (!world().get_rigid(object))
+                throw std::invalid_argument("Object is not a valid body");
+            return false;
+        }
+        void await_suspend(std::coroutine_handle<> /*handle*/)
+        { handler().add_destruction_waiter(object.id(), promise().id); }
+
+        void on_resume() noexcept { is_suspended = false; }
+    };
+
+    world_base::handle object;
+};
 
 // --------- META ---------
 
@@ -290,11 +326,11 @@ using awaitable_result_t = std::conditional_t<
 
 template <detail::awaitable... Awaitables>
     requires(sizeof...(Awaitables) > 1)
-struct after_all
+struct wait_for_all
 {
     struct awaiter_type : detail::awaiter
     {
-        awaiter_type(detail::task_promise_base &promise, after_all aw)
+        awaiter_type(detail::task_promise_base &promise, wait_for_all aw)
             : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
         { std::ranges::fill(child_ids, detail::arena<task<>>::handle::null); }
 
@@ -356,18 +392,18 @@ struct after_all
         }
     };
 
-    after_all(Awaitables &&...awaitables) : awaitables(std::move(awaitables)...) {}
+    wait_for_all(Awaitables &&...awaitables) : awaitables(std::move(awaitables)...) {}
 
     std::tuple<Awaitables...> awaitables;
 };
 
 template <detail::awaitable... Awaitables>
     requires(sizeof...(Awaitables) > 1)
-struct after_any
+struct wait_for_any
 {
     struct awaiter_type : detail::awaiter
     {
-        awaiter_type(detail::task_promise_base &promise, after_any aw)
+        awaiter_type(detail::task_promise_base &promise, wait_for_any aw)
             : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
         { std::ranges::fill(child_ids, detail::arena<task<>>::handle::null); }
 
@@ -439,7 +475,7 @@ struct after_any
         }
     };
 
-    after_any(Awaitables &&...awaitables) : awaitables(std::move(awaitables)...) {}
+    wait_for_any(Awaitables &&...awaitables) : awaitables(std::move(awaitables)...) {}
     std::tuple<Awaitables...> awaitables;
 };
 

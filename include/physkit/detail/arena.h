@@ -92,7 +92,9 @@ template <typename T> struct arena
         if (slot.gen != h.generation() || slot.available()) return std::nullopt;
         slot.gen++;
         free.push(h.index());
-        return std::move(slot.value);
+        auto val = std::move(*slot.value);
+        slot.value.reset();
+        return val;
     }
 
     auto get(this auto &&self, handle h)

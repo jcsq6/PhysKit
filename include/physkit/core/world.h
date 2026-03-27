@@ -83,6 +83,7 @@ public:
     {
         if (auto res = M_rigid.remove(h))
         {
+            M_task_handler.on_destruction(h.id(), {});
             M_broad.remove(res->broad_handle, res->obj.is_static(), M_narrow);
             return std::move(res->obj);
         }
@@ -120,14 +121,14 @@ protected:
     void on_collision(const detail::narrow_phase::manifold_info &man_info)
     {
         M_task_handler.on_collision(man_info, M_rigid.get_slot_handle(man_info.a).id(),
-                                    M_rigid.get_slot_handle(man_info.b).id());
+                                    M_rigid.get_slot_handle(man_info.b).id(), {});
     }
 
     void on_collision_exit(detail::dynamic_bvh::object_handle a,
                            detail::dynamic_bvh::object_handle b)
     {
         M_task_handler.on_collision_exit(M_rigid.get_slot_handle(a).id(),
-                                         M_rigid.get_slot_handle(b).id());
+                                         M_rigid.get_slot_handle(b).id(), {});
     }
 
     virtual void step_impl(quantity<si::second> dt) = 0;
