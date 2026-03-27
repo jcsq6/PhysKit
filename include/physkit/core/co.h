@@ -241,7 +241,11 @@ template <typename T> struct task_awaiter
         return t.M_handle;
     }
 
-    T await_resume() const { return t.get_result(); }
+    T await_resume() const
+    {
+        t.promise_base().check_rethrow();
+        return t.get_result();
+    }
 };
 
 template <typename T> task<T> task_promise<T>::get_return_object()
@@ -336,6 +340,7 @@ public:
                 queue_task_immediate(tid);
             }
             it->second.coll_enter.clear();
+            if (it->second.coll_exit.empty()) M_object_waiters.erase(it);
         };
 
         on_obj(obj_a);
@@ -357,6 +362,7 @@ public:
                 queue_task_immediate(tid);
             }
             it->second.coll_exit.clear();
+            if (it->second.coll_enter.empty()) M_object_waiters.erase(it);
         };
 
         on_obj(obj_a);

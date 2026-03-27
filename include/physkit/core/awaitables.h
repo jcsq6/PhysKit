@@ -130,7 +130,12 @@ struct wait_for_collision
         world_base::handle object;
         detail::narrow_phase::manifold_info result;
 
-        [[nodiscard]] bool await_ready() const { return !world().get_rigid(object); }
+        [[nodiscard]] bool await_ready() const
+        {
+            if (!world().get_rigid(object))
+                throw std::invalid_argument("Object is not a valid body");
+            return false;
+        }
         void await_suspend(std::coroutine_handle<> /*handle*/)
         { handler().add_collision_waiter(object.id(), promise().id, &result); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
@@ -205,6 +210,8 @@ struct completion_barrier
 struct race_barrier
 {
     std::atomic<bool> finished{false};
+    std::atomic<std::size_t> failures{0};
+    std::size_t total;
     task_id parent;
     task_handler *handler;
 
@@ -217,6 +224,16 @@ struct race_barrier
             return true;
         }
         return false;
+    }
+
+    void arrive_error()
+    {
+        if (++failures == total)
+        {
+            bool expected = false;
+            if (finished.compare_exchange_strong(expected, true))
+                handler->queue_task_immediate(parent);
+        }
     }
 };
 
@@ -252,6 +269,7 @@ struct after_all
         std::tuple<Awaitables...> awaitables;
         std::optional<detail::completion_barrier> barrier;
         std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
+        std::exception_ptr child_exception;
 
         [[nodiscard]] bool await_ready() const noexcept { return false; }
 
@@ -260,8 +278,11 @@ struct after_all
             barrier.emplace(sizeof...(Awaitables), promise().id, &handler());
             spawn_children(std::index_sequence_for<Awaitables...>{});
         }
-        // NOLINTNEXTLINE(modernize-use-nodiscard)
-        auto on_resume() const noexcept { return std::move(results); }
+        auto on_resume()
+        {
+            if (child_exception) std::rethrow_exception(child_exception);
+            return std::move(results);
+        }
 
     private:
         template <std::size_t... Is> void spawn_children(std::index_sequence<Is...> /*unused*/)
@@ -273,11 +294,19 @@ struct after_all
 
         template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
         {
-            if constexpr (std::is_void_v<decltype(std::declval<detail::awaitable_awaiter_t<Aw>>()
-                                                      .await_resume())>)
-                co_await std::move(aw);
-            else
-                std::get<I>(results) = co_await std::move(aw);
+            try
+            {
+                if constexpr (std::is_void_v<
+                                  decltype(std::declval<detail::awaitable_awaiter_t<Aw>>()
+                                               .await_resume())>)
+                    co_await std::move(aw);
+                else
+                    std::get<I>(results) = co_await std::move(aw);
+            }
+            catch (...)
+            {
+                if (!child_exception) child_exception = std::current_exception();
+            }
             barrier->arrive();
         }
     };
@@ -312,42 +341,55 @@ struct after_any
         std::tuple<Awaitables...> awaitables;
         std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
         std::optional<detail::race_barrier> barrier;
+        std::exception_ptr child_exception;
 
         [[nodiscard]] bool await_ready() const noexcept { return false; }
 
         void await_suspend(std::coroutine_handle<> /*handle*/)
         {
-            barrier.emplace(false, promise().id, &handler());
+            barrier.emplace(false, 0, sizeof...(Awaitables), promise().id, &handler());
             spawn_children(std::index_sequence_for<Awaitables...>{});
         }
 
         auto on_resume()
         {
-            for (auto id : child_ids)
-                if (id != detail::arena<task<>>::handle::null) cancel_task(id);
+            for (auto &id : child_ids)
+                cancel_task(std::exchange(id, detail::arena<task<>>::handle::null));
+
+            if (child_exception && barrier->failures.load() == barrier->total)
+                std::rethrow_exception(child_exception);
             return std::move(result);
         }
 
     private:
         template <std::size_t... Is> void spawn_children(std::index_sequence<Is...> /*unused*/)
         {
-            (((child_ids[Is] =
-                   add_task_eager(wrap_awaitable<Is>(std::get<Is>(std::move(awaitables))))),
-              ...));
+            ((child_ids[Is] =
+                  add_task_eager(wrap_awaitable<Is>(std::get<Is>(std::move(awaitables))))),
+             ...);
         }
 
         template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
         {
-            if constexpr (std::is_void_v<decltype(std::declval<detail::awaitable_awaiter_t<Aw>>()
-                                                      .await_resume())>)
+            try
             {
-                co_await std::move<Aw>(aw);
-                if (barrier->arrive()) result.template emplace<I>(std::monostate{});
+                if constexpr (std::is_void_v<
+                                  decltype(std::declval<detail::awaitable_awaiter_t<Aw>>()
+                                               .await_resume())>)
+                {
+                    co_await std::move(aw);
+                    if (barrier->arrive()) result.template emplace<I>(std::monostate{});
+                }
+                else
+                {
+                    auto res = co_await std::move(aw);
+                    if (barrier->arrive()) result.template emplace<I>(std::move(res));
+                }
             }
-            else
+            catch (...)
             {
-                auto res = co_await std::move(aw);
-                if (barrier->arrive()) result.template emplace<I>(std::move(res));
+                if (!child_exception) child_exception = std::current_exception();
+                barrier->arrive_error();
             }
         }
     };
