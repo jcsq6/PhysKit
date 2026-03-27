@@ -335,7 +335,6 @@ public:
             if (it == M_object_waiters.end()) return;
             for (auto [tid, result_storage] : it->second.coll_enter)
             {
-                if (!M_tasks.get(detail::arena<task<>>::handle::from_id(tid))) continue;
                 if (result_storage) *result_storage = man_info;
                 queue_task_immediate(tid);
             }
@@ -355,8 +354,6 @@ public:
             if (it == M_object_waiters.end()) return;
             for (auto [tid, a, b] : it->second.coll_exit)
             {
-                // TODO: clean up stale waiters before this
-                if (!M_tasks.get(detail::arena<task<>>::handle::from_id(tid))) continue;
                 if (a) *a = obj_a;
                 if (b) *b = obj_b;
                 queue_task_immediate(tid);
@@ -380,6 +377,26 @@ public:
                                    handle_id_t *b)
     { M_object_waiters[object_id].coll_exit.push_back({.task_id = task_id, .a = a, .b = b}); }
 
+    void remove_collision_waiter(handle_id_t object_id, handle_id_t task_id)
+    {
+        auto it = M_object_waiters.find(object_id);
+        if (it == M_object_waiters.end()) return;
+        auto &waiters = it->second.coll_enter;
+        // Should be close to constant time
+        std::erase_if(waiters, [task_id](const auto &w) { return w.task_id == task_id; });
+        if (waiters.empty() && it->second.coll_exit.empty()) M_object_waiters.erase(it);
+    }
+
+    void remove_collision_exit_waiter(handle_id_t object_id, handle_id_t task_id)
+    {
+        auto it = M_object_waiters.find(object_id);
+        if (it == M_object_waiters.end()) return;
+        auto &waiters = it->second.coll_exit;
+        // Should be close to constant time
+        std::erase_if(waiters, [task_id](const auto &w) { return w.task_id == task_id; });
+        if (waiters.empty() && it->second.coll_enter.empty()) M_object_waiters.erase(it);
+    }
+
 private:
     struct object_waiter
     {
@@ -398,6 +415,7 @@ private:
         std::vector<collision_exit_res> coll_exit;
     };
 
+    // TODO: make thread safe for future multithreading support
     struct swappable_queue
     {
         std::vector<handle_id_t> main;

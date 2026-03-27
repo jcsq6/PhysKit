@@ -127,8 +127,20 @@ struct wait_for_collision
         {
         }
 
+        ~awaiter_type()
+        {
+            // cancelled
+            if (is_suspended) handler().remove_collision_waiter(object.id(), promise().id);
+        }
+
+        awaiter_type(const awaiter_type &) = delete;
+        awaiter_type &operator=(const awaiter_type &) = delete;
+        awaiter_type(awaiter_type &&) = delete;
+        awaiter_type &operator=(awaiter_type &&) = delete;
+
         world_base::handle object;
         detail::narrow_phase::manifold_info result;
+        bool is_suspended = false;
 
         [[nodiscard]] bool await_ready() const
         {
@@ -137,10 +149,14 @@ struct wait_for_collision
             return false;
         }
         void await_suspend(std::coroutine_handle<> /*handle*/)
-        { handler().add_collision_waiter(object.id(), promise().id, &result); }
-        // NOLINTNEXTLINE(modernize-use-nodiscard)
-        result_type on_resume() const noexcept
         {
+            handler().add_collision_waiter(object.id(), promise().id, &result);
+            is_suspended = true;
+        }
+
+        result_type on_resume() noexcept
+        {
+            is_suspended = false;
             if (result.a == object.index())
                 return {.other = world_base::handle::from_id(result.b),
                         .contact_manifold = {result.man, false}};
@@ -161,17 +177,39 @@ struct wait_for_separation
         {
         }
 
+        ~awaiter_type()
+        {
+            if (is_suspended) handler().remove_collision_exit_waiter(object.id(), promise().id);
+        }
+
+        awaiter_type(const awaiter_type &) = delete;
+        awaiter_type &operator=(const awaiter_type &) = delete;
+        awaiter_type(awaiter_type &&) = delete;
+        awaiter_type &operator=(awaiter_type &&) = delete;
+
         world_base::handle object;
         detail::handle_id_t result_a = world_base::handle::null;
         detail::handle_id_t result_b = world_base::handle::null;
+        bool is_suspended = false;
 
-        // TODO: maybe make sure it's actually colliding?
-        [[nodiscard]] bool await_ready() const { return !world().get_rigid(object); }
+        [[nodiscard]] bool await_ready() const
+        {
+            if (!world().get_rigid(object))
+                throw std::invalid_argument("Object is not a valid body");
+            return true;
+        }
+
         void await_suspend(std::coroutine_handle<> /*handle*/)
-        { handler().add_collision_exit_waiter(object.id(), promise().id, &result_a, &result_b); }
-        // NOLINTNEXTLINE(modernize-use-nodiscard)
-        world_base::handle on_resume() const noexcept
-        { return world_base::handle::from_id((result_a == object.id()) ? result_b : result_a); }
+        {
+            handler().add_collision_exit_waiter(object.id(), promise().id, &result_a, &result_b);
+            is_suspended = true;
+        }
+
+        world_base::handle on_resume() noexcept
+        {
+            is_suspended = false;
+            return world_base::handle::from_id((result_a == object.id()) ? result_b : result_a);
+        }
     };
 
     world_base::handle object;
@@ -204,6 +242,12 @@ struct completion_barrier
     void arrive()
     {
         if (--remaining == 0) handler->queue_task_immediate(parent);
+    }
+
+    void arrive_error()
+    {
+        remaining = 0;
+        handler->queue_task_immediate(parent);
     }
 };
 
@@ -302,12 +346,13 @@ struct after_all
                     co_await std::move(aw);
                 else
                     std::get<I>(results) = co_await std::move(aw);
+                barrier->arrive();
             }
             catch (...)
             {
                 if (!child_exception) child_exception = std::current_exception();
+                barrier->arrive_error();
             }
-            barrier->arrive();
         }
     };
 
