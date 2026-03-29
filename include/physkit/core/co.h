@@ -7,6 +7,7 @@ import std;
 #include "../collision/collision_phases.h"
 #include "../detail/arena.h"
 #include "../detail/macros.h"
+#include "../detail/swappable_queue.h"
 
 #include <cassert>
 
@@ -257,6 +258,8 @@ inline task<void> task_promise<void>::get_return_object()
 class task_handler
 {
 public:
+    using task_handle = arena<task<>>::handle;
+
     void schedule_task_at(const task_id id, const mp_units::quantity<mp_units::si::second> when)
     {
         M_timer_heap.emplace_back(when, id);
@@ -267,18 +270,27 @@ public:
     void schedule_task_after(const task_id id, const mp_units::quantity<mp_units::si::second> delay)
     { schedule_task_at(id, M_current_time + delay); }
 
-    // Queue task for execution in the next frame
-    void queue_task(const task_id id) { M_pending_tasks.push(id); }
+    // Queue task for execution in beginning of the frame, before physics
+    void queue_pre_task(const task_id id) { M_pre_queue.push(id); }
 
-    // Queue task for immediate execution within the current process_tasks call
-    void queue_task_immediate(const task_id id) { M_immediate_tasks.push(id); }
+    // Queue task for execution after physics are calculated
+    void queue_post_task(const task_id id) { M_post_queue.push(id); }
+
+    // Queue task for execution after physics are calculated and after post_tasks are run
+    void queue_post_physics_tick(const task_id id) { M_post_physics_queue.push(id); }
+
+    // Queue for cleanup tasks run at the very end of the frame
+    void queue_cleanup_task(const task_id id) { M_cleanup_queue.push(id); }
+
+    // Queue for tasks that should be run immediately after the current phase
+    void queue_immediate_task(const task_id id) { M_immediate_queue.push(id); }
 
     [[nodiscard]] auto time() const { return M_current_time; }
 
     void increment(const mp_units::quantity<mp_units::si::second> dt, passkey<world_base> /*key*/)
     { M_current_time += dt; }
 
-    task_id add_task(task<> t, world_base &world, passkey<world_base, detail::awaiter> /*key*/)
+    task_handle add_task(task<> t, world_base &world, passkey<world_base, detail::awaiter> /*key*/)
     {
         auto handle = M_tasks.add(std::move(t));
         auto id = handle.id();
@@ -287,13 +299,13 @@ public:
         allocated_task->set_id(id, {});
         allocated_task->set_world(world, {});
 
-        M_pending_tasks.push(id);
-        return id;
+        M_pre_queue.push(id);
+        return handle;
     }
 
     // Add and immediately start a task (runs to its first suspension point)
-    task_id add_task_eager(task<> t, world_base &world,
-                           passkey<world_base, detail::awaiter> /*key*/)
+    task_handle add_task_eager(task<> t, world_base &world,
+                               passkey<world_base, detail::awaiter> /*key*/)
     {
         auto handle = M_tasks.add(std::move(t));
         auto id = handle.id();
@@ -304,7 +316,7 @@ public:
 
         if (allocated_task->resume({})) M_tasks.remove(handle);
 
-        return id;
+        return handle;
     }
 
     void cancel_task(const task_id id, passkey<world_base, detail::awaiter> /*key*/)
@@ -313,17 +325,33 @@ public:
         M_tasks.remove(handle);
     }
 
-    void process_tasks(passkey<world_base> /*key*/)
+    void dispatch_pre(passkey<world_base> /*key*/)
     {
-        M_pending_tasks.swap_and_clear();
-
-        drain_immediate();
-
-        for (auto id : M_pending_tasks.swap) resume_task(id);
-
+        for (auto id : M_pre_queue.iter()) resume_task(id);
         while (auto t = next_task()) resume_task(*t);
 
-        drain_immediate();
+        drain(M_immediate_queue);
+    }
+
+    void dispatch_post(passkey<world_base> /*key*/)
+    {
+        drain(M_post_queue);
+        drain(M_immediate_queue);
+        for (auto id : M_post_physics_queue.iter()) resume_task(id);
+        drain(M_immediate_queue);
+    }
+
+    void dispatch_cleanup(std::regular_invocable<> auto &&flush_commands,
+                          passkey<world_base> /*key*/)
+        requires(std::same_as<bool, std::invoke_result_t<decltype(flush_commands)>>)
+    {
+        bool done = false;
+        while (!done)
+        {
+            done = !drain(M_cleanup_queue);
+            done = !drain(M_immediate_queue) && done;
+            done = !flush_commands() && done;
+        }
     }
 
     void on_collision(const narrow_phase::manifold_info &man_info, handle_id_t obj_a,
@@ -336,7 +364,7 @@ public:
             for (auto [tid, result_storage] : it->second.coll_enter)
             {
                 if (result_storage) *result_storage = man_info;
-                queue_task_immediate(tid);
+                queue_post_task(tid);
             }
             it->second.coll_enter.clear();
             if (it->second.empty()) M_object_waiters.erase(it);
@@ -356,7 +384,7 @@ public:
             {
                 if (a) *a = obj_a;
                 if (b) *b = obj_b;
-                queue_task_immediate(tid);
+                queue_post_task(tid);
             }
             it->second.coll_exit.clear();
             if (it->second.empty()) M_object_waiters.erase(it);
@@ -370,7 +398,7 @@ public:
     {
         auto it = M_object_waiters.find(obj);
         if (it == M_object_waiters.end()) return;
-        for (auto [tid] : it->second.destructions) queue_task_immediate(tid);
+        for (auto [tid] : it->second.destructions) queue_cleanup_task(tid);
         it->second.destructions.clear();
         if (it->second.empty()) M_object_waiters.erase(it);
     }
@@ -434,32 +462,26 @@ private:
                 return destructions;
         }
 
-        bool empty() const
+        [[nodiscard]] bool empty() const
         { return coll_enter.empty() && coll_exit.empty() && destructions.empty(); }
     };
 
-    // TODO: make thread safe for future multithreading support
-    struct swappable_queue
-    {
-        std::vector<handle_id_t> main;
-        std::vector<handle_id_t> swap;
-
-        void push(handle_id_t id) { main.push_back(id); }
-        void swap_and_clear()
-        {
-            swap.clear();
-            swap.swap(main);
-        }
-    };
-
-    detail::arena<task<>> M_tasks;
-    swappable_queue M_pending_tasks;
-    swappable_queue M_immediate_tasks;
+    arena<task<>> M_tasks;
+    swappable_queue<task_id> M_pre_queue;
+    swappable_queue<task_id> M_post_queue;
+    swappable_queue<task_id> M_post_physics_queue;
+    swappable_queue<task_id> M_cleanup_queue;
+    swappable_queue<task_id> M_immediate_queue;
     absl::flat_hash_map<handle_id_t, object_waiter> M_object_waiters;
 
     std::vector<std::pair<mp_units::quantity<mp_units::si::second>, handle_id_t>>
         M_timer_heap; // TODO: memory management
     mp_units::quantity<mp_units::si::second> M_current_time{0.0 * mp_units::si::second};
+
+    bool drain(swappable_queue<task_id> &queue)
+    {
+        return queue.drain([this](auto id) { resume_task(id); });
+    }
 
     template <object_waiter::type T> void remove_waiter(handle_id_t object_id, handle_id_t task_id)
     {
@@ -468,17 +490,7 @@ private:
         auto &waiters = it->second.template get_waiter<T>();
         // Should be close to constant time
         std::erase_if(waiters, [task_id](const auto &w) { return w.task_id == task_id; });
-        if (waiters.empty() && it->second.coll_enter.empty() && it->second.coll_exit.empty())
-            M_object_waiters.erase(it);
-    }
-
-    void drain_immediate()
-    {
-        while (!M_immediate_tasks.main.empty())
-        {
-            M_immediate_tasks.swap_and_clear();
-            for (auto id : M_immediate_tasks.swap) resume_task(id);
-        }
+        if (waiters.empty() && it->second.empty()) M_object_waiters.erase(it);
     }
 
     void resume_task(handle_id_t id)
@@ -500,9 +512,10 @@ private:
     }
 };
 
-inline task_id awaiter::add_task(task<> t) { return handler().add_task(std::move(t), world(), {}); }
+inline task_id awaiter::add_task(task<> t)
+{ return handler().add_task(std::move(t), world(), {}).id(); }
 inline task_id awaiter::add_task_eager(task<> t)
-{ return handler().add_task_eager(std::move(t), world(), {}); }
+{ return handler().add_task_eager(std::move(t), world(), {}).id(); }
 inline void awaiter::cancel_task(task_id id) { handler().cancel_task(id, {}); }
 } // namespace detail
 } // namespace physkit

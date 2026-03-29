@@ -71,7 +71,28 @@ struct next_frame
 
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
         [[nodiscard]] bool await_ready() noexcept { return false; }
-        void await_suspend(std::coroutine_handle<> /**/) { handler().queue_task(promise().id); }
+        void await_suspend(std::coroutine_handle<> /**/) { handler().queue_pre_task(promise().id); }
+        // NOLINTNEXTLINE(modernize-use-nodiscard)
+        mp_units::quantity<mp_units::si::second> on_resume() const noexcept
+        { return handler().time() - start_time; }
+    };
+};
+
+struct next_physics_tick
+{
+    struct awaiter_type : detail::awaiter
+    {
+        awaiter_type(detail::task_promise_base &promise, next_physics_tick /*unused*/)
+            : detail::awaiter(promise), start_time(handler().time())
+        {
+        }
+
+        mp_units::quantity<mp_units::si::second> start_time;
+
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        [[nodiscard]] bool await_ready() noexcept { return false; }
+        void await_suspend(std::coroutine_handle<> /**/)
+        { handler().queue_post_physics_tick(promise().id); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
         mp_units::quantity<mp_units::si::second> on_resume() const noexcept
         { return handler().time() - start_time; }
@@ -196,7 +217,7 @@ struct wait_for_separation
         {
             if (!world().get_rigid(object))
                 throw std::invalid_argument("Object is not a valid body");
-            return true;
+            return false;
         }
 
         void await_suspend(std::coroutine_handle<> /*handle*/)
@@ -257,7 +278,10 @@ struct wait_until_destroyed
             return false;
         }
         void await_suspend(std::coroutine_handle<> /*handle*/)
-        { handler().add_destruction_waiter(object.id(), promise().id); }
+        {
+            is_suspended = true;
+            handler().add_destruction_waiter(object.id(), promise().id);
+        }
 
         void on_resume() noexcept { is_suspended = false; }
     };
@@ -277,13 +301,13 @@ struct completion_barrier
 
     void arrive()
     {
-        if (--remaining == 0) handler->queue_task_immediate(parent);
+        if (--remaining == 0) handler->queue_immediate_task(parent);
     }
 
     void arrive_error()
     {
         remaining = 0;
-        handler->queue_task_immediate(parent);
+        handler->queue_immediate_task(parent);
     }
 };
 
@@ -300,7 +324,7 @@ struct race_barrier
         bool expected = false;
         if (finished.compare_exchange_strong(expected, true))
         {
-            handler->queue_task_immediate(parent);
+            handler->queue_immediate_task(parent);
             return true;
         }
         return false;
@@ -312,7 +336,7 @@ struct race_barrier
         {
             bool expected = false;
             if (finished.compare_exchange_strong(expected, true))
-                handler->queue_task_immediate(parent);
+                handler->queue_immediate_task(parent);
         }
     }
 };
@@ -339,6 +363,7 @@ struct wait_for_all
         awaiter_type(awaiter_type &&) = delete;
         awaiter_type &operator=(awaiter_type &&) = delete;
 
+        // NOLINTNEXTLINE(bugprone-exception-escape)
         ~awaiter_type()
         {
             for (auto id : child_ids)
@@ -412,13 +437,15 @@ struct wait_for_any
         awaiter_type(awaiter_type &&) = delete;
         awaiter_type &operator=(awaiter_type &&) = delete;
 
+        // NOLINTNEXTLINE(bugprone-exception-escape)
         ~awaiter_type()
         {
             for (auto id : child_ids)
                 if (id != detail::arena<task<>>::handle::null) cancel_task(id);
         }
 
-        std::variant<detail::awaitable_result_t<Awaitables>...> result;
+        std::variant<detail::awaitable_result_t<Awaitables>..., std::monostate> result =
+            std::monostate{};
         std::tuple<Awaitables...> awaitables;
         std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
         std::optional<detail::race_barrier> barrier;
@@ -477,6 +504,147 @@ struct wait_for_any
 
     wait_for_any(Awaitables &&...awaitables) : awaitables(std::move(awaitables)...) {}
     std::tuple<Awaitables...> awaitables;
+};
+
+namespace detail
+{
+template <typename T, typename... Args> struct command_awaiter : awaiter
+{
+    command_awaiter(task_promise_base &promise, Args... args, typename T::result_type &&init = {})
+        : awaiter(promise), args(std::move(args)...), result(std::move(init))
+    {
+    }
+
+    std::tuple<Args...> args;
+    typename T::result_type result;
+
+    [[nodiscard]] bool await_ready() const noexcept { return false; }
+    void await_suspend(std::coroutine_handle<> handle)
+    {
+        world().push_command(std::apply([this, handle](Args &&...args)
+                                        { return T(&result, handle, std::move(args)...); },
+                                        std::move(args)));
+    }
+
+    auto on_resume() noexcept { return std::move(result); }
+};
+template <typename T, typename... Args> struct command_awaiter_no_wait : awaiter
+{
+    command_awaiter_no_wait(task_promise_base &promise, Args... args)
+        : awaiter(promise), args(std::move(args)...)
+    {
+    }
+
+    std::tuple<Args...> args;
+
+    [[nodiscard]] bool await_ready() const noexcept { return true; }
+    void await_suspend(std::coroutine_handle<> handle) const noexcept {}
+
+    void on_resume() noexcept
+    {
+        world().push_command(std::apply([](Args &&...args)
+                                        { return T(nullptr, nullptr, std::move(args)...); },
+                                        std::move(args)));
+    }
+};
+
+template <bool wait, typename T, typename... Args>
+using select_command_awaiter =
+    std::conditional_t<wait, command_awaiter<T, Args...>, command_awaiter_no_wait<T, Args...>>;
+}; // namespace detail
+
+// --------- COMMANDS ---------
+enum class policy : std::uint8_t
+{
+    wait,
+    no_wait,
+};
+
+template <policy p = policy::wait> struct add_task
+{
+    struct awaiter_type
+        : detail::select_command_awaiter<(p == policy::wait), detail::add_task_command, task<>>
+    {
+        awaiter_type(detail::task_promise_base &promise, struct add_task aw)
+            requires(p == policy::wait)
+            : detail::select_command_awaiter<(p == policy::wait), detail::add_task_command, task<>>(
+                  promise, std::move(aw.t),
+                  detail::task_handler::task_handle::from_id(
+                      detail::task_handler::task_handle::null))
+        {
+        }
+
+        awaiter_type(detail::task_promise_base &promise, struct add_task aw)
+            requires(p == policy::no_wait)
+            : detail::select_command_awaiter<(p == policy::wait), detail::add_task_command, task<>>(
+                  promise, std::move(aw.t))
+        {
+        }
+    };
+    task<> t;
+};
+
+template <policy p = policy::wait> struct cancel_task
+{
+    struct awaiter_type
+        : detail::select_command_awaiter<(p == policy::wait), detail::cancel_task_command,
+                                         detail::task_handler::task_handle>
+    {
+        awaiter_type(detail::task_promise_base &promise, struct cancel_task aw)
+            : detail::select_command_awaiter<(p == policy::wait), detail::cancel_task_command,
+                                             detail::task_handler::task_handle>(promise, aw.id)
+        {
+        }
+    };
+    detail::task_handler::task_handle id;
+};
+
+struct create_rigid
+{
+    struct awaiter_type : detail::command_awaiter<detail::add_rigid_command, object_desc>
+    {
+        awaiter_type(detail::task_promise_base &promise, create_rigid aw)
+            : command_awaiter(promise, std::move(aw.desc),
+                              object_handle::from_id(object_handle::null))
+        {
+        }
+    };
+    object_desc desc;
+};
+
+template <policy p = policy::wait> struct destroy_rigid
+{
+    struct awaiter_type
+        : detail::select_command_awaiter<(p == policy::wait), detail::destroy_rigid_command,
+                                         object_handle>
+    {
+        awaiter_type(detail::task_promise_base &promise, destroy_rigid aw)
+            : detail::select_command_awaiter<(p == policy::wait), detail::destroy_rigid_command,
+                                             object_handle>(promise, aw.h)
+        {
+        }
+    };
+    object_handle h;
+};
+
+struct get_rigid
+{
+    struct awaiter_type : detail::awaiter
+    {
+        awaiter_type(detail::task_promise_base &promise, get_rigid aw)
+            : awaiter(promise), handle(aw.h)
+        {
+        }
+
+        object_handle handle;
+
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        [[nodiscard]] bool await_ready() const noexcept { return true; }
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        bool await_suspend(std::coroutine_handle<> handle) { return false; }
+        auto on_resume() noexcept { return world().get_rigid(handle); }
+    };
+    object_handle h;
 };
 
 } // namespace physkit

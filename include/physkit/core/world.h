@@ -7,8 +7,6 @@ import std;
 #else
 #include <concepts>
 #include <cstddef>
-#include <cstdint>
-#include <expected>
 #include <utility>
 #endif
 
@@ -51,13 +49,95 @@ private:
     std::size_t M_solver_iterations = 10;
 };
 
+namespace detail
+{
+struct obj_node
+{
+    object obj;
+    detail::dynamic_bvh::node_handle broad_handle{};
+};
+
+using object_handle = arena<obj_node>::handle;
+
+struct command_base
+{
+    command_base(void *storage, std::coroutine_handle<> resume_handle)
+        : storage(storage), resume_handle(resume_handle)
+    {
+    }
+
+    template <typename Self>
+    void store(this Self &self, typename Self::result_type &&result)
+        requires(!std::same_as<typename Self::result_type, void>)
+    {
+        if (self.storage)
+            *static_cast<typename Self::result_type *>(self.storage) = std::move(result);
+        if (self.resume_handle) self.resume_handle.resume();
+    }
+
+    template <typename Self>
+    void store(this Self &self, bool success)
+        requires(std::same_as<typename Self::result_type, void>)
+    {
+        if (self.storage) *static_cast<bool *>(self.storage) = success;
+        if (self.resume_handle) self.resume_handle.resume();
+    }
+
+    void *storage{};
+    std::coroutine_handle<> resume_handle;
+};
+struct add_task_command : command_base
+{
+    using result_type = task_handler::task_handle;
+    task<> t;
+
+    add_task_command(result_type *storage, std::coroutine_handle<> resume_handle, task<> t)
+        : command_base(storage, resume_handle), t(std::move(t))
+    {
+    }
+};
+
+struct cancel_task_command : command_base
+{
+    using result_type = bool;
+    task_handler::task_handle handle;
+
+    cancel_task_command(void *storage, std::coroutine_handle<> resume_handle,
+                        task_handler::task_handle handle)
+        : command_base(storage, resume_handle), handle(handle)
+    {
+    }
+};
+
+struct add_rigid_command : command_base
+{
+    using result_type = object_handle;
+    object_desc desc;
+
+    add_rigid_command(result_type *storage, std::coroutine_handle<> resume_handle, object_desc desc)
+        : command_base(storage, resume_handle), desc(std::move(desc))
+    {
+    }
+};
+
+struct destroy_rigid_command : command_base
+{
+    using result_type = std::optional<object>;
+    object_handle h;
+
+    destroy_rigid_command(result_type *storage, std::coroutine_handle<> resume_handle,
+                          object_handle h)
+        : command_base(storage, resume_handle), h(h)
+    {
+    }
+};
+
+using command =
+    std::variant<add_task_command, cancel_task_command, add_rigid_command, destroy_rigid_command>;
+} // namespace detail
+
 class world_base
 {
-    struct obj_node
-    {
-        object obj;
-        detail::dynamic_bvh::node_handle broad_handle{};
-    };
 
 public:
     explicit world_base(const world_desc &desc) : M_gravity(desc.gravity()) {}
@@ -66,12 +146,11 @@ public:
     world_base(world_base &&) = default;
     world_base &operator=(world_base &&) = default;
 
-    using handle = detail::arena<obj_node>::handle;
-    enum class err_t : std::uint8_t
-    {
-        stale_handle
-    };
+    using handle = detail::object_handle;
 
+    void push_command(detail::command &&cmd) { M_command_queue.push(std::move(cmd)); }
+
+    // TODO: hide?
     auto create_rigid(const object_desc &desc)
     {
         object obj(desc);
@@ -79,7 +158,7 @@ public:
             M_broad.add({M_rigid.next_handle().index()}, obj.instance().bounds(), obj.is_static());
         return M_rigid.add({.obj = std::move(obj), .broad_handle = bh});
     }
-    std::expected<object, err_t> remove_rigid(handle h)
+    std::optional<object> remove_rigid(handle h)
     {
         if (auto res = M_rigid.remove(h))
         {
@@ -87,13 +166,13 @@ public:
             M_broad.remove(res->broad_handle, res->obj.is_static(), M_narrow);
             return std::move(res->obj);
         }
-        return std::unexpected(err_t::stale_handle);
+        return std::nullopt;
     }
-    auto get_rigid(this auto &&self, handle h)
-        -> std::expected<decltype(&self.M_rigid.get(h)->obj), err_t>
+
+    auto get_rigid(this auto &&self, handle h) -> std::optional<decltype(&self.M_rigid.get(h)->obj)>
     {
         if (auto *obj = self.M_rigid.get(h)) return &obj->obj;
-        return std::unexpected(err_t::stale_handle);
+        return std::nullopt;
     }
 
     [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
@@ -102,9 +181,12 @@ public:
 
     void step(quantity<si::second> dt)
     {
-        M_task_handler.process_tasks({});
-        step_impl(dt);
         M_task_handler.increment(dt, {});
+        M_task_handler.dispatch_pre({});
+        flush_commands();
+        step_impl(dt);
+        M_task_handler.dispatch_post({});
+        M_task_handler.dispatch_cleanup([this] { return flush_commands(); }, {});
     }
 
     detail::task_handler &handler(detail::passkey<detail::awaiter> /*key*/)
@@ -135,10 +217,29 @@ protected:
 
 private:
     detail::task_handler M_task_handler;
-    detail::arena<obj_node> M_rigid;
+    detail::arena<detail::obj_node> M_rigid;
     detail::broad_phase M_broad;
     detail::narrow_phase M_narrow;
+    detail::swappable_queue<detail::command> M_command_queue;
     vec3<si::metre / si::second / si::second> M_gravity;
+
+    auto execute_command(detail::add_task_command &cmd)
+    { return M_task_handler.add_task(std::move(cmd.t), *this, {}); }
+    bool execute_command(detail::cancel_task_command &cmd)
+    {
+        M_task_handler.cancel_task(cmd.handle.id(), {});
+        return true;
+    }
+    auto execute_command(detail::add_rigid_command &cmd) { return create_rigid(cmd.desc); }
+
+    auto execute_command(detail::destroy_rigid_command &cmd) { return remove_rigid(cmd.h); }
+
+    bool flush_commands()
+    {
+        return M_command_queue.drain(
+            [this](auto &cmd)
+            { std::visit([this](auto &&arg) { arg.store(execute_command(arg)); }, cmd); });
+    }
 };
 
 using object_handle = world_base::handle;
