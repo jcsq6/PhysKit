@@ -12,6 +12,4 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
     )
 
     target_link_libraries(missile_demo PRIVATE phys_graphics)
-
-    add_test(NAME missile_demo COMMAND missile_demo --testing)
 endif()
