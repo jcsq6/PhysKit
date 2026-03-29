@@ -30,10 +30,28 @@ public:
     shape &operator=(const shape &) = default;
     shape(shape &&) = default;
     shape &operator=(shape &&) = default;
-    ~shape() = default;
+    ~shape()
+    {
+        switch (M_type)
+        {
+        default:
+        case shape_mesh:
+            M_mesh.~shared_ptr();
+            break;
+        case shape_sphere:
+            M_sphere.~shared_ptr();
+            break;
+        }
+    }
 
-    shape(const std::shared_ptr<const mesh> &m) : M_type(shape_mesh), M_mesh(m) {}
-    shape(const std::shared_ptr<const sphere> &s) : M_type(shape_sphere), M_sphere(s) {}
+    shape(const std::shared_ptr<const mesh> &m) : M_type(shape_mesh), M_mesh()
+    {
+        M_mesh = std::shared_ptr<const mesh>(m);
+    }
+    shape(const std::shared_ptr<const sphere> &s) : M_type(shape_sphere), M_sphere()
+    {
+        M_sphere = std::shared_ptr<const sphere>(s);
+    }
 
     static std::shared_ptr<shape> make(const std::shared_ptr<const mesh> &m) { return std::make_shared<shape>(m);}
     static std::shared_ptr<shape> make(const std::shared_ptr<const sphere> &s) { return std::make_shared<shape>(s);}
@@ -210,8 +228,11 @@ public:
 
 private:
     shape_type M_type;
-    std::shared_ptr<const mesh> M_mesh;
-    std::shared_ptr<const sphere> M_sphere;
+    union
+    {
+        std::shared_ptr<const mesh> M_mesh;
+        std::shared_ptr<const sphere> M_sphere;
+    };
 };
 
 /// @brief A view of a collision shape placed in world space
