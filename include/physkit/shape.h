@@ -333,9 +333,6 @@ public:
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
     {
-        throw std::runtime_error("not implemented");
-        if (M_shape->type() == shape_mesh)
-            throw std::runtime_error("mesh::instance::inertia_tensor not yet implemented");
 
         //TODO is this correct??? no but i'll get back to this later
         //return M_orientation * M_shape->inertia_tensor(density);
