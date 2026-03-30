@@ -334,8 +334,8 @@ public:
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
     {
 
-        //TODO is this correct??? no but i'll get back to this later
-        //return M_orientation * M_shape->inertia_tensor(density);
+        //TODO is this correct???
+        return M_shape->inertia_tensor(density) * M_orientation.to_rotation_matrix();
     }
 
 private:
