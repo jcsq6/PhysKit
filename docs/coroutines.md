@@ -46,8 +46,11 @@ Using PhysKit's `task<>`, we can write the exact same logic sequentially using `
 task<> throw_grenade(app* self) {
     using namespace mp_units::si::unit_symbols;
     
+    // All co_await operations return a std::expected<T, physkit::error>.
+    // Use * or .value() to extract the result when success is guaranteed.
+    
     // 1. Create the grenade
-    auto gh = co_await create_rigid(object_desc::dynam().with_mass(0.5 * kg)...);
+    auto gh = *co_await create_rigid(object_desc::dynam().with_mass(0.5 * kg)...);
     
     // 2. Wait exactly 2 seconds. The underlying physics simulation
     // will continue stepping normally while this function waits!
@@ -77,9 +80,24 @@ PhysKit provides several `co_await`-able operations out of the box in `<physkit/
 - `co_await wait_for_separation(handle)`: Suspends until an existing collision ends.
 
 ### Orchestration
-- `co_await wait_for_all(task1, task2, ...)`: Suspend until *all* the provided tasks complete.
-- `co_await wait_for_any(task1, task2, ...)`: Suspend until *any* of the provided tasks complete.
+- `co_await wait_for_all(task1, task2, ...)`: Suspend until *all* the provided tasks complete. Returns a `std::tuple` of the `std::expected` results from each task.
+- `co_await wait_for_any(task1, task2, ...)`: Suspend until *any* of the provided tasks complete. Returns a `std::variant` of the `std::expected` results.
 - `co_await add_task(my_task())`: Spin up a child coroutine as an independent background task (fire-and-forget).
+
+## Error Handling (`std::expected`)
+
+Because physical events can fail (e.g. an object might be destroyed while waiting for it to collide, or a handle becomes stale), *every* awaitable returns a `std::expected<T, physkit::error>`. 
+
+```cpp
+auto result = co_await get_rigid(gh);
+if (!result) {
+    // Handle error (e.g. result.error() == physkit::error::stale_handle)
+    co_return;
+}
+auto* obj = *result;
+```
+
+For simple prototyping or situations where failures are impossible, using `*co_await ...` or `co_await ...` (for `void` returns) directly unwraps or discards the result. If an error happens and is unwrapped explicitly or implicitly without being checked, it may invoke undefined behavior or throw, depending on `std::expected` semantics.
 
 ## Advanced Composition
 
@@ -88,21 +106,21 @@ Because tasks can return values and be `co_await`ed by other tasks, they become 
 ```cpp
 task<vec3<si::metre>> launch_guided(vec3<si::metre> origin, vec3<si::metre> target) {
     // Spawn missile box
-    auto mh = co_await create_rigid(object_desc::dynam().with_pos(origin));
+    auto mh = *co_await create_rigid(object_desc::dynam().with_pos(origin));
 
     // Delegate the actual per-frame steering logic to another sub-task
     // which eventually returns the impact position.
-    co_return co_await guide_to_target(mh, target);
+    co_return *co_await guide_to_target(mh, target);
 }
 
 task<> main_scene() {
     using namespace mp_units::si::unit_symbols;
 
     // Wait for the grenade to blow up on the ground and get its actual detonation position
-    auto detonation_pos = co_await throw_grenade(origin, vel, 2.0 * s);
+    auto detonation_pos = *co_await throw_grenade(origin, vel, 2.0 * s);
 
     // Launch a guided missile at the exact point where the grenade detonated
-    auto impact_pos = co_await launch_guided(missile_silo_pos, detonation_pos);
+    auto impact_pos = *co_await launch_guided(missile_silo_pos, detonation_pos);
 
     // After the missile hits that spot, trigger secondary explosions
     co_await spawn_debris(impact_pos, ...);

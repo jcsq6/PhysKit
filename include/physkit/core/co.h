@@ -13,6 +13,7 @@ import std;
 
 #include <algorithm>
 #include <coroutine>
+#include <expected>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
@@ -29,6 +30,19 @@ class world_base;
 
 template <typename T = void> class task;
 
+struct error
+{
+    enum code : std::uint8_t
+    {
+        stale_handle,
+        object_destroyed,
+        exception_thrown,
+        unknown,
+    };
+    code value;
+    std::exception_ptr exception;
+};
+
 namespace detail
 {
 using task_id = arena<task<>>::handle::id_type;
@@ -43,10 +57,30 @@ class awaiter
 public:
     awaiter(task_promise_base &promise) : M_promise(promise) {}
 
-    auto await_resume(this auto &&self)
+    auto await_resume(this auto &&self) -> std::expected<decltype(self.on_resume()), error>
     {
-        self.promise().check_rethrow();
-        return self.on_resume();
+        try
+        {
+            self.promise().check_rethrow();
+            if constexpr (std::is_void_v<decltype(self.on_resume())>)
+            {
+                self.on_resume();
+                return {};
+            }
+            else
+            {
+                return self.on_resume();
+            }
+        }
+        catch (error::code c)
+        {
+            return std::unexpected(error{.value = c});
+        }
+        catch (...)
+        {
+            return std::unexpected(
+                error{.value = error::exception_thrown, .exception = std::current_exception()});
+        }
     }
 
 protected:
@@ -121,6 +155,8 @@ struct task_promise_base
         if (exception) std::rethrow_exception(exception);
     }
 
+    void set_error(auto &&e) { exception = std::make_exception_ptr(std::forward<decltype(e)>(e)); }
+
     world_base *world{};
     task_id id = detail::arena<task_id>::handle::null;
 
@@ -182,6 +218,9 @@ public:
     { M_handle.promise().world = &w; }
     void set_id(detail::handle_id_t id, detail::passkey<detail::task_handler> /*key*/) const
     { M_handle.promise().id = id; }
+    void set_error(auto &&e, detail::passkey<detail::task_handler> /*key*/)
+    { M_handle.promise().set_error(std::forward<decltype(e)>(e)); }
+
     [[nodiscard]] bool done() const { return !M_handle || M_handle.done(); }
 
     bool resume(detail::passkey<detail::task_handler> /*key*/)
@@ -242,10 +281,28 @@ template <typename T> struct task_awaiter
         return t.M_handle;
     }
 
-    T await_resume() const
+    auto await_resume() const -> std::expected<T, error>
     {
-        t.promise_base().check_rethrow();
-        return t.get_result();
+        try
+        {
+            t.promise_base().check_rethrow();
+            if constexpr (std::is_void_v<T>)
+            {
+                t.get_result();
+                return {};
+            }
+            else
+                return t.get_result();
+        }
+        catch (error::code c)
+        {
+            return std::unexpected(error{.value = c});
+        }
+        catch (...)
+        {
+            return std::unexpected(
+                error{.value = error::exception_thrown, .exception = std::current_exception()});
+        }
     }
 };
 
@@ -399,8 +456,23 @@ public:
         auto it = M_object_waiters.find(obj);
         if (it == M_object_waiters.end()) return;
         for (auto [tid] : it->second.destructions) queue_cleanup_task(tid);
-        it->second.destructions.clear();
-        if (it->second.empty()) M_object_waiters.erase(it);
+        for (auto [tid, a, b] : it->second.coll_exit)
+        {
+            if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+            {
+                task->set_error(error::object_destroyed, {});
+                queue_cleanup_task(tid);
+            }
+        }
+        for (auto [tid, result_storage] : it->second.coll_enter)
+        {
+            if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+            {
+                task->set_error(error::object_destroyed, {});
+                queue_cleanup_task(tid);
+            }
+        }
+        M_object_waiters.erase(it);
     }
 
     void add_collision_waiter(handle_id_t object_id, handle_id_t task_id,
@@ -517,5 +589,6 @@ inline task_id awaiter::add_task(task<> t)
 inline task_id awaiter::add_task_eager(task<> t)
 { return handler().add_task_eager(std::move(t), world(), {}).id(); }
 inline void awaiter::cancel_task(task_id id) { handler().cancel_task(id, {}); }
+
 } // namespace detail
 } // namespace physkit

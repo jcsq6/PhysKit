@@ -100,7 +100,7 @@ private:
             double elevation = up_speed * (0.6 + (0.4 * static_cast<double>(i % 3)));
             auto vel = vec3{speed * std::cos(angle), elevation, speed * std::sin(angle)} * m / s;
 
-            auto dh = co_await create_rigid(
+            auto dh = *co_await create_rigid(
                 object_desc::dynam()
                     .with_pos(origin)
                     .with_vel(vel)
@@ -134,14 +134,14 @@ private:
         using namespace mp_units::si::unit_symbols;
 
         auto gmesh = mesh::sphere(0.3 * m, 8, 16);
-        auto gh = co_await create_rigid(object_desc::dynam()
-                                            .with_pos(origin)
-                                            .with_vel(velocity)
-                                            .with_ang_vel(vec3{5, 2, 3} * rad / s)
-                                            .with_mass(0.5 * kg)
-                                            .with_mesh(gmesh)
-                                            .with_restitution(0.4)
-                                            .with_friction(0.5));
+        auto gh = *co_await create_rigid(object_desc::dynam()
+                                             .with_pos(origin)
+                                             .with_vel(velocity)
+                                             .with_ang_vel(vec3{5, 2, 3} * rad / s)
+                                             .with_mass(0.5 * kg)
+                                             .with_mesh(gmesh)
+                                             .with_restitution(0.4)
+                                             .with_friction(0.5));
         auto *gfx = self->add_object(gh, {0.2f, 0.35f, 0.15f});
 
         co_await wait_for(fuse);
@@ -174,20 +174,20 @@ private:
         while (true)
         {
             auto res =
-                co_await wait_for_any{next_physics_tick{}, wait_for_collision{.object = handle}};
+                *co_await wait_for_any{next_physics_tick{}, wait_for_collision{.object = handle}};
             auto rigid = co_await get_rigid(handle);
-            auto *obj = *rigid;
             if (!rigid) co_return target;
-            if (res.index() == 1) co_return co_await end(*obj);
+            auto *obj = *rigid;
+            if (res.index() == 1) co_return *co_await end(*obj);
 
-            auto dt = std::get<0>(res);
+            auto dt = *std::get<0>(res);
             time_s += dt;
 
             desired_speed += desired_accel_delta * dt;
             auto to_target = target - obj->pos();
             auto dist = to_target.norm();
 
-            if (dist < 2.0 * m) co_return co_await end(*obj);
+            if (dist < 2.0 * m) co_return *co_await end(*obj);
 
             auto desired_vel = (to_target / dist) * desired_speed;
             auto vel_error = desired_vel - obj->vel();
@@ -208,17 +208,17 @@ private:
         using namespace mp_units::si::unit_symbols;
         auto mmesh = mesh::box(vec3{0.6, 0.15, 0.15} * m);
 
-        auto mh = co_await create_rigid(object_desc::dynam()
-                                            .with_pos(origin)
-                                            .with_vel(initial_vel)
-                                            .with_mass(2.0 * kg)
-                                            .with_mesh(mmesh)
-                                            .with_restitution(0.1)
-                                            .with_friction(0.3));
+        auto mh = *co_await create_rigid(object_desc::dynam()
+                                             .with_pos(origin)
+                                             .with_vel(initial_vel)
+                                             .with_mass(2.0 * kg)
+                                             .with_mesh(mmesh)
+                                             .with_restitution(0.1)
+                                             .with_friction(0.3));
         auto *gfx = self->add_object(mh, {0.8f, 0.3f, 0.1f});
 
         // Delegate steering to a nested sub-task
-        co_return co_await guide_to_target(self, mh, gfx, target, 20, 0.15f, {0.95f, 0.5f, 0.1f});
+        co_return *co_await guide_to_target(self, mh, gfx, target, 20, 0.15f, {0.95f, 0.5f, 0.1f});
     }
 
     /// Fire-and-forget guided sub-munition (spawned via add_task).
@@ -228,13 +228,13 @@ private:
         using namespace mp_units::si::unit_symbols;
         auto mmesh = mesh::box(vec3{0.4, 0.1, 0.1} * m);
 
-        auto mh = co_await create_rigid(object_desc::dynam()
-                                            .with_pos(origin)
-                                            .with_vel(initial_vel)
-                                            .with_mass(1.0 * kg)
-                                            .with_mesh(mmesh)
-                                            .with_restitution(0.1)
-                                            .with_friction(0.3));
+        auto mh = *co_await create_rigid(object_desc::dynam()
+                                             .with_pos(origin)
+                                             .with_vel(initial_vel)
+                                             .with_mass(1.0 * kg)
+                                             .with_mesh(mmesh)
+                                             .with_restitution(0.1)
+                                             .with_friction(0.3));
         auto *gfx = self->add_object(mh, body_color);
 
         // Reuse guide_to_target — even fire-and-forget tasks compose sub-tasks
@@ -250,13 +250,13 @@ private:
 
         // Launch carrier rocket upward
         auto carrier_mesh = mesh::box(vec3{0.25, .75, 0.25} * m);
-        auto carrier_h = co_await create_rigid(object_desc::dynam()
-                                                   .with_pos(launch_pos)
-                                                   .with_vel(vec3{0, 20, 0} * m / s)
-                                                   .with_mass(5.0 * kg)
-                                                   .with_mesh(carrier_mesh)
-                                                   .with_restitution(0.1)
-                                                   .with_friction(0.3));
+        auto carrier_h = *co_await create_rigid(object_desc::dynam()
+                                                    .with_pos(launch_pos)
+                                                    .with_vel(vec3{0, 20, 0} * m / s)
+                                                    .with_mass(5.0 * kg)
+                                                    .with_mesh(carrier_mesh)
+                                                    .with_restitution(0.1)
+                                                    .with_friction(0.3));
         auto *carrier_gfx = self->add_object(carrier_h, {0.4f, 0.4f, 0.5f});
 
         // Wait for apex — vertical velocity flips sign
@@ -298,15 +298,15 @@ private:
         co_await wait_for(1.5 * s);
 
         auto crater1 =
-            co_await throw_grenade(self, vec3{-10, 3.5, 0} * m, vec3{12, 10, 2} * m / s, 2.2 * s);
+            *co_await throw_grenade(self, vec3{-10, 3.5, 0} * m, vec3{12, 10, 2} * m / s, 2.2 * s);
         std::println("Grenade 1 crater at: {}", crater1);
 
         // Pan toward missile area while grenade 2 flies
         track.append(
             kf::make_pos(fvec3{12, 12, -40} * m).look_at(fvec3{5, 4, 0} * m).transition(3.5f * s));
 
-        auto crater2 = co_await throw_grenade(self, vec3{-10, 2.5, 0} * m,
-                                              vec3{14, 10.4, -1} * m / s, 2.1 * s);
+        auto crater2 = *co_await throw_grenade(self, vec3{-10, 2.5, 0} * m,
+                                               vec3{14, 10.4, -1} * m / s, 2.1 * s);
         std::println("Grenade 2 crater at: {}", crater2);
 
         // --- Phase 2: Guided cruise missile retaliates ---
@@ -317,8 +317,8 @@ private:
         co_await wait_for(1.0 * s);
 
         auto bunker_pos = vec3{-10.0, 1.5, 0.0} * m;
-        auto impact = co_await launch_guided(self, vec3{14, 5, 0} * m, bunker_pos,
-                                             vec3{0, 20, 0} * m / s, true);
+        auto impact = *co_await launch_guided(self, vec3{14, 5, 0} * m, bunker_pos,
+                                              vec3{0, 20, 0} * m / s, true);
         std::println("Missile impact at: {}", impact);
 
         // --- Phase 3: MIRV strike finishing off the bunker area ---

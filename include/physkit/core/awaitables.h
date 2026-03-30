@@ -163,20 +163,17 @@ struct wait_for_collision
         detail::narrow_phase::manifold_info result;
         bool is_suspended = false;
 
-        [[nodiscard]] bool await_ready() const
-        {
-            if (!world().get_rigid(object))
-                throw std::invalid_argument("Object is not a valid body");
-            return false;
-        }
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        [[nodiscard]] bool await_ready() const noexcept { return !world().get_rigid(object); }
         void await_suspend(std::coroutine_handle<> /*handle*/)
         {
             handler().add_collision_waiter(object.id(), promise().id, &result);
             is_suspended = true;
         }
 
-        result_type on_resume() noexcept
+        result_type on_resume()
         {
+            if (!is_suspended) throw error::stale_handle;
             is_suspended = false;
             if (result.a == object.index())
                 return {.other = world_base::handle::from_id(result.b),
@@ -213,12 +210,8 @@ struct wait_for_separation
         detail::handle_id_t result_b = world_base::handle::null;
         bool is_suspended = false;
 
-        [[nodiscard]] bool await_ready() const
-        {
-            if (!world().get_rigid(object))
-                throw std::invalid_argument("Object is not a valid body");
-            return false;
-        }
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        [[nodiscard]] bool await_ready() const noexcept { return !world().get_rigid(object); }
 
         void await_suspend(std::coroutine_handle<> /*handle*/)
         {
@@ -226,8 +219,9 @@ struct wait_for_separation
             is_suspended = true;
         }
 
-        world_base::handle on_resume() noexcept
+        world_base::handle on_resume()
         {
+            if (!is_suspended) throw error::stale_handle;
             is_suspended = false;
             return world_base::handle::from_id((result_a == object.id()) ? result_b : result_a);
         }
@@ -271,19 +265,19 @@ struct wait_until_destroyed
         world_base::handle object;
         bool is_suspended = false;
 
-        [[nodiscard]] bool await_ready() const
-        {
-            if (!world().get_rigid(object))
-                throw std::invalid_argument("Object is not a valid body");
-            return false;
-        }
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        [[nodiscard]] bool await_ready() const noexcept { return !world().get_rigid(object); }
         void await_suspend(std::coroutine_handle<> /*handle*/)
         {
             is_suspended = true;
             handler().add_destruction_waiter(object.id(), promise().id);
         }
 
-        void on_resume() noexcept { is_suspended = false; }
+        void on_resume()
+        {
+            if (!is_suspended) throw error::stale_handle;
+            is_suspended = false;
+        }
     };
 
     world_base::handle object;
@@ -302,12 +296,6 @@ struct completion_barrier
     void arrive()
     {
         if (--remaining == 0) handler->queue_immediate_task(parent);
-    }
-
-    void arrive_error()
-    {
-        remaining = 0;
-        handler->queue_immediate_task(parent);
     }
 };
 
@@ -342,9 +330,7 @@ struct race_barrier
 };
 
 template <awaitable Awaitable>
-using awaitable_result_t = std::conditional_t<
-    std::is_void_v<decltype(std::declval<awaitable_awaiter_t<Awaitable>>().await_resume())>,
-    std::monostate, decltype(std::declval<awaitable_awaiter_t<Awaitable>>().await_resume())>;
+using raw_await_result_t = decltype(std::declval<awaitable_awaiter_t<Awaitable>>().await_resume());
 
 } // namespace detail
 
@@ -370,11 +356,13 @@ struct wait_for_all
                 if (id != detail::arena<task<>>::handle::null) cancel_task(id);
         }
 
-        std::tuple<detail::awaitable_result_t<Awaitables>...> results;
+        template <typename Awaitable> detail::raw_await_result_t<Awaitable> default_for()
+        { return std::unexpected(error{.value = error::unknown}); }
+
+        std::tuple<detail::raw_await_result_t<Awaitables>...> results{default_for<Awaitables>()...};
         std::tuple<Awaitables...> awaitables;
         std::optional<detail::completion_barrier> barrier;
         std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
-        std::exception_ptr child_exception;
 
         [[nodiscard]] bool await_ready() const noexcept { return false; }
 
@@ -383,11 +371,7 @@ struct wait_for_all
             barrier.emplace(sizeof...(Awaitables), promise().id, &handler());
             spawn_children(std::index_sequence_for<Awaitables...>{});
         }
-        auto on_resume()
-        {
-            if (child_exception) std::rethrow_exception(child_exception);
-            return std::move(results);
-        }
+        auto on_resume() { return std::move(results); }
 
     private:
         template <std::size_t... Is> void spawn_children(std::index_sequence<Is...> /*unused*/)
@@ -399,21 +383,8 @@ struct wait_for_all
 
         template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
         {
-            try
-            {
-                if constexpr (std::is_void_v<
-                                  decltype(std::declval<detail::awaitable_awaiter_t<Aw>>()
-                                               .await_resume())>)
-                    co_await std::move(aw);
-                else
-                    std::get<I>(results) = co_await std::move(aw);
-                barrier->arrive();
-            }
-            catch (...)
-            {
-                if (!child_exception) child_exception = std::current_exception();
-                barrier->arrive_error();
-            }
+            std::get<I>(results) = co_await std::move(aw);
+            barrier->arrive();
         }
     };
 
@@ -444,7 +415,7 @@ struct wait_for_any
                 if (id != detail::arena<task<>>::handle::null) cancel_task(id);
         }
 
-        std::variant<detail::awaitable_result_t<Awaitables>..., std::monostate> result =
+        std::variant<detail::raw_await_result_t<Awaitables>..., std::monostate> result =
             std::monostate{};
         std::tuple<Awaitables...> awaitables;
         std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
@@ -479,20 +450,11 @@ struct wait_for_any
 
         template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
         {
+            using await_result = detail::raw_await_result_t<Aw>;
             try
             {
-                if constexpr (std::is_void_v<
-                                  decltype(std::declval<detail::awaitable_awaiter_t<Aw>>()
-                                               .await_resume())>)
-                {
-                    co_await std::move(aw);
-                    if (barrier->arrive()) result.template emplace<I>(std::monostate{});
-                }
-                else
-                {
-                    auto res = co_await std::move(aw);
-                    if (barrier->arrive()) result.template emplace<I>(std::move(res));
-                }
+                auto res = co_await std::move(aw);
+                if (barrier->arrive()) result.template emplace<I>(std::move(res));
             }
             catch (...)
             {
@@ -623,6 +585,13 @@ template <policy p = policy::wait> struct destroy_rigid
                                              object_handle>(promise, aw.h)
         {
         }
+
+        auto on_resume()
+            requires(p == policy::wait)
+        {
+            if (auto opt = std::move(this->result)) return std::move(*opt);
+            throw error::stale_handle;
+        }
     };
     object_handle h;
 };
@@ -642,7 +611,11 @@ struct get_rigid
         [[nodiscard]] bool await_ready() const noexcept { return true; }
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
         bool await_suspend(std::coroutine_handle<> handle) { return false; }
-        auto on_resume() noexcept { return world().get_rigid(handle); }
+        auto on_resume()
+        {
+            if (auto r = world().get_rigid(handle)) return *r;
+            throw error::stale_handle;
+        }
     };
     object_handle h;
 };
