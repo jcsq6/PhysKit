@@ -312,10 +312,19 @@ template <typename T> task<T> task_promise<T>::get_return_object()
 inline task<void> task_promise<void>::get_return_object()
 { return task<void>{std::coroutine_handle<task_promise<void>>::from_promise(*this)}; }
 
+struct has_waiter_field
+{
+    std::uint8_t collision_enter : 1 = 0;
+    std::uint8_t collision_exit : 1 = 0;
+    std::uint8_t destruction : 1 = 0;
+};
+
 class task_handler
 {
 public:
     using task_handle = arena<task<>>::handle;
+
+    task_handler(world_base &world) : M_world(&world) {}
 
     void schedule_task_at(const task_id id, const mp_units::quantity<mp_units::si::second> when)
     {
@@ -347,29 +356,28 @@ public:
     void increment(const mp_units::quantity<mp_units::si::second> dt, passkey<world_base> /*key*/)
     { M_current_time += dt; }
 
-    task_handle add_task(task<> t, world_base &world, passkey<world_base, detail::awaiter> /*key*/)
+    task_handle add_task(task<> t, passkey<world_base, detail::awaiter> /*key*/)
     {
         auto handle = M_tasks.add(std::move(t));
         auto id = handle.id();
 
         auto *allocated_task = M_tasks.get(handle);
         allocated_task->set_id(id, {});
-        allocated_task->set_world(world, {});
+        allocated_task->set_world(*M_world, {});
 
         M_pre_queue.push(id);
         return handle;
     }
 
     // Add and immediately start a task (runs to its first suspension point)
-    task_handle add_task_eager(task<> t, world_base &world,
-                               passkey<world_base, detail::awaiter> /*key*/)
+    task_handle add_task_eager(task<> t, passkey<world_base, detail::awaiter> /*key*/)
     {
         auto handle = M_tasks.add(std::move(t));
         auto id = handle.id();
 
         auto *allocated_task = M_tasks.get(handle);
         allocated_task->set_id(id, {});
-        allocated_task->set_world(world, {});
+        allocated_task->set_world(*M_world, {});
 
         if (allocated_task->resume({})) M_tasks.remove(handle);
 
@@ -416,6 +424,8 @@ public:
     {
         auto on_obj = [&](handle_id_t object_id, handle_id_t other_id)
         {
+            if (get_waiter_fields(object_id)->collision_enter == 0) return;
+
             auto it = M_object_waiters.find(object_id);
             if (it == M_object_waiters.end()) return;
             std::erase_if(it->second.coll_enter,
@@ -427,6 +437,8 @@ public:
                               queue_post_task(w.task_id);
                               return true;
                           });
+            it->second.template set_field<object_waiter::type::collision_enter>(
+                *get_waiter_fields(object_id));
             if (it->second.empty()) M_object_waiters.erase(it);
         };
 
@@ -438,6 +450,8 @@ public:
     {
         auto on_obj = [&](handle_id_t object_id, handle_id_t other_id)
         {
+            if (get_waiter_fields(object_id)->collision_exit == 0) return;
+
             auto it = M_object_waiters.find(object_id);
             if (it == M_object_waiters.end()) return;
             std::erase_if(it->second.coll_exit,
@@ -451,6 +465,9 @@ public:
                               queue_post_task(w.task_id);
                               return true;
                           });
+
+            it->second.template set_field<object_waiter::type::collision_exit>(
+                *get_waiter_fields(object_id));
             if (it->second.empty()) M_object_waiters.erase(it);
         };
 
@@ -460,7 +477,6 @@ public:
 
     void on_destruction(handle_id_t obj, passkey<world_base> /*key*/)
     {
-
         if (auto it = M_object_waiters.find(obj); it != M_object_waiters.end())
         {
             for (auto [tid] : it->second.destructions) queue_cleanup_task(tid);
@@ -506,19 +522,28 @@ public:
     void add_collision_waiter(handle_id_t object_id, handle_id_t with, handle_id_t task_id,
                               narrow_phase::manifold_info *result_storage)
     {
-        M_object_waiters[object_id].coll_enter.emplace_back(task_id, with, result_storage);
+        auto &waiter = M_object_waiters[object_id];
+
+        waiter.coll_enter.emplace_back(task_id, with, result_storage);
+        waiter.set_field<object_waiter::type::collision_enter>(*get_waiter_fields(object_id));
         if (with != null_id) M_object_deps[with].emplace_back(task_id, object_id);
     }
 
     void add_collision_exit_waiter(handle_id_t object_id, handle_id_t with, handle_id_t task_id,
                                    handle_id_t *a, handle_id_t *b)
     {
-        M_object_waiters[object_id].coll_exit.emplace_back(task_id, with, a, b);
+        auto &waiter = M_object_waiters[object_id];
+        waiter.coll_exit.emplace_back(task_id, with, a, b);
+        waiter.set_field<object_waiter::type::collision_exit>(*get_waiter_fields(object_id));
         if (with != null_id) M_object_deps[with].emplace_back(task_id, object_id);
     }
 
     void add_destruction_waiter(handle_id_t object_id, handle_id_t task_id)
-    { M_object_waiters[object_id].destructions.emplace_back(task_id); }
+    {
+        auto &waiter = M_object_waiters[object_id];
+        waiter.destructions.emplace_back(task_id);
+        waiter.set_field<object_waiter::type::destruction>(*get_waiter_fields(object_id));
+    }
 
     void remove_collision_waiter(handle_id_t object_id, handle_id_t task_id)
     { remove_waiter<object_waiter::type::collision_enter>(object_id, task_id); }
@@ -570,6 +595,16 @@ private:
                 return destructions;
         }
 
+        template <type T> void set_field(has_waiter_field &fields)
+        {
+            if constexpr (T == type::collision_enter)
+                fields.collision_enter = !coll_enter.empty();
+            else if constexpr (T == type::collision_exit)
+                fields.collision_exit = !coll_exit.empty();
+            else
+                fields.destruction = !destructions.empty();
+        }
+
         [[nodiscard]] bool empty() const
         { return coll_enter.empty() && coll_exit.empty() && destructions.empty(); }
     };
@@ -594,6 +629,10 @@ private:
         M_timer_heap; // TODO: memory management
     mp_units::quantity<mp_units::si::second> M_current_time{0.0 * mp_units::si::second};
 
+    world_base *M_world;
+
+    has_waiter_field *get_waiter_fields(handle_id_t object_id);
+
     bool drain(swappable_queue<task_id> &queue)
     {
         return queue.drain([this](auto id) { resume_task(id); });
@@ -617,7 +656,9 @@ private:
                           }
                           return false;
                       });
-        if (waiters.empty() && it->second.empty()) M_object_waiters.erase(it);
+
+        if (auto *fields = get_waiter_fields(object_id)) it->second.template set_field<T>(*fields);
+        if (it->second.empty()) M_object_waiters.erase(it);
     }
 
     void remove_dependency(handle_id_t object_id, handle_id_t task_id)
@@ -648,10 +689,9 @@ private:
     }
 };
 
-inline task_id awaiter::add_task(task<> t)
-{ return handler().add_task(std::move(t), world(), {}).id(); }
+inline task_id awaiter::add_task(task<> t) { return handler().add_task(std::move(t), {}).id(); }
 inline task_id awaiter::add_task_eager(task<> t)
-{ return handler().add_task_eager(std::move(t), world(), {}).id(); }
+{ return handler().add_task_eager(std::move(t), {}).id(); }
 inline void awaiter::cancel_task(task_id id) { handler().cancel_task(id, {}); }
 
 } // namespace detail

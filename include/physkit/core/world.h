@@ -55,6 +55,7 @@ struct obj_node
 {
     object obj;
     detail::dynamic_bvh::node_handle broad_handle{};
+    has_waiter_field event_waiters;
 };
 
 using object_handle = arena<obj_node>::handle;
@@ -140,7 +141,9 @@ class world_base
 {
 
 public:
-    explicit world_base(const world_desc &desc) : M_gravity(desc.gravity()) {}
+    explicit world_base(const world_desc &desc) : M_gravity(desc.gravity()), M_task_handler(*this)
+    {
+    }
     world_base(const world_base &) = delete;
     world_base &operator=(const world_base &) = delete;
     world_base(world_base &&) = default;
@@ -177,7 +180,7 @@ public:
 
     [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
 
-    void add_task(task<> t) { M_task_handler.add_task(std::move(t), *this, {}); }
+    void add_task(task<> t) { M_task_handler.add_task(std::move(t), {}); }
 
     void step(quantity<si::second> dt)
     {
@@ -191,6 +194,14 @@ public:
 
     detail::task_handler &handler(detail::passkey<detail::awaiter> /*key*/)
     { return M_task_handler; }
+
+    // No check for object validity
+    detail::has_waiter_field *get_waiter_fields(detail::handle_id_t object_id,
+                                                detail::passkey<detail::task_handler> /*key*/)
+    {
+        auto *res = M_rigid.get(detail::object_handle::from_id(object_id));
+        return (res != nullptr) ? &res->event_waiters : nullptr;
+    }
 
     virtual ~world_base() = default;
 
@@ -224,7 +235,7 @@ private:
     vec3<si::metre / si::second / si::second> M_gravity;
 
     auto execute_command(detail::add_task_command &cmd)
-    { return M_task_handler.add_task(std::move(cmd.t), *this, {}); }
+    { return M_task_handler.add_task(std::move(cmd.t), {}); }
     bool execute_command(detail::cancel_task_command &cmd)
     {
         M_task_handler.cancel_task(cmd.handle.id(), {});
