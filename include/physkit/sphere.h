@@ -31,22 +31,23 @@ public:
     sphere &operator=(sphere &&) = default;
     ~sphere() = default;
 
-    sphere(const vec3<si::metre> position, const quantity<si::metre> radius) :
-        M_position{position}, M_radius{radius}
+    sphere(const quantity<si::metre> radius) :
+        M_radius{radius}
     {
         M_aabb = aabb::from_points({
             vec3<si::metre>{M_radius, M_radius, M_radius},
             vec3<si::metre>{-M_radius, -M_radius, -M_radius}});
 
-        M_bsphere =  bounding_sphere(M_position, M_radius);
+        M_bsphere =  bounding_sphere({0.0f*si::metre,0.0f*si::metre,0.0f*si::metre}, M_radius);
     }
 
-    static std::shared_ptr<sphere> make(const vec3<si::metre> position, const quantity<si::metre> radius)
+    static std::shared_ptr<sphere> make(const quantity<si::metre> radius)
     {
-        return std::make_shared<sphere>(position, radius);
+        return std::make_shared<sphere>(radius);
+        auto a = std::make_shared<sphere>(radius);
     }
 
-
+    [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius;}
     [[nodiscard]] const aabb &bounds() const;
     [[nodiscard]] const bounding_sphere &bsphere() const;
 
@@ -70,7 +71,6 @@ public:
     /// @brief - Add in support to return obb objects -> much more tedious, more research later.
 
 private:
-    vec3<si::metre> M_position;
     quantity<si::metre> M_radius;
     bounding_sphere M_bsphere;
     aabb M_aabb;

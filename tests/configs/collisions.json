@@ -13,7 +13,7 @@
     "title": "Collisions Test Config",
     "objects": [
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     15.0,
@@ -36,7 +36,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.5,
@@ -60,7 +60,7 @@
             "restitution": 0.4
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.5,
@@ -95,7 +95,7 @@
             "restitution": 0.4
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.5
             },
@@ -120,7 +120,7 @@
             "restitution": 0.4
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "pyramid",
                 "height": 1.5,
                 "base_size": 1.2
@@ -151,7 +151,7 @@
             "restitution": 0.4
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     1.0,
@@ -186,7 +186,7 @@
             "restitution": 0.4
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.8
             },

@@ -41,6 +41,43 @@
 
 namespace graphics
 {
+namespace mesh_objs
+{
+// radius 1
+inline auto cube()
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
+
+// radius 1
+inline auto sphere(unsigned int subdivisions = 3, float radius = 1.0f)
+{
+    auto data = Primitives::icosphereSolid(subdivisions);
+    if (radius != 1.0f)
+    {
+        for (Vector3& i: data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
+            i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
+    }
+
+
+    return std::make_shared<GL::Mesh>(MeshTools::compile(data));
+}
+
+inline auto cone(unsigned int rings, unsigned int segments, float half_length)
+{
+    return std::make_shared<GL::Mesh>(
+        MeshTools::compile(Primitives::coneSolid(rings, segments, half_length)));
+}
+
+inline auto cylinder(unsigned int rings, unsigned int segments, float half_length,
+                     bool include_caps = true)
+{
+    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cylinderSolid(
+        rings, segments, half_length,
+        include_caps ? Primitives::CylinderFlag::CapEnds : Primitives::CylinderFlag{})));
+}
+
+inline auto plane()
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
+}; // namespace mesh_objs
 
 using namespace Magnum;
 using gfx_obj_base = SceneGraph::Object<SceneGraph::MatrixTransformation3D>;
@@ -266,8 +303,6 @@ public:
         {
             std::string name; // must be "sphere"
             float radius;
-            unsigned int stacks = 16;
-            unsigned int sectors = 32;
         };
 
         struct obj // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -278,7 +313,7 @@ public:
             std::array<double, 3> angular_velocity = {0.0, 0.0, 0.0}; // rad/s
             std::array<double, 3> inertia_tensor = {1.0, 1.0, 1.0};   // diagonal [Ixx, Iyy, Izz]
             physkit::body_type type = physkit::body_type::dynam;
-            std::variant<box_type, pyramid_type, sphere_type> mesh =
+            std::variant<box_type, pyramid_type, sphere_type> shape =
                 box_type{"box", {0.5f, 0.5f, 0.5f}};
             double mass;
             double restitution = 0.5;
@@ -314,32 +349,30 @@ public:
 
         self.M_gravity =
             physkit::vec3{config.gravity[0], config.gravity[1], config.gravity[2]} * m / s / s;
-        // self.M_integrator = config.integrator;
         self.M_solver_iterations = config.solver_iterations;
 
-        std::map<std::string, std::shared_ptr<physkit::mesh>> mesh_map;
+        std::map<std::string, std::shared_ptr<physkit::shape>> shape_map;
         self.M_objects.reserve(config.objects.size());
         for (const obj &obj : config.objects)
         {
-            auto mesh_name = *glz::write_json(obj.mesh);
-            auto it = mesh_map.find(mesh_name);
-            if (it == mesh_map.end())
+            auto shape_name = *glz::write_json(obj.shape);
+            auto it = shape_map.find(shape_name);
+            if (it == shape_map.end())
             {
-                obj.mesh.visit(
-                    [&](auto &&mesh_desc)
+                obj.shape.visit(
+                    [&](auto &&shape_desc)
                     {
-                        using T = std::decay_t<decltype(mesh_desc)>;
+                        using T = std::decay_t<decltype(shape_desc)>;
                         if constexpr (std::same_as<T, box_type>)
-                            mesh_map[mesh_name] = physkit::mesh::box(
-                                physkit::vec3{mesh_desc.half_extents[0], mesh_desc.half_extents[1],
-                                              mesh_desc.half_extents[2]} *
-                                m);
+                            shape_map[shape_name] = physkit::shape::make(physkit::mesh::box(
+                                physkit::vec3{shape_desc.half_extents[0], shape_desc.half_extents[1],
+                                              shape_desc.half_extents[2]} *
+                                m));
                         else if constexpr (std::same_as<T, pyramid_type>)
-                            mesh_map[mesh_name] = physkit::mesh::pyramid(mesh_desc.height * m,
-                                                                         mesh_desc.base_size * m);
+                            shape_map[shape_name] = physkit::shape::make(physkit::mesh::pyramid(shape_desc.height * m,
+                                                                         shape_desc.base_size * m));
                         else if constexpr (std::same_as<T, sphere_type>)
-                            mesh_map[mesh_name] = physkit::mesh::sphere(
-                                mesh_desc.radius * m, mesh_desc.stacks, mesh_desc.sectors);
+                            shape_map[shape_name] = physkit::shape::make(physkit::sphere::make(shape_desc.radius * m));
                     });
             }
 
@@ -360,7 +393,7 @@ public:
                                   rad / s)
                     .with_inertia_tensor(inertia)
                     .with_mass(obj.mass * kg)
-                    .with_mesh(mesh_map.at(mesh_name))
+                    .with_shape(shape_map.at(shape_name))
                     .with_restitution(obj.restitution)
                     .with_friction(obj.friction),
                 Color3{obj.color[0], obj.color[1], obj.color[2]});
@@ -433,23 +466,24 @@ public:
                 "      Type: {}",
                 glz::reflect<physkit::body_type>::keys[static_cast<int>(o.type())]); // NOLINT
             std::println("      Color: ({}, {}, {})", color[0], color[1], color[2]);
-            config.objects[i].mesh.visit(
-                [](auto &&mesh_desc)
+            config.objects[i].shape.visit(
+                [](auto &&shape_desc)
                 {
-                    using T = std::decay_t<decltype(mesh_desc)>;
+                    using T = std::decay_t<decltype(shape_desc)>;
                     if constexpr (std::same_as<T, box_type>)
-                        std::println("      Mesh: box (half_extents: {})",
-                                     physkit::vec3{mesh_desc.half_extents[0],
-                                                   mesh_desc.half_extents[1],
-                                                   mesh_desc.half_extents[2]} *
-                                         m);
+                        std::println("      Shape: box (half_extents: {})",
+                                    physkit::vec3{shape_desc.half_extents[0],
+                                                  shape_desc.half_extents[1],
+                                                  shape_desc.half_extents[2]} *
+                                            m);
                     else if constexpr (std::same_as<T, pyramid_type>)
-                        std::println("      Mesh: pyramid (height: {}, base_size: {})",
-                                     mesh_desc.height * m, mesh_desc.base_size * m);
+                        std::println("      Shape: pyramid (height: {}, base_size: {})",
+                                     shape_desc.height * m, shape_desc.base_size * m);
                     else if constexpr (std::same_as<T, sphere_type>)
-                        std::println("      Mesh: sphere (radius: {}, stacks: {}, sectors: {})",
-                                     mesh_desc.radius * m, mesh_desc.stacks, mesh_desc.sectors);
+                        std::println("      Shape: sphere (radius: {})",
+                                shape_desc.radius * m);
                 });
+
         }
         std::cout.flush();
 
@@ -796,15 +830,13 @@ public:
 
     /// @brief Register and create, or fetch a previously registered shared mesh for this
     /// physkit::mesh instance. This mesh will be used across all methods with this physkit::mesh.
-    /// @param phys_mesh The physkit::mesh to get the shared GL::Mesh for.
-    /// @return A shared pointer to the GL::Mesh corresponding to the given physkit::mesh.
-    std::shared_ptr<GL::Mesh> get_mesh(const physkit::mesh &phys_mesh)
+    /// @param phys_shape The physkit::shape to get the shared GL::Mesh for.
+    /// @return A shared pointer to the GL::Mesh corresponding to the given physkit::shape
+    std::shared_ptr<GL::Mesh> get_mesh(const physkit::shape &phys_shape)
     {
-        if (auto it = M_phys_mesh_map.find(&phys_mesh); it != M_phys_mesh_map.end())
+        if (auto it = M_phys_shape_map.find(&phys_shape); it != M_phys_shape_map.end())
             return it->second;
-        return M_phys_mesh_map
-            .emplace(&phys_mesh, std::make_shared<GL::Mesh>(to_magnum_mesh(phys_mesh)))
-            .first->second;
+        return internal_shape_map_emplace(phys_shape);
     }
 
     /// @brief Add a physics object to the scene with the specified color. This method will create
@@ -818,10 +850,8 @@ public:
         auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
         auto &obj = phys_obj->obj();
         std::shared_ptr<GL::Mesh> mesh;
-        if (auto it = M_phys_mesh_map.find(&obj.mesh()); it == M_phys_mesh_map.end())
-            mesh = M_phys_mesh_map
-                       .emplace(&obj.mesh(), std::make_shared<GL::Mesh>(to_magnum_mesh(obj.mesh())))
-                       .first->second;
+        if (auto it = M_phys_shape_map.find(&obj.shape()); it == M_phys_shape_map.end())
+            mesh = internal_shape_map_emplace(obj.shape());
         else
             mesh = it->second;
 
@@ -846,8 +876,8 @@ public:
             .transform(
                 [&](auto obj)
                 {
-                    if (auto it = M_phys_mesh_map.find(&obj->mesh()); it == M_phys_mesh_map.end())
-                        M_phys_mesh_map.emplace(&obj->mesh(), mesh);
+                    if (auto it = M_phys_shape_map.find(&obj->shape()); it == M_phys_shape_map.end())
+                        M_phys_shape_map.emplace(&obj->shape(), mesh);
                     else if (it->second != mesh)
                         throw std::runtime_error(
                             "graphics_app::add_object: provided mesh does not match "
@@ -986,6 +1016,23 @@ protected:
     { return M_timeline.previousFrameTime() * physkit::si::second; }
 
 private:
+    std::shared_ptr<GL::Mesh> internal_shape_map_emplace(const physkit::shape &phys_shape)
+    {
+        switch (phys_shape.type())
+        {
+        default:
+        case physkit::shape_type::shape_mesh:
+            return M_phys_shape_map
+                .emplace(&phys_shape, std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.mesh())))
+                .first->second;
+            break;
+        case physkit::shape_type::shape_sphere:
+            return M_phys_shape_map //oh boy. TODO
+                .emplace(&phys_shape, mesh_objs::sphere(3, phys_shape.sphere()->radius().numerical_value_in(physkit::si::metre)))
+                .first->second;
+            break;
+        }
+    }
     void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
     {
         instanced_drawables *instances{};
@@ -1092,7 +1139,7 @@ private:
     std::unique_ptr<physkit::world_base> M_world;
     physkit::stepper M_stepper;
     camera M_cam;
-    std::unordered_map<const physkit::mesh *, std::shared_ptr<GL::Mesh>> M_phys_mesh_map;
+    std::unordered_map<const physkit::shape *, std::shared_ptr<GL::Mesh>> M_phys_shape_map;
     std::unordered_map<std::shared_ptr<GL::Mesh>, instanced_drawables *> M_mesh_drawables;
     std::vector<physics_obj *> M_physics_objs;
     std::unordered_map<Key, key_state> M_keys;
@@ -1106,31 +1153,4 @@ private:
     bool M_testing = false;
 };
 
-namespace mesh_objs
-{
-// radius 1
-inline auto cube()
-{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
-
-// radius 1
-inline auto sphere(unsigned int subdivisions = 3)
-{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions))); }
-
-inline auto cone(unsigned int rings, unsigned int segments, float half_length)
-{
-    return std::make_shared<GL::Mesh>(
-        MeshTools::compile(Primitives::coneSolid(rings, segments, half_length)));
-}
-
-inline auto cylinder(unsigned int rings, unsigned int segments, float half_length,
-                     bool include_caps = true)
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cylinderSolid(
-        rings, segments, half_length,
-        include_caps ? Primitives::CylinderFlag::CapEnds : Primitives::CylinderFlag{})));
-}
-
-inline auto plane()
-{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
-}; // namespace mesh_objs
 } // namespace graphics

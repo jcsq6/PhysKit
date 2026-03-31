@@ -19,7 +19,7 @@
     "solver_iterations": 15,
     "objects": [
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     6.0,
@@ -44,7 +44,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -68,7 +68,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -92,7 +92,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -116,7 +116,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -140,7 +140,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -164,7 +164,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -188,7 +188,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -212,7 +212,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -236,7 +236,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -260,7 +260,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -284,7 +284,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -308,7 +308,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -332,7 +332,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -356,7 +356,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -380,7 +380,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.4,
@@ -404,7 +404,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.35
             },

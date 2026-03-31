@@ -46,23 +46,23 @@ public:
 
     shape(const std::shared_ptr<const mesh> &m) : M_type(shape_mesh), M_mesh()
     {
-        M_mesh = std::shared_ptr<const mesh>(m);
+        M_mesh = std::shared_ptr<const physkit::mesh>(m);
     }
     shape(const std::shared_ptr<const sphere> &s) : M_type(shape_sphere), M_sphere()
     {
-        M_sphere = std::shared_ptr<const sphere>(s);
+        M_sphere = std::shared_ptr<const physkit::sphere>(s);
     }
 
     static std::shared_ptr<shape> make(const std::shared_ptr<const mesh> &m) { return std::make_shared<shape>(m);}
     static std::shared_ptr<shape> make(const std::shared_ptr<const sphere> &s) { return std::make_shared<shape>(s);}
 
 
-    [[nodiscard]] std::shared_ptr<const struct mesh> get_mesh() const
+    [[nodiscard]] std::shared_ptr<const struct mesh> mesh() const
     {
         assert(M_type == shape_mesh);
         return M_mesh;
     }
-    [[nodiscard]] std::shared_ptr<const struct sphere> get_sphere() const
+    [[nodiscard]] std::shared_ptr<const struct sphere> sphere() const
     {
         assert(M_type == shape_sphere);
         return M_sphere;
@@ -230,8 +230,8 @@ private:
     shape_type M_type;
     union
     {
-        std::shared_ptr<const mesh> M_mesh;
-        std::shared_ptr<const sphere> M_sphere;
+        std::shared_ptr<const physkit::mesh> M_mesh;
+        std::shared_ptr<const physkit::sphere> M_sphere;
     };
 };
 

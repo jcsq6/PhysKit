@@ -29,7 +29,7 @@ quantity<pow<3>(m)> sphere::volume() const
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 vec3<m> sphere::mass_center() const
 {
-    return M_position;
+    return {0.0f*m, 0.0f*m, 0.0f*m};
 }
 
 mat3<kg * pow<2>(m)>
@@ -61,6 +61,7 @@ std::optional<ray::hit> sphere::ray_intersect(const ray &r, quantity<m> max_dist
     auto origin = r.origin();
     auto direction = r.direction();
 
+    /*
     auto a = direction.dot(direction);
     auto b = 2*(origin - M_position).dot(direction);
     auto c = (origin - M_position).dot(origin-M_position) - mp_units::pow<2>(M_radius);
@@ -74,6 +75,18 @@ std::optional<ray::hit> sphere::ray_intersect(const ray &r, quantity<m> max_dist
     auto pos = origin + dist*direction;
 
     auto normal = (pos - M_position).normalized();
+    */
+    auto a = direction.dot(direction);
+    auto b = 2*(origin.dot(direction));
+    auto c = origin.dot(origin) - mp_units::pow<2>(M_radius);
+
+    auto det = mp_units::pow<2>(b) - 4*a*c;
+    if (det < 0*m*m)
+        return std::nullopt;
+
+    auto dist = (b - mp_units::sqrt(det)) / (2*a);
+    auto pos = origin + dist*direction;
+    auto normal = pos.normalized();
 
 
     return ray::hit{
@@ -85,12 +98,14 @@ std::optional<ray::hit> sphere::ray_intersect(const ray &r, quantity<m> max_dist
 
 vec3<m> sphere::closest_point(const vec3<m> &p) const
 {
-    return (p - M_position).normalized()*M_radius;
+    //return (p - M_position).normalized()*M_radius;
+    return p.normalized()*M_radius;
 }
 
 bool sphere::contains(const vec3<m> &point) const
 {
-    return (point - M_position).norm() <= M_radius;
+    //return (point - M_position).norm() <= M_radius;
+    return point.norm() <= M_radius;
 }
 
 //point on sphere that gives greatest dot product with direction????
