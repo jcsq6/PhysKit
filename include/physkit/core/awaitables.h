@@ -312,16 +312,13 @@ struct race_barrier
     task_id parent;
     task_handler *handler;
 
-    bool arrive()
+    bool claim_win()
     {
         bool expected = false;
-        if (finished.compare_exchange_strong(expected, true))
-        {
-            handler->queue_immediate_task(parent);
-            return true;
-        }
-        return false;
+        return finished.compare_exchange_strong(expected, true);
     }
+
+    void wake_parent() const { handler->queue_immediate_task(parent); }
 
     void arrive_error()
     {
@@ -459,7 +456,11 @@ struct wait_for_any
             try
             {
                 auto res = co_await std::move(aw);
-                if (barrier->arrive()) result.template emplace<I>(std::move(res));
+                if (barrier->claim_win())
+                {
+                    result.template emplace<I>(std::move(res));
+                    barrier->wake_parent();
+                }
             }
             catch (...)
             {
