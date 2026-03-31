@@ -227,8 +227,8 @@ protected:
     virtual void step_impl(quantity<si::second> dt) = 0;
 
 private:
-    detail::task_handler M_task_handler;
     detail::arena<detail::obj_node> M_rigid;
+    detail::task_handler M_task_handler;
     detail::broad_phase M_broad;
     detail::narrow_phase M_narrow;
     detail::swappable_queue<detail::command> M_command_queue;
