@@ -380,6 +380,58 @@ void collision()
     stepper.update(5 * s);
 }
 
+void collision_with_specific_object()
+{
+    world<semi_implicit_euler> w(no_gravity());
+    auto a = w.create_rigid(object_desc::dynam()
+                                .with_vel(vec3{1, 0, 0} * m / s)
+                                .with_pos(vec3{-1, 0, 0} * m)
+                                .with_mesh(box_mesh));
+    auto b = w.create_rigid(object_desc::dynam()
+                                .with_vel(vec3{-1, 0, 0} * m / s)
+                                .with_pos(vec3{1, 0, 0} * m)
+                                .with_mesh(box_mesh));
+    auto c = w.create_rigid(object_desc::dynam()
+                                .with_vel(vec3{0, 0, 0} * m / s)
+                                .with_pos(vec3{0, 10, 0} * m) // Far away
+                                .with_mesh(box_mesh));
+
+    static bool completed_ab = false;
+    static bool completed_ac = false;
+    completed_ab = false;
+    completed_ac = false;
+
+    auto t = [](object_handle a, object_handle b) -> task<>
+    {
+        auto col = *co_await wait_for_collision(a, b);
+        CHECK(col.other == b);
+        CHECK(col.contact_manifold.contacts().size() > 0);
+
+        auto other = *co_await wait_for_separation(b, a);
+        CHECK(other == a);
+
+        completed_ab = true;
+    };
+
+    auto t2 = [](object_handle a, object_handle c) -> task<>
+    {
+        auto result = *co_await wait_for_any{wait_for_collision(a, c), wait_for(4 * s)};
+        if (result.index() == 1)
+            completed_ac = false;
+        else
+            completed_ac = true;
+    };
+
+    w.add_task(t(a, b));
+    w.add_task(t2(a, c));
+
+    stepper stepper(w, frame_ds);
+    stepper.update(5 * s);
+
+    CHECK(completed_ab);
+    CHECK(!completed_ac);
+}
+
 void collision_stale_handle()
 {
     world<semi_implicit_euler> w(no_gravity());
@@ -1033,6 +1085,7 @@ int main()
 
     // Collisions
     s.group("Collisions").test("collision and separation", tests::collision);
+    s.group("Collisions").test("specific object collision", tests::collision_with_specific_object);
     s.group("Collisions").test("stale handle collision", tests::collision_stale_handle);
     s.group("Collisions").test("stale handle separation", tests::separation_stale_handle);
 

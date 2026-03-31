@@ -414,74 +414,108 @@ public:
     void on_collision(const narrow_phase::manifold_info &man_info, handle_id_t obj_a,
                       handle_id_t obj_b, passkey<world_base> /*key*/)
     {
-        auto on_obj = [&](handle_id_t object_id)
+        auto on_obj = [&](handle_id_t object_id, handle_id_t other_id)
         {
             auto it = M_object_waiters.find(object_id);
             if (it == M_object_waiters.end()) return;
-            for (auto [tid, result_storage] : it->second.coll_enter)
-            {
-                if (result_storage) *result_storage = man_info;
-                queue_post_task(tid);
-            }
-            it->second.coll_enter.clear();
+            std::erase_if(it->second.coll_enter,
+                          [&](const auto &w)
+                          {
+                              if (w.with != other_id && w.with != null_id) return false;
+
+                              if (w.result_storage) *w.result_storage = man_info;
+                              queue_post_task(w.task_id);
+                              return true;
+                          });
             if (it->second.empty()) M_object_waiters.erase(it);
         };
 
-        on_obj(obj_a);
-        on_obj(obj_b);
+        on_obj(obj_a, obj_b);
+        on_obj(obj_b, obj_a);
     }
 
     void on_collision_exit(handle_id_t obj_a, handle_id_t obj_b, passkey<world_base> /*key*/)
     {
-        auto on_obj = [&](handle_id_t object_id)
+        auto on_obj = [&](handle_id_t object_id, handle_id_t other_id)
         {
             auto it = M_object_waiters.find(object_id);
             if (it == M_object_waiters.end()) return;
-            for (auto [tid, a, b] : it->second.coll_exit)
-            {
-                if (a) *a = obj_a;
-                if (b) *b = obj_b;
-                queue_post_task(tid);
-            }
-            it->second.coll_exit.clear();
+            std::erase_if(it->second.coll_exit,
+                          [&](const auto &w)
+                          {
+                              if (w.with != other_id && w.with != null_id) return false;
+
+                              if (w.a) *w.a = obj_a;
+                              if (w.b) *w.b = obj_b;
+
+                              queue_post_task(w.task_id);
+                              return true;
+                          });
             if (it->second.empty()) M_object_waiters.erase(it);
         };
 
-        on_obj(obj_a);
-        on_obj(obj_b);
+        on_obj(obj_a, obj_b);
+        on_obj(obj_b, obj_a);
     }
 
     void on_destruction(handle_id_t obj, passkey<world_base> /*key*/)
     {
-        auto it = M_object_waiters.find(obj);
-        if (it == M_object_waiters.end()) return;
-        for (auto [tid] : it->second.destructions) queue_cleanup_task(tid);
-        for (auto [tid, a, b] : it->second.coll_exit)
+
+        if (auto it = M_object_waiters.find(obj); it != M_object_waiters.end())
         {
-            if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+            for (auto [tid] : it->second.destructions) queue_cleanup_task(tid);
+            for (auto [tid, with, a, b] : it->second.coll_exit)
             {
-                task->set_error(error::object_destroyed, {});
-                queue_cleanup_task(tid);
+                if (with != null_id) remove_dependency(with, tid);
+                if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+                {
+                    task->set_error(error::object_destroyed, {});
+                    queue_cleanup_task(tid);
+                }
             }
+            for (auto [tid, with, result_storage] : it->second.coll_enter)
+            {
+                if (with != null_id) remove_dependency(with, tid);
+                if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+                {
+                    task->set_error(error::object_destroyed, {});
+                    queue_cleanup_task(tid);
+                }
+            }
+            M_object_waiters.erase(it);
         }
-        for (auto [tid, result_storage] : it->second.coll_enter)
+
+        if (auto it = M_object_deps.find(obj); it != M_object_deps.end())
         {
-            if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+            thread_local std::vector<dependency> copy;
+            copy = it->second;
+            for (auto [tid, source_obj] : copy)
             {
-                task->set_error(error::object_destroyed, {});
-                queue_cleanup_task(tid);
+                remove_collision_waiter(source_obj, tid);
+                remove_collision_exit_waiter(source_obj, tid);
+                if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+                {
+                    task->set_error(error::object_destroyed, {});
+                    queue_cleanup_task(tid);
+                }
             }
+            M_object_deps.erase(it);
         }
-        M_object_waiters.erase(it);
     }
 
-    void add_collision_waiter(handle_id_t object_id, handle_id_t task_id,
+    void add_collision_waiter(handle_id_t object_id, handle_id_t with, handle_id_t task_id,
                               narrow_phase::manifold_info *result_storage)
-    { M_object_waiters[object_id].coll_enter.emplace_back(task_id, result_storage); }
+    {
+        M_object_waiters[object_id].coll_enter.emplace_back(task_id, with, result_storage);
+        if (with != null_id) M_object_deps[with].emplace_back(task_id, object_id);
+    }
 
-    void add_collision_exit_waiter(handle_id_t object_id, handle_id_t task_id, handle_id_t *a,
-                                   handle_id_t *b)
-    { M_object_waiters[object_id].coll_exit.emplace_back(task_id, a, b); }
+    void add_collision_exit_waiter(handle_id_t object_id, handle_id_t with, handle_id_t task_id,
+                                   handle_id_t *a, handle_id_t *b)
+    {
+        M_object_waiters[object_id].coll_exit.emplace_back(task_id, with, a, b);
+        if (with != null_id) M_object_deps[with].emplace_back(task_id, object_id);
+    }
 
     void add_destruction_waiter(handle_id_t object_id, handle_id_t task_id)
     { M_object_waiters[object_id].destructions.emplace_back(task_id); }
@@ -508,11 +542,13 @@ private:
         struct collision_enter_res
         {
             task_id task_id;
+            handle_id_t with;
             narrow_phase::manifold_info *result_storage;
         };
         struct collision_exit_res
         {
             task_id task_id;
+            handle_id_t with;
             handle_id_t *a;
             handle_id_t *b;
         };
@@ -538,13 +574,21 @@ private:
         { return coll_enter.empty() && coll_exit.empty() && destructions.empty(); }
     };
 
+    struct dependency
+    {
+        task_id task_id;
+        handle_id_t source_object;
+    };
+
+    absl::flat_hash_map<handle_id_t, object_waiter> M_object_waiters;
+    absl::flat_hash_map<handle_id_t, std::vector<dependency>> M_object_deps;
+
     arena<task<>> M_tasks;
     swappable_queue<task_id> M_pre_queue;
     swappable_queue<task_id> M_post_queue;
     swappable_queue<task_id> M_post_physics_queue;
     swappable_queue<task_id> M_cleanup_queue;
     swappable_queue<task_id> M_immediate_queue;
-    absl::flat_hash_map<handle_id_t, object_waiter> M_object_waiters;
 
     std::vector<std::pair<mp_units::quantity<mp_units::si::second>, handle_id_t>>
         M_timer_heap; // TODO: memory management
@@ -561,8 +605,28 @@ private:
         if (it == M_object_waiters.end()) return;
         auto &waiters = it->second.template get_waiter<T>();
         // Should be close to constant time
-        std::erase_if(waiters, [task_id](const auto &w) { return w.task_id == task_id; });
+        std::erase_if(waiters,
+                      [task_id, this](const auto &w)
+                      {
+                          if (w.task_id == task_id)
+                          {
+                              if constexpr (T == object_waiter::type::collision_enter ||
+                                            T == object_waiter::type::collision_exit)
+                                  if (w.with != null_id) remove_dependency(w.with, task_id);
+                              return true;
+                          }
+                          return false;
+                      });
         if (waiters.empty() && it->second.empty()) M_object_waiters.erase(it);
+    }
+
+    void remove_dependency(handle_id_t object_id, handle_id_t task_id)
+    {
+        if (auto it = M_object_deps.find(object_id); it != M_object_deps.end())
+        {
+            std::erase_if(it->second, [task_id](const auto &d) { return d.task_id == task_id; });
+            if (it->second.empty()) M_object_deps.erase(it);
+        }
     }
 
     void resume_task(handle_id_t id)

@@ -144,7 +144,7 @@ struct wait_for_collision
     struct awaiter_type : detail::awaiter
     {
         awaiter_type(detail::task_promise_base &promise, wait_for_collision aw)
-            : detail::awaiter(promise), object(aw.object)
+            : detail::awaiter(promise), object(aw.object), with(aw.with)
         {
         }
 
@@ -160,6 +160,7 @@ struct wait_for_collision
         awaiter_type &operator=(awaiter_type &&) = delete;
 
         world_base::handle object;
+        world_base::handle with;
         detail::narrow_phase::manifold_info result;
         bool is_suspended = false;
 
@@ -167,7 +168,7 @@ struct wait_for_collision
         [[nodiscard]] bool await_ready() const noexcept { return !world().get_rigid(object); }
         void await_suspend(std::coroutine_handle<> /*handle*/)
         {
-            handler().add_collision_waiter(object.id(), promise().id, &result);
+            handler().add_collision_waiter(object.id(), with.id(), promise().id, &result);
             is_suspended = true;
         }
 
@@ -184,6 +185,7 @@ struct wait_for_collision
     };
 
     world_base::handle object;
+    world_base::handle with = world_base::handle::from_id(world_base::handle::null);
 };
 
 struct wait_for_separation
@@ -191,7 +193,7 @@ struct wait_for_separation
     struct awaiter_type : detail::awaiter
     {
         awaiter_type(detail::task_promise_base &promise, wait_for_separation aw)
-            : detail::awaiter(promise), object(aw.object)
+            : detail::awaiter(promise), object(aw.object), with(aw.with)
         {
         }
 
@@ -206,6 +208,7 @@ struct wait_for_separation
         awaiter_type &operator=(awaiter_type &&) = delete;
 
         world_base::handle object;
+        world_base::handle with;
         detail::handle_id_t result_a = world_base::handle::null;
         detail::handle_id_t result_b = world_base::handle::null;
         bool is_suspended = false;
@@ -215,7 +218,8 @@ struct wait_for_separation
 
         void await_suspend(std::coroutine_handle<> /*handle*/)
         {
-            handler().add_collision_exit_waiter(object.id(), promise().id, &result_a, &result_b);
+            handler().add_collision_exit_waiter(object.id(), with.id(), promise().id, &result_a,
+                                                &result_b);
             is_suspended = true;
         }
 
@@ -228,6 +232,7 @@ struct wait_for_separation
     };
 
     world_base::handle object;
+    world_base::handle with = world_base::handle::from_id(world_base::handle::null);
 };
 
 // --------- KINEMATICS ---------
