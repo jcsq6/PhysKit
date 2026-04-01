@@ -17,8 +17,7 @@ else()
     set(PHYSKIT_BUILD_GRAPHICS_TESTS OFF)
 endif()
 
-add_library(phys_graphics INTERFACE
-        shape/main.cpp)
+add_library(phys_graphics INTERFACE)
 
 target_sources(phys_graphics
   INTERFACE

@@ -36,6 +36,7 @@ set(PHYSKIT_SOURCES
 	src/sphere.cpp
 	src/collision.cpp
 	src/bvh.cpp
+	src/box.cpp
 )
 
 set(PHYSKIT_HEADERS
@@ -44,6 +45,7 @@ set(PHYSKIT_HEADERS
 	integrator.h
 	mesh.h
 	sphere.h
+	box.h
 	shape.h
 	object.h
 	particle.h

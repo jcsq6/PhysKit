@@ -1027,7 +1027,7 @@ private:
                 .first->second;
             break;
         case physkit::shape_type::shape_sphere:
-            return M_phys_shape_map //oh boy. TODO
+            return M_phys_shape_map //oh boy
                 .emplace(&phys_shape, mesh_objs::sphere(3, phys_shape.sphere()->radius().numerical_value_in(physkit::si::metre)))
                 .first->second;
             break;

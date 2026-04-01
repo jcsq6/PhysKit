@@ -1,6 +1,7 @@
 #pragma once
 #include "mesh.h"
 #include "sphere.h"
+#include "box.h"
 #include "detail/bounds.h"
 #include "detail/bvh.h"
 #include "detail/types.h"
@@ -41,6 +42,8 @@ public:
         case shape_sphere:
             M_sphere.~shared_ptr();
             break;
+        case shape_box:
+            M_box.~shared_ptr();
         }
     }
 
@@ -52,9 +55,14 @@ public:
     {
         M_sphere = std::shared_ptr<const physkit::sphere>(s);
     }
+    shape (const std::shared_ptr<const box> &b) : M_type(shape_box), M_box()
+    {
+        M_box = std::shared_ptr<const physkit::box>(b);
+    }
 
     static std::shared_ptr<shape> make(const std::shared_ptr<const mesh> &m) { return std::make_shared<shape>(m);}
     static std::shared_ptr<shape> make(const std::shared_ptr<const sphere> &s) { return std::make_shared<shape>(s);}
+    static std::shared_ptr<shape> make(const std::shared_ptr<const box> &b) { return std::make_shared<shape>(b);}
 
 
     [[nodiscard]] std::shared_ptr<const struct mesh> mesh() const
@@ -67,6 +75,11 @@ public:
         assert(M_type == shape_sphere);
         return M_sphere;
     }
+    [[nodiscard]] std::shared_ptr<const struct box> box() const
+    {
+        assert(M_type == shape_box);
+        return M_box;
+    }
 
     [[nodiscard]] const aabb &bounds() const
     {
@@ -75,8 +88,10 @@ public:
         default:
         case shape_mesh:
             return M_mesh->bounds();
-        case shape_type::shape_sphere:
+        case shape_sphere:
             return  M_sphere->bounds();
+        case shape_box:
+            return M_box->bounds();
         }
     }
 
@@ -89,6 +104,8 @@ public:
             return M_mesh->bsphere();
         case shape_sphere:
             return M_sphere->bsphere();
+        case shape_box:
+            return M_box->bsphere();
         }
     }
 
@@ -101,6 +118,8 @@ public:
             return M_mesh->volume();
         case shape_sphere:
             return M_sphere->volume();
+        case shape_box:
+            return M_box->volume();
         }
 
     }
@@ -114,6 +133,8 @@ public:
             return M_mesh->mass_center();
         case shape_sphere:
             return M_sphere->mass_center();
+        case shape_box:
+            return M_box->mass_center();
         }
     }
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
@@ -127,6 +148,9 @@ public:
             break;
         case shape_sphere:
             return M_sphere->inertia_tensor(density);
+            break;
+        case shape_box:
+            return M_box->inertia_tensor(density);
             break;
         }
     }
@@ -143,6 +167,8 @@ public:
             return M_mesh->ray_intersect(r, max_distance);
         case shape_sphere:
             return M_sphere->ray_intersect(r, max_distance);
+        case shape_box:
+            return M_box->ray_intersect(r, max_distance);
         }
     }
     /// @brief Closest point on the surface
@@ -155,6 +181,8 @@ public:
             return M_mesh->closest_point(point);
         case shape_sphere:
             return M_sphere->closest_point(point);
+        case shape_box:
+            return M_box->closest_point(point);
         }
     }
     /// @brief Point containment test in local space.
@@ -167,6 +195,8 @@ public:
             return M_mesh->contains(point);
         case shape_sphere:
             return M_sphere->contains(point);
+        case shape_box:
+            return M_box->contains(point);
         }
     }
 
@@ -192,6 +222,8 @@ public:
             return M_mesh->support(direction);
         case shape_sphere:
             return M_sphere->support(direction);
+        case shape_box:
+            return M_box->support(direction);
         }
     }
     [[nodiscard]] bool is_convex() const
@@ -202,6 +234,8 @@ public:
         case shape_mesh:
             return M_mesh->is_convex();
         case shape_sphere:
+            return true;
+        case shape_box:
             return true;
         }
     }
@@ -232,6 +266,7 @@ private:
     {
         std::shared_ptr<const physkit::mesh> M_mesh;
         std::shared_ptr<const physkit::sphere> M_sphere;
+        std::shared_ptr<const physkit::box> M_box;
     };
 };
 
