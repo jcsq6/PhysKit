@@ -34,13 +34,13 @@ mat3<kg * pow<2>(m)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 box::inertia_tensor(quantity<kg / pow<3>(m)> density) const
 {
-    auto m = density*volume();
+    auto mass = density*volume();
     auto x = M_half_extents.x()*2;
     auto y = M_half_extents.y()*2;
     auto z = M_half_extents.z()*2;
-    auto i1 = ((m/12) * (mp_units::pow<2>(y) + mp_units::pow<2>(z))).numerical_value_in(kg*m*m);
-    auto i2 = ((m/12) * (mp_units::pow<2>(x) + mp_units::pow<2>(z))).numerical_value_in(kg*m*m);
-    auto i3 = ((m/12) * (mp_units::pow<2>(x) + mp_units::pow<2>(y))).numerical_value_in(kg*m*m);
+    auto i1 = ((mass/12) * (mp_units::pow<2>(y) + mp_units::pow<2>(z))).numerical_value_in(kg*m*m);
+    auto i2 = ((mass/12) * (mp_units::pow<2>(x) + mp_units::pow<2>(z))).numerical_value_in(kg*m*m);
+    auto i3 = ((mass/12) * (mp_units::pow<2>(x) + mp_units::pow<2>(y))).numerical_value_in(kg*m*m);
 
     return mat3{{i1, 0.0f, 0.0f, 0.0f, i2, 0.0f, 0.0f, 0.0f, i3}} * kg * m * m;
 }
