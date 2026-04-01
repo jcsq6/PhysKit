@@ -34,21 +34,20 @@ mat3<kg * pow<2>(m)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 box::inertia_tensor(quantity<kg / pow<3>(m)> density) const
 {
-    throw std::runtime_error("box inertia tensor not implemented");
-    /*
-    auto val = ((2.0f/5.0f) * density*this->volume()*(mp_units::pow<2>(M_radius))).numerical_value_in(kg*m*m);
+    auto m = density*volume();
+    auto x = M_half_extents.x()*2;
+    auto y = M_half_extents.y()*2;
+    auto z = M_half_extents.z()*2;
+    auto i1 = ((m/12) * (mp_units::pow<2>(y) + mp_units::pow<2>(z))).numerical_value_in(kg*m*m);
+    auto i2 = ((m/12) * (mp_units::pow<2>(x) + mp_units::pow<2>(z))).numerical_value_in(kg*m*m);
+    auto i3 = ((m/12) * (mp_units::pow<2>(x) + mp_units::pow<2>(y))).numerical_value_in(kg*m*m);
 
-    const auto ret = mat3{{val, 0.0f, 0.0f, 0.0f, val, 0.0f, 0.0f, 0.0f, val}} * kg * m * m;
-
-    return ret;
-    */
+    return mat3{{i1, 0.0f, 0.0f, 0.0f, i2, 0.0f, 0.0f, 0.0f, i3}} * kg * m * m;
 }
 
 // ray intersection
 std::optional<ray::hit> box::ray_intersect(const ray &r, quantity<m> max_distance) const
 {
-
-    auto best_t = max_distance;
     ray::hit best;
     auto origin = r.origin();
     auto direction = r.direction();
