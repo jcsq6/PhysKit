@@ -10,10 +10,12 @@
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Renderer.h>
+#include <Magnum/Image.h>
 #include <Magnum/GL/Shader.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Angle.h>
 #include <Magnum/Math/Color.h>
+#include <Magnum/PixelFormat.h>
 #include <Magnum/Math/CubicHermite.h>
 #include <Magnum/Math/DualQuaternion.h>
 #include <Magnum/Math/Functions.h>

@@ -233,6 +233,8 @@ GRAPHICS_EXPORT namespace graphics
         static constexpr bool default_drag = false;
         static constexpr bool default_vsync = true;
         static constexpr auto default_time_step = 1.0f / 60.0f * mp_units::si::second;
+        static constexpr auto default_record_duration = 10.0f * mp_units::si::second;
+        static constexpr int default_record_fps = 60;
 
         template <typename Self> Self &&read_file(this Self &&self, std::string_view path);
 
@@ -363,6 +365,22 @@ GRAPHICS_EXPORT namespace graphics
             if (!self.M_time_step) self.M_time_step = time_step;
             return std::forward<decltype(self)>(self);
         }
+        auto &&record_output(this auto &&self, std::string_view path)
+        {
+            self.M_record_output = std::string(path);
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&record_duration(this auto &&self,
+                               physkit::quantity<mp_units::si::second> duration)
+        {
+            self.M_record_duration = duration;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&record_fps(this auto &&self, int fps)
+        {
+            self.M_record_fps = fps;
+            return std::forward<decltype(self)>(self);
+        }
 
         [[nodiscard]] auto window_size() const
         { return M_window_size.value_or(default_window_size); }
@@ -382,6 +400,11 @@ GRAPHICS_EXPORT namespace graphics
         [[nodiscard]] auto drag() const { return M_drag.value_or(default_drag); }
         [[nodiscard]] auto vsync() const { return M_vsync.value_or(default_vsync); }
         [[nodiscard]] auto time_step() const { return M_time_step.value_or(default_time_step); }
+        [[nodiscard]] auto &record_output() const { return M_record_output; }
+        [[nodiscard]] auto record_duration() const
+        { return M_record_duration.value_or(default_record_duration); }
+        [[nodiscard]] auto record_fps() const { return M_record_fps.value_or(default_record_fps); }
+        [[nodiscard]] bool recording() const { return M_record_output.has_value(); }
         [[nodiscard]] auto &objects() const { return M_objects; }
         [[nodiscard]] auto world_desc() const
         {
@@ -415,6 +438,9 @@ GRAPHICS_EXPORT namespace graphics
         // std::optional<physkit::world_desc::integ_t> M_integrator;
         std::optional<std::size_t> M_solver_iterations;
         std::optional<physkit::quantity<mp_units::si::second>> M_time_step;
+        std::optional<std::string> M_record_output;
+        std::optional<physkit::quantity<mp_units::si::second>> M_record_duration;
+        std::optional<int> M_record_fps;
         bool M_testing{false};
     };
 
@@ -545,13 +571,24 @@ GRAPHICS_EXPORT namespace graphics
         auto &physics_objects() const { return M_physics_objs; }
 
         graphics_app(const g_config &config)
-            : Magnum::Platform::Application{
-                  config.args(),
-                  Configuration{}
-                      .setTitle(
-                          Containers::StringView{config.title().data(), config.title().size()})
-                      .setSize(config.window_size())
-                      .setWindowFlags(Platform::Application::Configuration::WindowFlag::Focused)},
+            : Magnum::Platform::Application{config.args(),
+                                            [&config]
+                                            {
+                                                Configuration configuration;
+                                                configuration.setTitle(Containers::StringView{
+                                                    config.title().data(),
+                                                    config.title().size()});
+                                                if (config.recording())
+                                                    configuration.setSize(config.window_size(),
+                                                                          Vector2{1.0f});
+                                                else
+                                                    configuration.setSize(config.window_size());
+                                                configuration.setWindowFlags(
+                                                    config.recording()
+                                                        ? Platform::Application::Configuration::WindowFlag::Hidden
+                                                        : Platform::Application::Configuration::WindowFlag::Focused);
+                                                return configuration;
+                                            }()},
               M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                     config.window_size()),
               M_drag(true), M_grab_focus(!config.drag()), M_testing(config.testing())
@@ -577,7 +614,10 @@ GRAPHICS_EXPORT namespace graphics
             M_keys.reserve(128);
 
             M_timeline.start();
-            if (config.vsync()) set_vsync();
+            if (config.recording())
+                start_recording(config);
+            else if (config.vsync())
+                set_vsync();
 
             for (const auto &[obj_desc, color] : config.objects())
                 add_object(M_world->create_rigid(obj_desc), color);
@@ -587,6 +627,7 @@ GRAPHICS_EXPORT namespace graphics
 
         virtual ~graphics_app()
         {
+            finish_recording();
             if (M_testing) prompt_results();
         }
 
@@ -655,6 +696,76 @@ GRAPHICS_EXPORT namespace graphics
         { return M_timeline.previousFrameTime() * mp_units::si::second; }
 
     private:
+        static std::string shell_quote(std::string_view value)
+        {
+            std::string out;
+            out.reserve(value.size() + 2);
+            out.push_back('\'');
+            for (char c : value)
+            {
+                if (c == '\'')
+                    out += "'\\''";
+                else
+                    out.push_back(c);
+            }
+            out.push_back('\'');
+            return out;
+        }
+
+        void start_recording(const g_config &config)
+        {
+            M_recording = true;
+            M_record_output = *config.record_output();
+            M_record_fps = config.record_fps();
+            M_record_size = config.window_size();
+            M_record_dt = (1.0f / static_cast<float>(M_record_fps)) * mp_units::si::second;
+            M_record_time = 0.0f * mp_units::si::second;
+            M_record_frame = 0;
+
+            const auto duration = config.record_duration();
+            M_record_frame_count = std::max<std::size_t>(
+                1, static_cast<std::size_t>(std::ceil(duration.numerical_value_in(mp_units::si::second) *
+                                                     static_cast<double>(M_record_fps))));
+
+            set_vsync(false);
+            M_cam.cam().setViewport(M_record_size);
+
+            const auto command =
+                std::format("ffmpeg -y -loglevel error -f rawvideo -pixel_format rgba -video_size {}x{} "
+                            "-framerate {} -i - -vf vflip -an -c:v libx264 -pix_fmt yuv420p {}",
+                            M_record_size.x(), M_record_size.y(), M_record_fps,
+                            shell_quote(M_record_output));
+
+            M_record_pipe = popen(command.c_str(), "w");
+            if (!M_record_pipe)
+                throw std::runtime_error(std::format("failed to start ffmpeg for recording: {}",
+                                                     M_record_output));
+        }
+
+        void finish_recording()
+        {
+            if (!M_record_pipe) return;
+            pclose(M_record_pipe);
+            M_record_pipe = nullptr;
+        }
+
+        bool capture_record_frame()
+        {
+            if (!M_record_pipe) return true;
+
+            Image2D image =
+                GL::defaultFramebuffer.read({{}, M_record_size}, {PixelFormat::RGBA8Unorm});
+            const auto data = image.data();
+            const auto written = std::fwrite(data.data(), 1, data.size(), M_record_pipe);
+            if (written != data.size())
+                throw std::runtime_error(std::format("failed while writing recorded frame to {}",
+                                                     M_record_output));
+
+            ++M_record_frame;
+            M_record_time += M_record_dt;
+            return M_record_frame >= M_record_frame_count;
+        }
+
         void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
         {
             instanced_drawables *instances{};
@@ -683,20 +794,31 @@ GRAPHICS_EXPORT namespace graphics
             if (M_keys[Key::Space].is_pressed()) up += 1.0f;
             if (M_keys[Key::LeftShift].is_pressed()) up -= 1.0f;
 
-            M_cam.move(forward, right, up, dt());
+            const auto frame_dt = M_recording ? M_record_dt : dt();
+            const auto frame_time = M_recording ? M_record_time : current_time();
 
-            update(dt());
-            M_stepper.update(dt());
+            M_cam.move(forward, right, up, frame_dt);
+
+            update(frame_dt);
+            M_stepper.update(frame_dt);
 
             for (auto *obj : M_physics_objs) obj->sync();
 
             M_shader.setProjectionMatrix(M_cam.projection_matrix());
-            M_cam.draw(M_shaded, current_time());
+            M_cam.draw(M_shaded, frame_time);
+
+            if (M_recording && capture_record_frame())
+            {
+                finish_recording();
+                exit(0);
+                return;
+            }
 
             swapBuffers();
             redraw();
-            while (M_timeline.currentFrameDuration() * mp_units::si::second < M_frame_limit)
-                std::this_thread::yield();
+            if (!M_recording)
+                while (M_timeline.currentFrameDuration() * mp_units::si::second < M_frame_limit)
+                    std::this_thread::yield();
             M_timeline.nextFrame();
         }
 
@@ -771,6 +893,15 @@ GRAPHICS_EXPORT namespace graphics
         Vector2 M_mouse_pos;
         Timeline M_timeline;
         physkit::quantity<mp_units::si::second> M_frame_limit{};
+        std::FILE *M_record_pipe{};
+        std::string M_record_output;
+        Vector2i M_record_size{1, 1};
+        physkit::quantity<mp_units::si::second> M_record_dt = 0.0f * mp_units::si::second;
+        physkit::quantity<mp_units::si::second> M_record_time = 0.0f * mp_units::si::second;
+        std::size_t M_record_frame{};
+        std::size_t M_record_frame_count{};
+        int M_record_fps{};
+        bool M_recording = false;
         bool M_debug = false;
         bool M_drag = false;
         bool M_grab_focus = false;
