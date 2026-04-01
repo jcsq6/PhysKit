@@ -105,6 +105,23 @@ public:
     auto remove_rigid(handle h) { return M_rigid.remove(h); }
     auto get_rigid(this auto &&self, handle h) { return self.M_rigid.get(h); }
 
+    // NOTE: Added specifically for Debug Screen:
+    [[nodiscard]] size_t object_count() const { return M_rigid.slots.size() - M_rigid.free.size();}
+
+    [[nodiscard]] const auto& gravity() const { return M_gravity; }
+
+    template<typename F>
+    void for_each_object (F&& callback) const {
+        for (size_t i = 0; i < M_rigid.slots.size(); i++) {
+            const auto& slot = M_rigid.slots[i];
+            if (!slot.available) {
+                handle h{handle::key{}, i, slot.gen};
+                std::forward<F>(callback)(h, slot.value);
+            }
+        }
+    }
+    // End of Debug Screen Additions
+
 private:
     template <typename T> struct slot
     {
