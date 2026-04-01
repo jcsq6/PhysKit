@@ -20,6 +20,7 @@ enum class constraint_type : std::uint8_t
     hinge,
     slider,
     weld,
+    spring,
     contact,
 };
 
@@ -33,6 +34,7 @@ struct jacobian_row
     vec3<si::metre> J_w_b;
     quantity<si::kilogram> M_eff{};
     quantity<si::metre / si::second> bias{};
+    quantity<one / si::kilogram> gamma{}; // CFM
 
     // For warm starting
     quantity<si::newton * si::second> accumulated_impulse{};
@@ -49,7 +51,9 @@ struct jacobian_row
         // NOLINTNEXTLINE(readability-identifier-naming)
         auto Jv = J_v.dot(a->vel()) + (J_w_a.dot(a->ang_vel()) / si::radian) - J_v.dot(b->vel()) +
                   (J_w_b.dot(b->ang_vel()) / si::radian);
-        auto lambda = -(Jv + bias) * M_eff;
+
+        auto impulse_cfp = gamma * accumulated_impulse;
+        auto lambda = -(Jv + bias + impulse_cfp) * M_eff;
         auto old_impulse = accumulated_impulse;
         accumulated_impulse = std::clamp(old_impulse + lambda, impulse_min, impulse_max);
 
@@ -197,6 +201,74 @@ public:
     quantity<si::metre> M_distance;
 };
 
+class spring_constraint : public constraint_base
+{
+public:
+    static constexpr auto static_type = constraint_type::spring;
+    static constexpr auto jacobian_dimension = 1;
+
+    spring_constraint(object &a, object &b, const vec3<si::metre> &local_anchor_a,
+                      const vec3<si::metre> &local_anchor_b, quantity<si::metre> distance,
+                      quantity<si::kilogram / (si::second * si::second)> stiffness,
+                      quantity<si::kilogram / si::second> damping)
+        : constraint_base(a, b), M_local_a(local_anchor_a), M_local_b(local_anchor_b),
+          M_distance(distance), M_stiffness(stiffness), M_damping(damping)
+    {
+    }
+
+    void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
+                             ::physkit::detail::passkey<constraint_base> /*unused*/) const
+    {
+        // NOLINTBEGIN(readability-identifier-naming)
+        static constexpr auto dist_epsilon = 1e-6 * si::metre;
+
+        auto &a = obj_a();
+        auto &b = obj_b();
+
+        // world-space anchor points
+        auto r_a = a.orientation() * M_local_a;
+        auto r_b = b.orientation() * M_local_b;
+        auto p_a = a.pos() + r_a;
+        auto p_b = b.pos() + r_b;
+
+        auto delta = p_a - p_b;
+        auto cur_dist = delta.norm();
+        if (cur_dist < dist_epsilon) return;
+
+        auto u = delta / cur_dist;
+
+        // J = [u^T, (r_a \times u)^T, -u^T, -(r_b \times u)^T]
+        jacobian_row row{
+            .J_v = u,
+            .J_w_a = r_a.cross(u),
+            .J_w_b = -r_b.cross(u),
+            .a = &a,
+            .b = &b,
+        };
+
+        // I^-1 * (r \times u)
+        auto k_a = a.world_inv_inertia_tensor() * row.J_w_a;
+        auto k_b = b.world_inv_inertia_tensor() * row.J_w_b;
+
+        auto m_c_inv = a.inv_mass() + b.inv_mass() + row.J_w_a.dot(k_a) + row.J_w_b.dot(k_b);
+
+        auto gamma = 1.0 / (dt * (M_damping + dt * M_stiffness));
+        auto beta = dt * M_stiffness / (M_damping + dt * M_stiffness);
+
+        row.M_eff = 1.0 / (m_c_inv + gamma);
+        row.bias = (beta / dt) * (cur_dist - M_distance);
+        row.gamma = gamma;
+        rows.push_back(row);
+        // NOLINTEND(readability-identifier-naming)
+    }
+
+    vec3<si::metre> M_local_a;
+    vec3<si::metre> M_local_b;
+    quantity<si::metre> M_distance;
+    quantity<si::kilogram / (si::second * si::second)> M_stiffness;
+    quantity<si::kilogram / si::second> M_damping;
+};
+
 // For a, b as anchor points, r_a is the skew-symmetric matrix of vector r:
 // C=a-b=0
 // J=[I, -r_a, -I, r_b]
@@ -311,7 +383,7 @@ public:
 
         auto u_a = a.orientation() * M_local_axis_a;
         auto u_b = b.orientation() * M_local_axis_b;
-        auto angular_error = u_a.cross(u_b);
+        auto angular_error = -u_a.cross(u_b);
 
         // Rotational rows: remove 2 angular DOF orthogonal to hinge axis.
         auto v_a = a.orientation() * M_local_v_a;
@@ -363,8 +435,11 @@ public:
         M_local_axis_a = a.orientation().conjugate() * axis_n;
         M_local_axis_b = b.orientation().conjugate() * axis_n;
 
-        std::tie(M_local_t1_a, M_local_t2_a) = detail::build_orthonormal_basis(M_local_axis_a);
-        std::tie(M_local_t1_b, M_local_t2_b) = detail::build_orthonormal_basis(M_local_axis_b);
+        auto [w_t1, w_t2] = detail::build_orthonormal_basis(axis_n);
+        M_local_t1_a = a.orientation().conjugate() * w_t1;
+        M_local_t2_a = a.orientation().conjugate() * w_t2;
+        M_local_t1_b = b.orientation().conjugate() * w_t1;
+        M_local_t2_b = b.orientation().conjugate() * w_t2;
     }
 
     void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
@@ -409,7 +484,7 @@ public:
         constexpr auto angular_scale = 1.0 * si::metre;
 
         // angular constraint: keep orientations aligned
-        auto angular_error = .5 * (axis_a.cross(axis_b) + t1_a.cross(t1_b) + t2_a.cross(t2_b));
+        auto angular_error = -.5 * (axis_a.cross(axis_b) + t1_a.cross(t1_b) + t2_a.cross(t2_b));
 
         for (const auto &n : {axis_a, t1_a, t2_a})
         {
@@ -619,10 +694,13 @@ build_contact_jacobian(object &a, object &b, const vec3<si::metre> &local_contac
 template <constraint_type Type>
 using constraint_class_type = std::conditional_t<
     Type == constraint_type::distance, distance_constraint,
-    std::conditional_t<Type == constraint_type::ball_socket, ball_socket_constraint,
-                       std::conditional_t<Type == constraint_type::slider, slider_constraint,
-                                          std::conditional_t<Type == constraint_type::weld,
-                                                             weld_constraint, hinge_constraint>>>>;
+    std::conditional_t<
+        Type == constraint_type::ball_socket, ball_socket_constraint,
+        std::conditional_t<
+            Type == constraint_type::slider, slider_constraint,
+            std::conditional_t<Type == constraint_type::weld, weld_constraint,
+                               std::conditional_t<Type == constraint_type::spring,
+                                                  spring_constraint, hinge_constraint>>>>>;
 
 namespace detail
 {

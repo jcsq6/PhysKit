@@ -4,11 +4,6 @@
 import std;
 #endif
 #else
-#include "../collision/collision_phases.h"
-#include "../detail/arena.h"
-#include "../detail/macros.h"
-#include "../detail/swappable_queue.h"
-
 #include <cassert>
 
 #include <algorithm>
@@ -21,6 +16,11 @@ import std;
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
 #endif
+
+#include "../collision/collision_phases.h"
+#include "../detail/arena.h"
+#include "../detail/macros.h"
+#include "../detail/swappable_queue.h"
 
 PHYSKIT_EXPORT
 namespace physkit
@@ -434,7 +434,7 @@ public:
                               if (w.with != other_id && w.with != null_id) return false;
 
                               if (w.result_storage) *w.result_storage = man_info;
-                              queue_post_task(w.task_id);
+                              queue_post_task(w.task);
                               return true;
                           });
             it->second.template set_field<object_waiter::type::collision_enter>(
@@ -462,7 +462,7 @@ public:
                               if (w.a) *w.a = obj_a;
                               if (w.b) *w.b = obj_b;
 
-                              queue_post_task(w.task_id);
+                              queue_post_task(w.task);
                               return true;
                           });
 
@@ -566,20 +566,20 @@ private:
 
         struct collision_enter_res
         {
-            task_id task_id;
+            task_id task;
             handle_id_t with;
             narrow_phase::manifold_info *result_storage;
         };
         struct collision_exit_res
         {
-            task_id task_id;
+            task_id task;
             handle_id_t with;
             handle_id_t *a;
             handle_id_t *b;
         };
         struct destruction_res
         {
-            task_id task_id;
+            task_id task;
         };
         std::vector<collision_enter_res> coll_enter;
         std::vector<collision_exit_res> coll_exit;
@@ -611,7 +611,7 @@ private:
 
     struct dependency
     {
-        task_id task_id;
+        task_id task;
         handle_id_t source_object;
     };
 
@@ -647,7 +647,7 @@ private:
         std::erase_if(waiters,
                       [task_id, this](const auto &w)
                       {
-                          if (w.task_id == task_id)
+                          if (w.task == task_id)
                           {
                               if constexpr (T == object_waiter::type::collision_enter ||
                                             T == object_waiter::type::collision_exit)
@@ -665,7 +665,7 @@ private:
     {
         if (auto it = M_object_deps.find(object_id); it != M_object_deps.end())
         {
-            std::erase_if(it->second, [task_id](const auto &d) { return d.task_id == task_id; });
+            std::erase_if(it->second, [task_id](const auto &d) { return d.task == task_id; });
             if (it->second.empty()) M_object_deps.erase(it);
         }
     }

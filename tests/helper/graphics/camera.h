@@ -629,7 +629,7 @@ GRAPHICS_EXPORT namespace graphics
         constexpr static float near = 0.01f;
         constexpr static float far = 1000.0f;
 
-        constexpr static auto up = Vector3::yAxis();
+        constexpr static auto up_axis = Vector3::yAxis();
 
         template <class Transform>
         explicit camera(SceneGraph::Scene<Transform> &scene,
@@ -660,7 +660,7 @@ GRAPHICS_EXPORT namespace graphics
             if (Math::isInf(dir).any() || dir.isZero()) return;
 
             Vector3 f = dir.normalized();
-            Vector3 r = Math::cross(f, up);
+            Vector3 r = Math::cross(f, up_axis);
             if (r.isZero())
             {
                 const Vector3 alt_up = Math::abs(Math::dot(f, Vector3::zAxis())) > 0.99f
@@ -693,6 +693,9 @@ GRAPHICS_EXPORT namespace graphics
         }
 
         auto pos() const { return to_physkit_vector<mp_units::si::metre, float>(M_pos); }
+        auto forward() const { return to_physkit_vector<mp_units::one, float>(forward_axis()); }
+        auto right() const { return to_physkit_vector<mp_units::one, float>(right_axis()); }
+        auto up() const { return to_physkit_vector<mp_units::one, float>(camera::up_axis); }
 
         void move(const physkit::vec3<mp_units::si::metre, float> &delta)
         {
@@ -706,7 +709,7 @@ GRAPHICS_EXPORT namespace graphics
             Vector3 delta{0.0f};
             if (forward != 0) delta += forward_axis() * forward;
             if (right != 0) delta += right_axis() * right;
-            if (up != 0) delta += camera::up * up;
+            if (up != 0) delta += camera::up_axis * up;
             if (delta == Vector3{0.0f}) return;
             move((to_physkit_vector<mp_units::one, float>(delta.normalized())) * (M_speed * dt));
         }
@@ -718,7 +721,7 @@ GRAPHICS_EXPORT namespace graphics
             float pitch = d_pitch.numerical_value_in(mp_units::si::radian);
             if (yaw == 0.0f && pitch == 0.0f) return;
 
-            M_rot = Quaternion::rotation(Rad(yaw), up) * M_rot;
+            M_rot = Quaternion::rotation(Rad(yaw), camera::up_axis) * M_rot;
 
             constexpr auto max_pitch = std::numbers::pi_v<float> / 2 * .98f;
             const Vector3 fwd = forward_axis();
@@ -836,8 +839,6 @@ GRAPHICS_EXPORT namespace graphics
 
         [[nodiscard]] Vector3 right_axis() const noexcept
         { return M_rot.transformVector(Vector3::xAxis()); }
-        [[nodiscard]] Vector3 up_axis() const noexcept
-        { return M_rot.transformVector(Vector3::yAxis()); }
         [[nodiscard]] Vector3 forward_axis() const noexcept
         { return M_rot.transformVector(-Vector3::zAxis()); }
 

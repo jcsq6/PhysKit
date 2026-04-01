@@ -3,6 +3,11 @@
 #include <Magnum/Platform/GlfwApplication.h>
 #endif
 
+#ifndef PHYSKIT_IMPORT_STD
+#include <algorithm>
+#include <coroutine> // IWYU pragma: keep
+#endif
+
 #ifdef PHYSKIT_MODULES
 import physkit;
 import mp_units;
@@ -23,139 +28,276 @@ using namespace graphics;
 
 class pool_app : public graphics_app
 {
+    static inline const auto gravity = vec3{0.0, -9.81, 0.0} * m / s / s;
+    using typed_world = physkit::world<physkit::semi_implicit_euler>;
+
 public:
     explicit pool_app(const Platform::Application::Arguments &arguments)
         : graphics_app{g_config(arguments, false)
                            .title("PhysKit Pool Demo")
                            .window_size({1280, 720})
-                           .cam_pos(fvec3{8.0f, 7.0f, -4.0f} * si::metre)
+                           .cam_pos(fvec3{0.0f, 2.0f, -3.0f} * si::metre)
                            .look_at(fvec3{0.0f, 0.0f, 1.5f} * si::metre)
                            .drag(true)
-                           .gravity(vec3{0.0, -9.81, 0.0} * m / s / s)
+                           .gravity(gravity)
+                           .time_step(1.0 / 600.0 * si::second)
                            .solver_iterations(15)}
     {
-        build_table();
-        build_balls();
+        cam().speed(1.0f * si::metre / si::second);
+        world().add_task(scene(this));
     }
 
-    void update(mp_units::quantity<mp_units::si::second> dt) override
-    {
-        if (M_charging) M_charge_time += dt;
-    }
+    void update(mp_units::quantity<mp_units::si::second> dt) override { update_anchor(dt); }
 
     void pointer_press(PointerEvent &event, bool pressed) override
     {
-        if (event.pointer() != Pointer::MouseLeft) return;
-        if (pressed)
+        if (event.pointer() == Pointer::MouseLeft)
         {
-            M_charging = true;
-            M_charge_time = 0.0 * s;
-        }
-        else if (M_charging)
-        {
-            M_charging = false;
-            shoot();
+            if (pressed)
+                world().add_task(charge_and_shoot(this));
+            else
+                M_released = true;
         }
     }
 
 private:
-    physics_obj *M_cue{};
-    bool M_charging{false};
-    quantity<si::second> M_charge_time{0.0 * s};
+    world_base::handle M_anchor_handle = world_base::handle::from_id(world_base::handle::null);
+    world_base::handle M_stick_handle = world_base::handle::from_id(world_base::handle::null);
+    quantity<si::metre, float> M_pull_back = 0.0f * si::metre;
+    quantity<si::metre, float> M_shoot_offset = 0.0f * si::metre;
+    bool M_released{false};
 
-    void build_table()
+    // Teleport the invisible anchor to the desired camera-relative position.
+    // The stick follows it kinematically during aiming.
+    void update_anchor(mp_units::quantity<mp_units::si::second> dt)
     {
-        // Felt surface
-        auto felt = object_desc::stat()
-                        .with_mesh(mesh::box(vec3{3.0, 0.1, 5.0} * m))
-                        .with_pos(vec3{0.0, -0.1, 0.5} * m)
-                        .with_restitution(0.3)
-                        .with_friction(0.6);
-        add_object(world().create_rigid(felt), Color3{0.1f, 0.45f, 0.15f});
+        if (M_anchor_handle.is_null_handle()) return;
+        auto anchor_opt = world().get_rigid(M_anchor_handle);
+        if (!anchor_opt) return;
+        auto &anchor = **anchor_opt;
 
-        // Rails
-        auto rail_fb = mesh::box(vec3{3.1, 0.2, 0.1} * m);
-        auto rail_lr = mesh::box(vec3{0.1, 0.2, 5.1} * m);
+        auto stick_opt = world().get_rigid(M_stick_handle);
+        if (!stick_opt) return;
+        auto &stick = **stick_opt;
+        auto bounds = stick.mesh().bounds();
+        auto stick_half_len = (bounds.max.y() - bounds.min.y()) * 0.5f;
+
+        auto fwd = cam().forward();
+        auto tip_z = 1.0f * m; // Keep resting position anchor stationary
+        auto stick_half_len_float = value_cast<float>(stick_half_len);
+        auto target_pos = cam().pos() + fwd * (tip_z - stick_half_len_float) +
+                          cam().right() * 0.10f * m + cam().up() * -0.05f * m;
+
+        auto magnum_fwd = to_magnum_vector<one, float>(fwd);
+        auto target_rot =
+            to_physkit_quaternion<one, double>(Quaternion::rotation(Vector3::yAxis(), -magnum_fwd));
+
+        anchor.pos() = target_pos;
+        anchor.orientation(target_rot);
+    }
+
+    static task<> make_rail(pool_app *self, std::shared_ptr<physkit::mesh> msh, vec3<si::metre> pos,
+                            Color3 color)
+    {
+        auto rh = *co_await create_rigid(
+            object_desc::stat().with_mesh(msh).with_pos(pos).with_restitution(0.75).with_friction(
+                0.3));
+        self->add_object(rh, color);
+    }
+
+    static task<> make_ball(pool_app *self, std::shared_ptr<physkit::mesh> ball,
+                            physkit::quantity<si::kilogram, double> ball_mass, vec3<si::metre> pos,
+                            Color3 color)
+    {
+        auto bh = *co_await create_rigid(object_desc::dynam()
+                                             .with_mesh(ball)
+                                             .with_pos(pos)
+                                             .with_mass(ball_mass)
+                                             .with_restitution(0.9)
+                                             .with_friction(0.01));
+        self->add_object(bh, color);
+    }
+
+    static task<> scene(pool_app *self)
+    {
+        // --- Anchor (invisible static body that drives the stick via weld constraint) ---
+        auto initial_pos = vec3{0.0, 5.0, 0.0} * m;
+        self->M_anchor_handle =
+            *co_await create_rigid(object_desc::stat()
+                                       .with_mesh(mesh::box(vec3{0.001, 0.001, 0.001} * m))
+                                       .with_pos(initial_pos));
+
+        // --- Stick ---
+        self->M_stick_handle =
+            *co_await create_rigid(object_desc::dynam()
+                                       .with_mesh(mesh::box(vec3{0.005, 0.75, 0.005} * m))
+                                       .with_pos(initial_pos)
+                                       .with_mass(.5 * kg)
+                                       .with_restitution(1)
+                                       .with_friction(0.05));
+        self->add_object(self->M_stick_handle, Color3{0.72f, 0.53f, 0.2f});
+
+        // --- Constraint ---
+        auto &anchor_obj = **self->world().get_rigid(self->M_anchor_handle);
+        auto &stick_obj = **self->world().get_rigid(self->M_stick_handle);
+        auto &w = dynamic_cast<typed_world &>(self->world());
+
+        // Slider keeps the stick structurally aligned with the camera vector (Z-axis local)
+        w.add_constraint(impulse::slider_constraint{anchor_obj, stick_obj, initial_pos,
+                                                    vec3<one>{0.0, 1.0, 0.0}});
+
+        // Soft spring keeps it tethered elastically, pulling the stick through dynamic physics
+        w.add_constraint(impulse::spring_constraint{
+            anchor_obj, stick_obj, anchor_obj.project_to_local(initial_pos),
+            stick_obj.project_to_local(initial_pos), 0.0 * m,
+            30.0 * kg / s / s, // stiffness (N/m)
+            10.0 * kg / s      // damping (N*s/m)
+        });
+
+        // --- Table ---
+        auto felt_mesh = mesh::box(vec3{0.8, 0.1, 1.6} * m);
+        auto felt_pos = vec3{0.0, -0.1, 0.0} * m;
+
+        auto felt = *co_await create_rigid(object_desc::stat()
+                                               .with_mesh(felt_mesh)
+                                               .with_pos(felt_pos)
+                                               .with_restitution(0.3)
+                                               .with_friction(0.6));
+        self->add_object(felt, Color3{0.1f, 0.45f, 0.15f});
+
+        auto felt_bounds = felt_mesh->bounds();
+        auto felt_hx = (felt_bounds.max.x() - felt_bounds.min.x()) * 0.5;
+        auto felt_hz = (felt_bounds.max.z() - felt_bounds.min.z()) * 0.5;
+
+        auto rail_t = 0.05 * m; // rail half-thickness
+        auto rail_h = 0.05 * m; // rail half-height
+
+        // Top of felt is at y = 0.0m
+        // We center rails at y = 0.0m so their tops are at 0.05m
+        auto rail_fb = mesh::box(vec3{felt_hx + rail_t, rail_h, rail_t});
+        auto rail_lr = mesh::box(vec3{rail_t, rail_h, felt_hz + rail_t});
         Color3 wood{0.45f, 0.25f, 0.1f};
 
-        auto make_rail = [&](auto m, vec3<si::metre> pos)
-        {
-            add_object(world().create_rigid(object_desc::stat()
-                                                .with_mesh(m)
-                                                .with_pos(pos)
-                                                .with_restitution(0.75)
-                                                .with_friction(0.3)),
-                       wood);
-        };
-        make_rail(rail_fb, vec3{0.0, 0.1, -4.6} * m);
-        make_rail(rail_fb, vec3{0.0, 0.1, 5.6} * m);
-        make_rail(rail_lr, vec3{-3.1, 0.1, 0.5} * m);
-        make_rail(rail_lr, vec3{3.1, 0.1, 0.5} * m);
-    }
+        co_await make_rail(self, rail_fb, vec3{0.0 * m, 0.0 * m, -felt_hz - rail_t}, wood);
+        co_await make_rail(self, rail_fb, vec3{0.0 * m, 0.0 * m, felt_hz + rail_t}, wood);
+        co_await make_rail(self, rail_lr, vec3{-felt_hx - rail_t, 0.0 * m, 0.0 * m}, wood);
+        co_await make_rail(self, rail_lr, vec3{felt_hx + rail_t, 0.0 * m, 0.0 * m}, wood);
 
-    void build_balls()
-    {
-        auto ball = mesh::sphere(0.3 * m, 16, 24);
-        auto mass = 0.17 * kg;
-
-        auto make_ball = [&](vec3<si::metre> pos, Color3 color)
-        {
-            return add_object(world().create_rigid(object_desc::dynam()
-                                                       .with_mesh(ball)
-                                                       .with_pos(pos)
-                                                       .with_mass(mass)
-                                                       .with_restitution(0.95)
-                                                       .with_friction(0.05)),
-                              color);
-        };
+        // --- Balls ---
+        auto ball = mesh::sphere(0.0285 * m, 16, 24);
+        auto ball_mass = 0.17 * kg;
 
         // Cue ball
-        M_cue = make_ball(vec3{0.0, 0.3, -2.5} * m, {0.95f, 0.95f, 0.95f});
+        auto ball_bounds = ball->bounds();
+        auto ball_radius = (ball_bounds.max.x() - ball_bounds.min.x()) * 0.5;
+        double sp = (ball_bounds.max.x() - ball_bounds.min.x()).numerical_value_in(m) +
+                    0.001; // just over diameter
 
-        // Rack: 5 rows, apex at z=2.0
-        constexpr double sp = 0.601;       // just over diameter
-        constexpr double zsp = sp * 0.866; // equilateral triangle row spacing
-        constexpr double z0 = 2.0;
-        constexpr double y = 0.3;
+        co_await make_ball(self, ball, ball_mass, vec3{0.0 * m, ball_radius, -0.8 * m},
+                           {0.95f, 0.95f, 0.95f});
+
+        // Rack: 5 rows, apex at z=0.8
+        double zsp = sp * 0.866; // equilateral triangle row spacing
+        double z0 = 0.8;
+        auto y = ball_radius;
 
         // Row 1
-        make_ball(vec3{0.0, y, z0} * m, {1.0f, 0.85f, 0.0f});
+        co_await make_ball(self, ball, ball_mass, vec3{0.0 * m, y, z0 * m}, {1.0f, 0.85f, 0.0f});
         // Row 2
-        make_ball(vec3{-sp / 2, y, z0 + zsp} * m, {1.0f, 0.92f, 0.55f});
-        make_ball(vec3{sp / 2, y, z0 + zsp} * m, {0.0f, 0.25f, 0.85f});
+        co_await make_ball(self, ball, ball_mass, vec3{-sp / 2 * m, y, (z0 + zsp) * m},
+                           {1.0f, 0.92f, 0.55f});
+        co_await make_ball(self, ball, ball_mass, vec3{sp / 2 * m, y, (z0 + zsp) * m},
+                           {0.0f, 0.25f, 0.85f});
         // Row 3
-        make_ball(vec3{-sp, y, z0 + zsp * 2} * m, {0.55f, 0.65f, 0.9f});
-        make_ball(vec3{0.0, y, z0 + zsp * 2} * m, {0.08f, 0.08f, 0.08f}); // 8-ball
-        make_ball(vec3{sp, y, z0 + zsp * 2} * m, {0.85f, 0.1f, 0.1f});
+        co_await make_ball(self, ball, ball_mass, vec3{-sp * m, y, (z0 + zsp * 2) * m},
+                           {0.55f, 0.65f, 0.9f});
+        co_await make_ball(self, ball, ball_mass, vec3{0.0 * m, y, (z0 + zsp * 2) * m},
+                           {0.08f, 0.08f, 0.08f}); // 8-ball
+        co_await make_ball(self, ball, ball_mass, vec3{sp * m, y, (z0 + zsp * 2) * m},
+                           {0.85f, 0.1f, 0.1f});
         // Row 4
-        make_ball(vec3{-sp * 1.5, y, z0 + zsp * 3} * m, {0.9f, 0.55f, 0.55f});
-        make_ball(vec3{-sp / 2, y, z0 + zsp * 3} * m, {0.5f, 0.1f, 0.1f});
-        make_ball(vec3{sp / 2, y, z0 + zsp * 3} * m, {0.5f, 0.0f, 0.5f});
-        make_ball(vec3{sp * 1.5, y, z0 + zsp * 3} * m, {0.7f, 0.45f, 0.7f});
+        co_await make_ball(self, ball, ball_mass, vec3{-sp * 1.5 * m, y, (z0 + zsp * 3) * m},
+                           {0.9f, 0.55f, 0.55f});
+        co_await make_ball(self, ball, ball_mass, vec3{-sp / 2 * m, y, (z0 + zsp * 3) * m},
+                           {0.5f, 0.1f, 0.1f});
+        co_await make_ball(self, ball, ball_mass, vec3{sp / 2 * m, y, (z0 + zsp * 3) * m},
+                           {0.5f, 0.0f, 0.5f});
+        co_await make_ball(self, ball, ball_mass, vec3{sp * 1.5 * m, y, (z0 + zsp * 3) * m},
+                           {0.7f, 0.45f, 0.7f});
         // Row 5
-        make_ball(vec3{-sp * 2, y, z0 + zsp * 4} * m, {0.95f, 0.5f, 0.0f});
-        make_ball(vec3{-sp, y, z0 + zsp * 4} * m, {0.95f, 0.72f, 0.45f});
-        make_ball(vec3{0.0, y, z0 + zsp * 4} * m, {0.0f, 0.5f, 0.1f});
-        make_ball(vec3{sp, y, z0 + zsp * 4} * m, {0.55f, 0.75f, 0.55f});
-        make_ball(vec3{sp * 2, y, z0 + zsp * 4} * m, {0.7f, 0.45f, 0.45f});
+        co_await make_ball(self, ball, ball_mass, vec3{-sp * 2 * m, y, (z0 + zsp * 4) * m},
+                           {0.95f, 0.5f, 0.0f});
+        co_await make_ball(self, ball, ball_mass, vec3{-sp * m, y, (z0 + zsp * 4) * m},
+                           {0.95f, 0.72f, 0.45f});
+        co_await make_ball(self, ball, ball_mass, vec3{0.0 * m, y, (z0 + zsp * 4) * m},
+                           {0.0f, 0.5f, 0.1f});
+        co_await make_ball(self, ball, ball_mass, vec3{sp * m, y, (z0 + zsp * 4) * m},
+                           {0.55f, 0.75f, 0.55f});
+        co_await make_ball(self, ball, ball_mass, vec3{sp * 2 * m, y, (z0 + zsp * 4) * m},
+                           {0.7f, 0.45f, 0.45f});
     }
 
-    void shoot()
+    static task<> charge_and_shoot(pool_app *self)
     {
-        if (!M_cue) return;
-        auto &obj = M_cue->obj();
+        self->M_released = false;
 
-        // Get camera forward direction projected onto XZ plane
-        Matrix4 inv = cam().inverse_view_matrix();
-        Vector3 fwd = inv.transformVector(-Vector3::zAxis());
-        fwd.y() = 0.0f;
-        if (fwd.dot() < 1e-6f) return;
-        fwd = fwd.normalized();
+        // Reset velocities and center the stick on the anchor starting a new aim
+        auto stick_opt = self->world().get_rigid(self->M_stick_handle);
+        auto anchor_opt = self->world().get_rigid(self->M_anchor_handle);
+        if (stick_opt && anchor_opt)
+        {
+            stick_opt.value()->vel() = vec3<si::metre / si::second>::zero();
+            stick_opt.value()->pos() = anchor_opt.value()->pos();
+        }
 
-        double t = std::min(M_charge_time.numerical_value_in(s), 2.0);
-        auto speed = (1.0 + t * 5.0) * m / s;
-        auto dir = vec3{double(fwd.x()), 0.0, double(fwd.z())};
-        obj.apply_impulse(dir * (obj.mass() * speed));
+        // --- Charge phase: Pull the stick backward physically ---
+        while (!self->M_released)
+        {
+            auto frame_dt = value_cast<float>(*co_await next_frame{});
+            auto cur_stick = self->world().get_rigid(self->M_stick_handle);
+            auto cur_anchor = self->world().get_rigid(self->M_anchor_handle);
+            if (cur_stick && cur_anchor)
+            {
+                auto &stick = **cur_stick;
+                auto fwd = self->cam().forward();
+
+                auto offset = stick.pos() - cur_anchor.value()->pos();
+                auto dist = -offset.dot(fwd);
+
+                // Pull back smoothly, limit max pull to ~2.0m
+                if (dist < 2.0f * m)
+                {
+                    // The spring pulls forward with 200 N/m. We must overcome it to pull the stick
+                    // back! Overcome the damping as well.
+                    auto spring_resistance = 200.0 * kg / s / s * dist;
+                    auto damping_resistance = 10.0 * kg / s * stick.vel().dot(-fwd);
+                    // Apply enough force to perfectly counter the spring, plus 500 N to accelerate
+                    // backward
+                    stick.apply_force(-fwd * (spring_resistance + damping_resistance +
+                                              stick.mass() * (500.0 * m / s / s)));
+                }
+                else
+                {
+                    stick.vel() *= 0.1; // Dampen heavily at the max pull limit to hold it steady
+                }
+            }
+        }
+
+        // --- Strike phase: Apply a single impulsive strike forward ---
+        // The newly added soft spring constraint will catch the stick naturally after it hits
+        auto cur_stick = self->world().get_rigid(self->M_stick_handle);
+        auto cur_anchor = self->world().get_rigid(self->M_anchor_handle);
+        if (cur_stick && cur_anchor)
+        {
+            auto &stick = **cur_stick;
+            auto fwd = self->cam().forward();
+            auto offset = stick.pos() - cur_anchor.value()->pos();
+            auto pulled_amount = std::max(0.0 * m, -offset.dot(fwd));
+
+            auto speed = pulled_amount * 35.0 / s;
+            stick.vel() = vec3<si::metre / si::second>::zero(); // Stop backing up
+            stick.apply_impulse(fwd * stick.mass() * speed);
+        }
     }
 };
 

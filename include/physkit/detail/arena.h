@@ -19,7 +19,7 @@ PHYSKIT_EXPORT
 namespace physkit::detail
 {
 using handle_id_t = std::uint64_t;
-static constexpr std::uint32_t null_id = std::numeric_limits<std::uint32_t>::max();
+constexpr std::uint32_t null_id = std::numeric_limits<std::uint32_t>::max();
 
 template <typename T> struct arena
 {

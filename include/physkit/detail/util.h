@@ -1,7 +1,6 @@
 #pragma once
 
 // TODO: Use std::is_debugger_present when support arrives
-#ifndef NDEBUG
 
 #ifdef PHYSKIT_IN_MODULE_IMPL
 #ifdef PHYSKIT_IMPORT_STD
@@ -27,13 +26,15 @@ import std;
 
 namespace physkit::detail
 {
+
+#ifndef NDEBUG
 inline bool is_debugger_present_impl()
 {
 #if defined(_WIN32)
     return ::IsDebuggerPresent() != 0;
 
 #elif defined(__APPLE__)
-    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()}; // NOLINT
     struct kinfo_proc info{};
     size_t size = sizeof(info);
 
@@ -77,12 +78,12 @@ PHYSKIT_EXPORT inline bool is_debugger_present()
     }();
     return present;
 }
+#endif
 
-template <typename... T> class passkey
+PHYSKIT_EXPORT template <typename... T> class passkey
 {
     friend T...;
     passkey() = default;
 };
 
 } // namespace physkit::detail
-#endif

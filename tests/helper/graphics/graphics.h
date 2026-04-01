@@ -370,8 +370,7 @@ GRAPHICS_EXPORT namespace graphics
             self.M_record_output = std::string(path);
             return std::forward<decltype(self)>(self);
         }
-        auto &&record_duration(this auto &&self,
-                               physkit::quantity<mp_units::si::second> duration)
+        auto &&record_duration(this auto &&self, physkit::quantity<mp_units::si::second> duration)
         {
             self.M_record_duration = duration;
             return std::forward<decltype(self)>(self);
@@ -571,24 +570,23 @@ GRAPHICS_EXPORT namespace graphics
         auto &physics_objects() const { return M_physics_objs; }
 
         graphics_app(const g_config &config)
-            : Magnum::Platform::Application{config.args(),
-                                            [&config]
-                                            {
-                                                Configuration configuration;
-                                                configuration.setTitle(Containers::StringView{
-                                                    config.title().data(),
-                                                    config.title().size()});
-                                                if (config.recording())
-                                                    configuration.setSize(config.window_size(),
-                                                                          Vector2{1.0f});
-                                                else
-                                                    configuration.setSize(config.window_size());
-                                                configuration.setWindowFlags(
-                                                    config.recording()
-                                                        ? Platform::Application::Configuration::WindowFlag::Hidden
-                                                        : Platform::Application::Configuration::WindowFlag::Focused);
-                                                return configuration;
-                                            }()},
+            : Magnum::Platform::Application{
+                  config.args(),
+                  [&config]
+                  {
+                      Configuration configuration;
+                      configuration.setTitle(
+                          Containers::StringView{config.title().data(), config.title().size()});
+                      if (config.recording())
+                          configuration.setSize(config.window_size(), Vector2{1.0f});
+                      else
+                          configuration.setSize(config.window_size());
+                      configuration.setWindowFlags(
+                          config.recording()
+                              ? Platform::Application::Configuration::WindowFlag::Hidden
+                              : Platform::Application::Configuration::WindowFlag::Focused);
+                      return configuration;
+                  }()},
               M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                     config.window_size()),
               M_drag(true), M_grab_focus(!config.drag()), M_testing(config.testing())
@@ -723,23 +721,23 @@ GRAPHICS_EXPORT namespace graphics
             M_record_frame = 0;
 
             const auto duration = config.record_duration();
-            M_record_frame_count = std::max<std::size_t>(
-                1, static_cast<std::size_t>(std::ceil(duration.numerical_value_in(mp_units::si::second) *
-                                                     static_cast<double>(M_record_fps))));
+            M_record_frame_count =
+                std::max<std::size_t>(1, static_cast<std::size_t>(std::ceil(
+                                             duration.numerical_value_in(mp_units::si::second) *
+                                             static_cast<double>(M_record_fps))));
 
             set_vsync(false);
             M_cam.cam().setViewport(M_record_size);
 
-            const auto command =
-                std::format("ffmpeg -y -loglevel error -f rawvideo -pixel_format rgba -video_size {}x{} "
-                            "-framerate {} -i - -vf vflip -an -c:v libx264 -pix_fmt yuv420p {}",
-                            M_record_size.x(), M_record_size.y(), M_record_fps,
-                            shell_quote(M_record_output));
+            const auto command = std::format(
+                "ffmpeg -y -loglevel error -f rawvideo -pixel_format rgba -video_size {}x{} "
+                "-framerate {} -i - -vf vflip -an -c:v libx264 -pix_fmt yuv420p {}",
+                M_record_size.x(), M_record_size.y(), M_record_fps, shell_quote(M_record_output));
 
             M_record_pipe = popen(command.c_str(), "w");
             if (!M_record_pipe)
-                throw std::runtime_error(std::format("failed to start ffmpeg for recording: {}",
-                                                     M_record_output));
+                throw std::runtime_error(
+                    std::format("failed to start ffmpeg for recording: {}", M_record_output));
         }
 
         void finish_recording()
@@ -758,8 +756,8 @@ GRAPHICS_EXPORT namespace graphics
             const auto data = image.data();
             const auto written = std::fwrite(data.data(), 1, data.size(), M_record_pipe);
             if (written != data.size())
-                throw std::runtime_error(std::format("failed while writing recorded frame to {}",
-                                                     M_record_output));
+                throw std::runtime_error(
+                    std::format("failed while writing recorded frame to {}", M_record_output));
 
             ++M_record_frame;
             M_record_time += M_record_dt;

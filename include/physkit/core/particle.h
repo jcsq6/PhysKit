@@ -33,7 +33,6 @@ public:
     [[nodiscard]] auto &ang_vel() { return M_ang_vel; }
 
     [[nodiscard]] const auto &orientation() const { return M_orientation; }
-    [[nodiscard]] auto &orientation() { return M_orientation; }
     void orientation(const quat<one> &orient)
     {
         M_orientation = orient;
