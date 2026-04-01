@@ -92,29 +92,45 @@ std::optional<ray::hit> box::ray_intersect(const ray &r, quantity<m> max_distanc
 
 vec3<m> box::closest_point(const vec3<m> &p) const
 {
-    vec3<m> ret = p;
+    auto x = p.x();
+    auto y = p.y();
+    auto z = p.z();
 
     //bind the point to the space inside the cube
-    if (mp_units::abs(ret.x()) > M_half_extents.x())
-        ret.x() = (ret.x() < 0.0f*m)? -M_half_extents.x() : M_half_extents.x();
-    if (mp_units::abs(ret.y()) > M_half_extents.y())
-        ret.y() = (ret.y() < 0.0f*m)? -M_half_extents.y() : M_half_extents.y();
-    if (mp_units::abs(ret.z()) > M_half_extents.z())
-        ret.z() = (ret.z() < 0.0f*m)? -M_half_extents.z() : M_half_extents.z();
+    if (mp_units::abs(x) > M_half_extents.x())
+        x = (x < 0.0f*m)? -M_half_extents.x() : M_half_extents.x();
+    if (mp_units::abs(x) > M_half_extents.y())
+        y = (y < 0.0f*m)? -M_half_extents.y() : M_half_extents.y();
+    if (mp_units::abs(z) > M_half_extents.z())
+        z = (z < 0.0f*m)? -M_half_extents.z() : M_half_extents.z();
 
     //bind the point to the edge of the cube
-    quantity<m> dist = mp_units::abs(ret.x()) - M_half_extents.x();
+    quantity<m> dist = mp_units::abs(x) - M_half_extents.x();
     int j = 0;
     for (int i = 1; i < 3; i++)
     {
-        quantity<m> d = mp_units::abs(ret[i]) - M_half_extents[i];
+        vec3<m> v = {x,y,z};
+        quantity<m> d = mp_units::abs(v[i]) - M_half_extents[i];
         if (dist < d)
         {
             dist = d;
             j = i;
         }
     }
-    ret[j] = (ret[j] < 0.0f*m)? -M_half_extents[j] : M_half_extents[j];
+    switch (j)
+    {
+    default:
+    case 0:
+        x = (x < 0.0f*m)? -M_half_extents.x() : M_half_extents.x();
+        break;
+    case 1:
+        y = (y < 0.0f*m)? -M_half_extents.y() : M_half_extents.y();
+        break;
+    case 2:
+        z = (z < 0.0f*m)? -M_half_extents.z() : M_half_extents.z();
+        break;
+    }
+    vec3<m> ret = vec3(x,y,z);
     return ret;
 }
 
@@ -128,15 +144,25 @@ bool box::contains(const vec3<m> &point) const
 //point on sphere that gives greatest dot product with direction????
 vec3<m> box::support(const vec3<one> &direction) const
 {
-    vec3<m> ret = direction.normalized()*M_half_extents.norm();
-    if (mp_units::abs(ret.x()) > M_half_extents.x())
-        ret.x() = (ret.x() < 0.0f*m)? -M_half_extents.x() : M_half_extents.x();
-    if (mp_units::abs(ret.y()) > M_half_extents.y())
-        ret.y() = (ret.y() < 0.0f*m)? -M_half_extents.y() : M_half_extents.y();
-    if (mp_units::abs(ret.z()) > M_half_extents.z())
-        ret.z() = (ret.z() < 0.0f*m)? -M_half_extents.z() : M_half_extents.z();
+    int best_i = 0;
+    quantity<m> best = 0.0f*m;
+    for (int i = 0; i < 8; i++)
+    {
+        auto x = (i < 4)? -M_half_extents.x() : M_half_extents.x();
+        auto y = ((i/2) %2 == 0)? -M_half_extents.y() : M_half_extents.y();
+        auto z = (i%2 == 0)? -M_half_extents.z() : M_half_extents.z();
 
-    return ret;
+        if (best < vec3(x,y,z).dot(direction))
+        {
+            best_i = i;
+            best = vec3(x,y,z).dot(direction);
+        }
+    }
+    auto x = (best_i < 4)? -M_half_extents.x() : M_half_extents.x();
+    auto y = ((best_i/2) %2 == 0)? -M_half_extents.y() : M_half_extents.y();
+    auto z = (best_i%2 == 0)? -M_half_extents.z() : M_half_extents.z();
+
+    return vec3(x,y,z);
 }
 
 }

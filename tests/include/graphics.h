@@ -29,6 +29,7 @@
 #include <Magnum/Primitives/Cylinder.h>
 #include <Magnum/Primitives/Icosphere.h>
 #include <Magnum/Primitives/Plane.h>
+#include <Magnum/MeshTools/Copy.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/MatrixTransformation3D.h>
 #include <Magnum/SceneGraph/Scene.h>
@@ -47,7 +48,14 @@ namespace mesh_objs
 inline auto cube()
 { return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
 
-// radius 1
+inline auto box(Magnum::Vector3 half_extents = Magnum::Vector3{1.0f, 1.0f, 1.0f})
+{
+    auto data = MeshTools::copy(Primitives::cubeSolid());
+    for (Vector3& i: data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
+        i = Matrix4::scaling(half_extents).transformPoint(i);
+    return std::make_shared<GL::Mesh>(MeshTools::compile(data));
+}
+
 inline auto sphere(unsigned int subdivisions = 3, float radius = 1.0f)
 {
     auto data = Primitives::icosphereSolid(subdivisions);
@@ -363,8 +371,13 @@ public:
                     [&](auto &&shape_desc)
                     {
                         using T = std::decay_t<decltype(shape_desc)>;
-                        if constexpr (std::same_as<T, box_type>)
+                        /*if constexpr (std::same_as<T, box_type>)
                             shape_map[shape_name] = physkit::shape::make(physkit::mesh::box(
+                                physkit::vec3{shape_desc.half_extents[0], shape_desc.half_extents[1],
+                                              shape_desc.half_extents[2]} *
+                                m)); */
+                        if constexpr (std::same_as<T, box_type>)
+                            shape_map[shape_name] = physkit::shape::make(physkit::box::make(
                                 physkit::vec3{shape_desc.half_extents[0], shape_desc.half_extents[1],
                                               shape_desc.half_extents[2]} *
                                 m));
@@ -1031,6 +1044,10 @@ private:
                 .emplace(&phys_shape, mesh_objs::sphere(3, phys_shape.sphere()->radius().numerical_value_in(physkit::si::metre)))
                 .first->second;
             break;
+        case physkit::shape_type::shape_box:
+            return M_phys_shape_map
+                .emplace(&phys_shape, mesh_objs::box(to_magnum_vector<physkit::si::metre, float>(phys_shape.box()->half_extents())))
+                .first->second;
         }
     }
     void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)

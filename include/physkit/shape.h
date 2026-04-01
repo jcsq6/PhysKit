@@ -292,7 +292,11 @@ public:
     }
 
     /// @brief Compute the world-space AABB by rotating the local AABB and translating.
-    [[nodiscard]] aabb bounds() const { return M_shape->bounds() * M_orientation + M_position; }
+    [[nodiscard]] aabb bounds() const
+    {
+        auto ret = M_shape->bounds() * M_orientation + M_position;
+        return M_shape->bounds() * M_orientation + M_position;
+    }
 
     /// @brief Compute the world-space bounding sphere. Rotation-invariant — only the
     /// center is translated.
@@ -330,6 +334,7 @@ public:
         auto inv_orient = M_orientation.conjugate();
         auto local_point = inv_orient * (point - M_position);
         auto local_closest = M_shape->closest_point(local_point);
+        auto ret = M_orientation * local_closest + M_position;
         return M_orientation * local_closest + M_position;
     }
 
@@ -338,6 +343,7 @@ public:
     {
         auto inv_orient = M_orientation.conjugate();
         auto local_point = inv_orient * (point - M_position);
+        auto ret = M_shape->contains(local_point);
         return M_shape->contains(local_point);
     }
 
@@ -350,6 +356,7 @@ public:
             .center = inv_orient * (sphere.center - M_position),
             .radius = sphere.radius,
         };
+        auto ret = M_shape->overlap_sphere(local_sphere);
         return M_shape->overlap_sphere(local_sphere);
     }
 
@@ -360,6 +367,7 @@ public:
         auto inv_orient = M_orientation.conjugate();
         auto local_dir = inv_orient * direction;
         auto local_support = M_shape->support(local_dir);
+        auto ret = M_orientation * local_support + M_position;
         return M_orientation * local_support + M_position;
     }
 
