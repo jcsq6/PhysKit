@@ -153,7 +153,6 @@ quantity<pow<3>(m)> mesh::volume() const
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 vec3<m> mesh::mass_center() const
 {
-    // TODO: implement volume-weighted centroid via divergence theorem
     auto total_vol = 0.0 * m * m * m;
     vec3<pow<4>(m)> weighted_center(0.0 * pow<4>(m), 0.0 * pow<4>(m), 0.0 * pow<4>(m));
 
@@ -479,8 +478,6 @@ bool mesh::is_convex() const
 {
     // tolerance
     constexpr auto epsilon = 1e-10 * m;
-    // TODO: implement convexity test (check all edges, verify all vertices on same side of each
-    // face)
     assert(!M_triangles.empty() && "Empty mesh.");
     for (auto tri : M_triangles)
     {
@@ -570,6 +567,13 @@ mesh::instance::inertia_tensor(quantity<kg / pow<3>(m)> density) const
 {
     // TODO: rotate local inertia tensor into world frame and apply parallel axis theorem
     // throw std::runtime_error("mesh::instance::inertia_tensor not yet implemented");
+
+    // call the inertia_tensor function to get the mesh local COM
+    auto i_local = M_mesh->inertia_tensor(density);
+    auto mass = density * M_mesh->volume();
+
+    // inertia needs to inertia tensor to world space
+    // need to compute the quaternion
 }
 
 } // namespace physkit
