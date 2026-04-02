@@ -15,12 +15,14 @@ class PhysKit(ConanFile):
         "dev": [True, False],
         "physkit_modules": [True, False],
         "import_std": [True, False],
+        "build_static": [True, False],
     }
     default_options = {
         "build_tests": True,
         "dev": True,
         "physkit_modules": False,
         "import_std": False,
+        "build_static": False,
     }
 
     def configure(self):
@@ -48,6 +50,8 @@ class PhysKit(ConanFile):
             tc.cache_variables["CMAKE_EXPERIMENTAL_CXX_IMPORT_STD"] = (
                 "d0edc3af-4c50-42ea-a356-e2862fe7a444"
             )
+            
+        tc.cache_variables["PHYSKIT_BUILD_STATIC"] = self.options.build_static
 
         tc.generate()
         deps = CMakeDeps(self)
