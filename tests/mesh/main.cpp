@@ -1495,8 +1495,8 @@ void test_overlap_sphere_sphere_mesh()
     CHECK(all_result.size() == msh->triangles().size());
 
     // Small sphere far from the mesh — no overlap
-    bounding_sphere far{.center = vec3{10.0, 0.0, 0.0} * m, .radius = 0.5 * m};
-    CHECK(msh->overlap_sphere(far).empty());
+    bounding_sphere far_overlapsphere_var{.center = vec3{10.0, 0.0, 0.0} * m, .radius = 0.5 * m};
+    CHECK(msh->overlap_sphere(far_overlapsphere_var).empty());
 
     // Small sphere near the +X pole — partial overlap
     bounding_sphere pole{.center = vec3{1.2, 0.0, 0.0} * m, .radius = 0.3 * m};
@@ -1593,8 +1593,8 @@ void test_overlap_sphere_instance_translated_and_rotated()
     CHECK(inst.overlap_sphere(enclosing).size() == 12);
 
     // Sphere far from the transformed cube
-    bounding_sphere far{.center = vec3{0.0, 0.0, 0.0} * m, .radius = 1.0 * m};
-    CHECK(inst.overlap_sphere(far).empty());
+    bounding_sphere far_overlapsphere_var{.center = vec3{0.0, 0.0, 0.0} * m, .radius = 1.0 * m};
+    CHECK(inst.overlap_sphere(far_overlapsphere_var).empty());
 
     // Sphere near the -X face of the transformed cube (x=9)
     bounding_sphere near_face{.center = vec3{8.7, 0.5, 0.5} * m, .radius = 0.4 * m};

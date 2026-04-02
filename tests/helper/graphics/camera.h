@@ -626,8 +626,8 @@ GRAPHICS_EXPORT namespace graphics
     class camera
     {
     public:
-        constexpr static float near = 0.01f;
-        constexpr static float far = 1000.0f;
+        constexpr static float near_var = 0.01f;
+        constexpr static float far_var = 1000.0f;
 
         constexpr static auto up_axis = Vector3::yAxis();
 
@@ -648,7 +648,7 @@ GRAPHICS_EXPORT namespace graphics
             M_cam->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
                 .setProjectionMatrix(Matrix4::perspectiveProjection(
                     Rad(M_fov.numerical_value_in(mp_units::si::radian)),
-                    Vector2(viewport_size).aspectRatio(), near, far))
+                    Vector2(viewport_size).aspectRatio(), near_var, far_var))
                 .setViewport(viewport_size);
 
             set_view(dir);
@@ -682,7 +682,7 @@ GRAPHICS_EXPORT namespace graphics
             M_cam
                 ->setProjectionMatrix(Matrix4::perspectiveProjection(
                     Rad(M_fov.numerical_value_in(mp_units::si::radian)),
-                    Vector2(viewport_size).aspectRatio(), near, far))
+                    Vector2(viewport_size).aspectRatio(), near_var, far_var))
                 .setViewport(viewport_size);
         }
 
