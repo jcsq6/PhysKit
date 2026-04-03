@@ -105,7 +105,7 @@ private:
         auto stick_half_len_float = value_cast<float>(stick_half_len);
         auto target_pos = cam().pos() +
                           fwd * (tip_z + value_cast<float>(M_shoot_offset) - stick_half_len_float) +
-                          cam().right() * 0.10f * m + cam().up() * -0.05f * m;
+                          cam().up() * -0.05f * m;
 
         auto magnum_fwd = to_magnum_vector<one, float>(fwd);
         auto target_rot =
