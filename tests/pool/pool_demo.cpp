@@ -40,8 +40,8 @@ public:
                            .look_at(fvec3{0.0f, 0.0f, 1.5f} * si::metre)
                            .drag(true)
                            .gravity(gravity)
-                           .time_step(1.0 / 600.0 * si::second)
-                           .solver_iterations(15)}
+                           .time_step(1.0 / 1200.0 * si::second)
+                           .solver_iterations(20)}
     {
         cam().speed(1.0f * si::metre / si::second);
         world().add_task(scene(this));
@@ -295,11 +295,11 @@ private:
             auto offset = stick.pos() - cur_anchor.value()->pos();
             auto pulled_amount = std::max(0.0 * m, -offset.dot(fwd));
 
-            // Shift the anchor forward quickly so the spring permits a natural follow-through past
-            // the ball
-            self->M_shoot_offset = 0.5f * m;
+            // Shift the anchor forward proportionately so the spring permits a natural
+            // follow-through past the ball without violently yanking light taps forward.
+            self->M_shoot_offset = pulled_amount * 0.75f;
 
-            auto speed = pulled_amount * 15.0 / s;
+            auto speed = pulled_amount * 10.0 / s;
             stick.vel() = vec3<si::metre / si::second>::zero(); // Stop backing up
             stick.apply_impulse(fwd * stick.mass() * speed);
         }
