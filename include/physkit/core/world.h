@@ -205,6 +205,8 @@ public:
 
     virtual ~world_base() = default;
 
+    [[nodiscard]] auto &gravity() const { return M_gravity; }
+
 protected:
     auto &rigids(this auto &&self) { return self.M_rigid; }
     auto &broad_phase(this auto &&self) { return self.M_broad; }
@@ -259,7 +261,7 @@ template <std::derived_from<integrator> Integrator> class world : public world_b
 {
 public:
     explicit world(const world_desc &desc)
-        : world_base(desc), M_constraints(desc.solver_iterations())
+        : world_base(desc), M_constraints(desc.solver_iterations(), desc.gravity().norm())
     {
     }
 

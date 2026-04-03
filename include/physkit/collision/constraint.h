@@ -38,6 +38,7 @@ struct jacobian_row
 
     // For warm starting
     quantity<si::newton * si::second> accumulated_impulse{};
+    quantity<si::newton * si::second> *impulse_ptr{};
     quantity<si::newton * si::second> impulse_min =
         -std::numeric_limits<quantity<si::newton * si::second>>::max();
     quantity<si::newton * si::second> impulse_max =
@@ -103,9 +104,9 @@ concept constraint_impl =
 // "Building an Orthonormal Basis, Revisited" (2017).
 inline std::pair<vec3<one>, vec3<one>> build_orthonormal_basis(const vec3<one> &n)
 {
-    double sign = std::copysign(1.0f, static_cast<double>(n.z()));
+    double sign = std::copysign(1.0, static_cast<double>(n.z()));
 
-    const auto a = -1.0f / (sign + n.z());
+    const auto a = -1.0 / (sign + n.z());
     const auto b = n.x() * n.y() * a;
 
     return {vec3(1.0f + sign * n.x() * n.x() * a, sign * b, -sign * n.x()),
@@ -178,6 +179,8 @@ public:
             .J_v = u,
             .J_w_a = r_a.cross(u),
             .J_w_b = -r_b.cross(u),
+            .accumulated_impulse = M_accumulated_impulse,
+            .impulse_ptr = &M_accumulated_impulse,
             .a = &a,
             .b = &b,
         };
@@ -196,9 +199,11 @@ public:
         // NOLINTEND(readability-identifier-naming)
     }
 
+private:
     vec3<si::metre> M_local_a;
     vec3<si::metre> M_local_b;
     quantity<si::metre> M_distance;
+    mutable quantity<si::newton * si::second> M_accumulated_impulse{};
 };
 
 class spring_constraint : public constraint_base
@@ -242,6 +247,8 @@ public:
             .J_v = u,
             .J_w_a = r_a.cross(u),
             .J_w_b = -r_b.cross(u),
+            .accumulated_impulse = M_accumulated_impulse,
+            .impulse_ptr = &M_accumulated_impulse,
             .a = &a,
             .b = &b,
         };
@@ -262,11 +269,13 @@ public:
         // NOLINTEND(readability-identifier-naming)
     }
 
+private:
     vec3<si::metre> M_local_a;
     vec3<si::metre> M_local_b;
     quantity<si::metre> M_distance;
     quantity<si::kilogram / (si::second * si::second)> M_stiffness;
     quantity<si::kilogram / si::second> M_damping;
+    mutable quantity<si::newton * si::second> M_accumulated_impulse{};
 };
 
 // For a, b as anchor points, r_a is the skew-symmetric matrix of vector r:
@@ -300,6 +309,7 @@ public:
         auto p_b = b.pos() + r_b;
 
         auto delta = p_a - p_b;
+        auto *impulse_ptr = M_accumulated_impulse.data();
 
         // J = [I, -r_a, -I, r_b]
         for (const auto &n : {vec3{1, 0, 0}, vec3{0, 1, 0}, vec3{0, 0, 1}})
@@ -308,9 +318,12 @@ public:
                 .J_v = n,
                 .J_w_a = r_a.cross(n),
                 .J_w_b = -r_b.cross(n),
+                .accumulated_impulse = *impulse_ptr,
+                .impulse_ptr = impulse_ptr,
                 .a = &a,
                 .b = &b,
             };
+            ++impulse_ptr; // NOLINT
 
             // I^-1 * (r \times u)
             auto k_a = a.world_inv_inertia_tensor() * row.J_w_a;
@@ -329,6 +342,8 @@ public:
 private:
     vec3<si::metre> M_local_a;
     vec3<si::metre> M_local_b;
+    mutable std::array<quantity<si::newton * si::second>, jacobian_dimension>
+        M_accumulated_impulse{};
 };
 
 class hinge_constraint : public constraint_base
@@ -362,6 +377,8 @@ public:
         const auto &inv_inertia_a = a.world_inv_inertia_tensor();
         const auto &inv_inertia_b = b.world_inv_inertia_tensor();
 
+        auto *impulse_ptr = M_accumulated_impulse.data();
+
         // Positional rows: keep anchors coincident.
         for (const auto &n : {vec3{1, 0, 0}, vec3{0, 1, 0}, vec3{0, 0, 1}})
         {
@@ -369,9 +386,12 @@ public:
                 .J_v = n,
                 .J_w_a = r_a.cross(n),
                 .J_w_b = -r_b.cross(n),
+                .accumulated_impulse = *impulse_ptr,
+                .impulse_ptr = impulse_ptr,
                 .a = &a,
                 .b = &b,
             };
+            ++impulse_ptr; // NOLINT
 
             auto k_a = inv_inertia_a * row.J_w_a;
             auto k_b = inv_inertia_b * row.J_w_b;
@@ -397,9 +417,12 @@ public:
                 .J_v = vec3<one>::zero(),
                 .J_w_a = jt,
                 .J_w_b = -jt,
+                .accumulated_impulse = *impulse_ptr,
+                .impulse_ptr = impulse_ptr,
                 .a = &a,
                 .b = &b,
             };
+            ++impulse_ptr; // NOLINT
 
             auto k_a = inv_inertia_a * row.J_w_a;
             auto k_b = inv_inertia_b * row.J_w_b;
@@ -417,6 +440,8 @@ private:
     vec3<one> M_local_axis_b;
     vec3<one> M_local_v_a;
     vec3<one> M_local_w_a;
+    mutable std::array<quantity<si::newton * si::second>, jacobian_dimension>
+        M_accumulated_impulse{};
 };
 
 class slider_constraint : public constraint_base
@@ -440,6 +465,7 @@ public:
         M_local_t2_a = a.orientation().conjugate() * w_t2;
         M_local_t1_b = b.orientation().conjugate() * w_t1;
         M_local_t2_b = b.orientation().conjugate() * w_t2;
+        M_local_orientation_rel = a.orientation().conjugate() * b.orientation();
     }
 
     void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
@@ -461,30 +487,54 @@ public:
         auto t1_b = b.orientation() * M_local_t1_b;
         auto t2_b = b.orientation() * M_local_t2_b;
 
+        auto lever_arm = r_a - delta;
+
+        auto *impulse_ptr = M_accumulated_impulse.data();
+
         // linear constraint: restrict movement perpendicular to slider axis
         for (const auto &n : {t1_a, t2_a})
         {
             jacobian_row row{
                 .J_v = n,
-                .J_w_a = (r_a - delta).cross(n),
+                .J_w_a = lever_arm.cross(n),
                 .J_w_b = -r_b.cross(n),
+                .accumulated_impulse = *impulse_ptr,
+                .impulse_ptr = impulse_ptr,
                 .a = &a,
                 .b = &b,
             };
+            ++impulse_ptr; // NOLINT
 
             auto k_a = a.world_inv_inertia_tensor() * row.J_w_a;
             auto k_b = b.world_inv_inertia_tensor() * row.J_w_b;
 
-            row.M_eff =
-                1.0 / (a.inv_mass() + b.inv_mass() + row.J_w_a.dot(k_a) + row.J_w_b.dot(k_b));
-            row.bias = (bias_factor / dt) * delta.dot(n);
+            auto linear_inertia = a.inv_mass() + b.inv_mass();
+            auto angular_inertia = row.J_w_a.dot(k_a) + row.J_w_b.dot(k_b);
+
+            auto regularization = 0.01 * angular_inertia;
+
+            row.gamma = regularization;
+
+            row.M_eff = 1.0 / (linear_inertia + angular_inertia + regularization);
+
+            constexpr auto max_error = 0.2 * si::metre;
+            auto error = std::clamp(delta.dot(n), -max_error, max_error);
+
+            row.bias = (bias_factor / dt) * error;
             rows.push_back(row);
         }
 
         constexpr auto angular_scale = 1.0 * si::metre;
 
         // angular constraint: keep orientations aligned
-        auto angular_error = -.5 * (axis_a.cross(axis_b) + t1_a.cross(t1_b) + t2_a.cross(t2_b));
+        // auto angular_error = -.5 * (axis_a.cross(axis_b) + t1_a.cross(t1_b) + t2_a.cross(t2_b));
+        auto cur_rel_orientation = a.orientation().conjugate() * b.orientation();
+        auto orientation_error = M_local_orientation_rel * cur_rel_orientation.conjugate();
+
+        if (orientation_error.w() < 0)
+            orientation_error = quat{-orientation_error.w(), -orientation_error.x(),
+                                     -orientation_error.y(), -orientation_error.z()};
+        auto angular_error = a.orientation() * (orientation_error.vec() * 2);
 
         for (const auto &n : {axis_a, t1_a, t2_a})
         {
@@ -493,9 +543,12 @@ public:
                 .J_v = vec3<one>::zero(),
                 .J_w_a = jt,
                 .J_w_b = -jt,
+                .accumulated_impulse = *impulse_ptr,
+                .impulse_ptr = impulse_ptr,
                 .a = &a,
                 .b = &b,
             };
+            ++impulse_ptr; // NOLINT
 
             auto k_a = a.world_inv_inertia_tensor() * row.J_w_a;
             auto k_b = b.world_inv_inertia_tensor() * row.J_w_b;
@@ -515,6 +568,9 @@ private:
     vec3<one> M_local_t2_a;
     vec3<one> M_local_t1_b;
     vec3<one> M_local_t2_b;
+    quat<one> M_local_orientation_rel;
+    mutable std::array<quantity<si::newton * si::second>, jacobian_dimension>
+        M_accumulated_impulse{};
 };
 
 // TODO: compliant weld constraint
@@ -545,6 +601,8 @@ public:
 
         static auto axes = std::array{vec3{1, 0, 0}, vec3{0, 1, 0}, vec3{0, 0, 1}};
 
+        auto *impulse_ptr = M_accumulated_impulse.data();
+
         // Positional rows: keep anchors coincident.
         for (const auto &n : axes)
         {
@@ -552,9 +610,12 @@ public:
                 .J_v = n,
                 .J_w_a = r_a.cross(n),
                 .J_w_b = -r_b.cross(n),
+                .accumulated_impulse = *impulse_ptr,
+                .impulse_ptr = impulse_ptr,
                 .a = &a,
                 .b = &b,
             };
+            ++impulse_ptr; // NOLINT
 
             // I^-1 * (r \times u)
             auto k_a = a.world_inv_inertia_tensor() * row.J_w_a;
@@ -574,7 +635,7 @@ public:
                 quat{-orientation_error.w(), -orientation_error.x(), -orientation_error.y(),
                      -orientation_error.z()}; // Ensure shortest path
 
-        auto angular_error_world = a.orientation() * (orientation_error.vec() * 2); // TODO: need 2?
+        auto angular_error_world = a.orientation() * (orientation_error.vec() * 2);
         constexpr auto angular_scale = 1.0 * si::metre;
         for (const auto &n : axes)
         {
@@ -583,9 +644,12 @@ public:
                 .J_v = vec3<one>::zero(),
                 .J_w_a = jt,
                 .J_w_b = -jt,
+                .accumulated_impulse = *impulse_ptr,
+                .impulse_ptr = impulse_ptr,
                 .a = &a,
                 .b = &b,
             };
+            ++impulse_ptr; // NOLINT
 
             auto k_a = a.world_inv_inertia_tensor() * row.J_w_a;
             auto k_b = b.world_inv_inertia_tensor() * row.J_w_b;
@@ -600,6 +664,8 @@ private:
     vec3<si::metre> M_local_anchor_a;
     vec3<si::metre> M_local_anchor_b;
     quat<one> M_local_orientation_rel;
+    mutable std::array<quantity<si::newton * si::second>, jacobian_dimension>
+        M_accumulated_impulse{};
 };
 
 struct contact_jacobian
@@ -612,7 +678,8 @@ struct contact_jacobian
 inline std::optional<contact_jacobian>
 build_contact_jacobian(object &a, object &b, const vec3<si::metre> &local_contact_a,
                        const vec3<si::metre> &local_contact_b,
-                       const vec3<one> &world_contact_normal, quantity<si::second> dt)
+                       const vec3<one> &world_contact_normal, quantity<si::second> dt,
+                       quantity<si::metre / si::second> restitution_threshold)
 {
     constexpr auto bias_factor = .1;
     constexpr auto linear_slop = 0.005 * si::metre;
@@ -650,8 +717,6 @@ build_contact_jacobian(object &a, object &b, const vec3<si::metre> &local_contac
         auto v_rel_n = (v_ca - v_cb).dot(n);
         double restitution_coeff = std::max(a.restitution(), b.restitution());
 
-        // prevent jitter when objects come to rest
-        constexpr auto restitution_threshold = 1.0 * si::metre / si::second;
         auto restitution_bias = 0.0 * si::metre / si::second;
 
         if (v_rel_n < -restitution_threshold) restitution_bias = restitution_coeff * v_rel_n;
@@ -723,10 +788,12 @@ template <std::derived_from<integrator> Integrator> class constraint_solver;
 template <> class constraint_solver<semi_implicit_euler>
 {
 public:
-    constraint_solver(std::size_t iterations, std::size_t initial_capacity = 100)
+    constraint_solver(std::size_t iterations, quantity<si::metre / si::second / si::second> gravity,
+                      std::size_t initial_capacity = 100)
         : M_iterations(iterations),
           M_constraints(detail::make_tuple_helper(
-              initial_capacity, std::make_index_sequence<detail::constraint_count>{}))
+              initial_capacity, std::make_index_sequence<detail::constraint_count>{})),
+          M_gravity(gravity)
     {
     }
 
@@ -745,6 +812,8 @@ public:
             .remove(h);
     }
 
+    void gravity(quantity<si::metre / si::second / si::second> g) { M_gravity = g; }
+
     void setup_contacts(
         quantity<si::second> dt, physkit::detail::narrow_phase &narrow,
         std::regular_invocable<physkit::detail::dynamic_bvh::object_handle> auto &&get_object)
@@ -762,13 +831,35 @@ public:
 
             for (auto &contact : man_info.man.contacts())
             {
-                auto jac_opt = build_contact_jacobian(
-                    a, b, contact.point.local_a, contact.point.local_b, contact.point.normal, dt);
+                auto jac_opt =
+                    build_contact_jacobian(a, b, contact.point.local_a, contact.point.local_b,
+                                           contact.point.normal, dt, 2 * M_gravity * dt);
                 if (!jac_opt) continue;
 
                 contact_solver_point p{.jac = *jac_opt,
                                        .friction_coeff = std::sqrt(a.friction() * b.friction()),
                                        .cache = &contact};
+
+                auto m11 = 1.0 / p.jac.tangent1.M_eff;
+                auto m22 = 1.0 / p.jac.tangent2.M_eff;
+                auto m12 =
+                    p.jac.tangent1.J_w_a.dot(a.world_inv_inertia_tensor() * p.jac.tangent2.J_w_a) +
+                    p.jac.tangent1.J_w_b.dot(b.world_inv_inertia_tensor() * p.jac.tangent2.J_w_b);
+
+                auto det = m11 * m22 - m12 * m12;
+                if (det > 0.0 * (1.0 / (si::kilogram * si::kilogram)))
+                {
+                    p.inv_m_11 = m22 / det;
+                    p.inv_m_22 = m11 / det;
+                    p.inv_m_12 = -m12 / det;
+                }
+                else
+                {
+                    p.inv_m_11 = p.jac.tangent1.M_eff;
+                    p.inv_m_22 = p.jac.tangent2.M_eff;
+                    p.inv_m_12 = 0.0 * si::kilogram;
+                }
+
                 p.jac.normal.accumulated_impulse = contact.normal_impulse;
                 p.jac.tangent1.accumulated_impulse = contact.tangent_impulses[0];
                 p.jac.tangent2.accumulated_impulse = contact.tangent_impulses[1];
@@ -817,12 +908,15 @@ public:
                 // NOLINTNEXTLINE(readability-identifier-naming)
                 auto Jv1 = t1.J_v.dot(t1.a->vel()) + (t1.J_w_a.dot(t1.a->ang_vel()) / si::radian) -
                            t1.J_v.dot(t1.b->vel()) + (t1.J_w_b.dot(t1.b->ang_vel()) / si::radian);
-                auto lambda1 = -(Jv1 + t1.bias) * t1.M_eff;
-
                 // NOLINTNEXTLINE(readability-identifier-naming)
                 auto Jv2 = t2.J_v.dot(t2.a->vel()) + (t2.J_w_a.dot(t2.a->ang_vel()) / si::radian) -
                            t2.J_v.dot(t2.b->vel()) + (t2.J_w_b.dot(t2.b->ang_vel()) / si::radian);
-                auto lambda2 = -(Jv2 + t2.bias) * t2.M_eff;
+
+                auto b_1 = Jv1 + t1.bias;
+                auto b_2 = Jv2 + t2.bias;
+
+                auto lambda1 = -(pt.inv_m_11 * b_1 + pt.inv_m_12 * b_2);
+                auto lambda2 = -(pt.inv_m_12 * b_1 + pt.inv_m_22 * b_2);
 
                 auto old_imp1 = t1.accumulated_impulse;
                 auto old_imp2 = t2.accumulated_impulse;
@@ -843,6 +937,7 @@ public:
 
                 auto applied_lambda1 = new_imp1 - old_imp1;
                 auto applied_lambda2 = new_imp2 - old_imp2;
+
                 if (!t1.a->is_static())
                 {
                     t1.a->apply_impulse(t1.J_v * applied_lambda1 + t2.J_v * applied_lambda2);
@@ -864,6 +959,10 @@ public:
             pt.cache->tangent_impulses = {pt.jac.tangent1.accumulated_impulse,
                                           pt.jac.tangent2.accumulated_impulse};
         }
+
+        for (auto &row : M_jacobian_rows)
+            *row.impulse_ptr = row.accumulated_impulse; // Write back accumulated impulses to
+                                                        // constraints for warm starting next frame
     }
 
 private:
@@ -871,6 +970,10 @@ private:
     {
         impulse::contact_jacobian jac;
         double friction_coeff{};
+
+        quantity<si::kilogram> inv_m_11{};
+        quantity<si::kilogram> inv_m_12{};
+        quantity<si::kilogram> inv_m_22{};
 
         physkit::detail::manifold::contact_info *cache{};
     };
@@ -880,6 +983,7 @@ private:
 
     std::vector<impulse::jacobian_row> M_jacobian_rows;
     std::size_t M_iterations;
+    quantity<si::metre / si::second / si::second> M_gravity;
 };
 } // namespace impulse
 } // namespace physkit
