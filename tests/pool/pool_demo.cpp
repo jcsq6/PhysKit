@@ -38,7 +38,7 @@ public:
                            .window_size({1280, 720})
                            .cam_pos(fvec3{0.0f, 2.0f, -3.0f} * si::metre)
                            .look_at(fvec3{0.0f, 0.0f, 1.5f} * si::metre)
-                           .drag(true)
+                           .drag(false)
                            .gravity(gravity)
                            .time_step(1.0 / 1200.0 * si::second)
                            .solver_iterations(20)}
@@ -47,7 +47,24 @@ public:
         world().add_task(scene(this));
     }
 
-    void update(mp_units::quantity<mp_units::si::second> dt) override { update_anchor(dt); }
+    void update(mp_units::quantity<mp_units::si::second> dt) override
+    {
+        update_anchor(dt);
+
+        if (!M_cue_ball_handle.is_null_handle())
+        {
+            if (auto cue_ball_opt = world().get_rigid(M_cue_ball_handle))
+            {
+                auto &cue_ball = **cue_ball_opt;
+                if (cue_ball.pos().y() < -2.0 * m)
+                {
+                    cue_ball.pos() = vec3{0.0 * m, 0.5 * m, -0.8 * m};
+                    cue_ball.vel() = vec3<si::metre / si::second>::zero();
+                    cue_ball.ang_vel() = vec3<one / si::second>::zero();
+                }
+            }
+        }
+    }
 
     void pointer_press(PointerEvent &event, bool pressed) override
     {
@@ -63,6 +80,7 @@ public:
 private:
     world_base::handle M_anchor_handle = world_base::handle::from_id(world_base::handle::null);
     world_base::handle M_stick_handle = world_base::handle::from_id(world_base::handle::null);
+    world_base::handle M_cue_ball_handle = world_base::handle::from_id(world_base::handle::null);
     quantity<si::metre, float> M_pull_back = 0.0f * si::metre;
     quantity<si::metre, float> M_shoot_offset = 0.0f * si::metre;
     bool M_released{false};
@@ -106,17 +124,18 @@ private:
         self->add_object(rh, color);
     }
 
-    static task<> make_ball(pool_app *self, std::shared_ptr<physkit::mesh> ball,
-                            physkit::quantity<si::kilogram, double> ball_mass, vec3<si::metre> pos,
-                            Color3 color)
+    static task<world_base::handle> make_ball(pool_app *self, std::shared_ptr<physkit::mesh> ball,
+                                              physkit::quantity<si::kilogram, double> ball_mass,
+                                              vec3<si::metre> pos, Color3 color)
     {
         auto bh = *co_await create_rigid(object_desc::dynam()
                                              .with_mesh(ball)
                                              .with_pos(pos)
                                              .with_mass(ball_mass)
                                              .with_restitution(0.9)
-                                             .with_friction(0.01));
+                                             .with_friction(0.005));
         self->add_object(bh, color);
+        co_return bh;
     }
 
     static task<> scene(pool_app *self)
@@ -170,19 +189,28 @@ private:
         auto felt_hx = (felt_bounds.max.x() - felt_bounds.min.x()) * 0.5;
         auto felt_hz = (felt_bounds.max.z() - felt_bounds.min.z()) * 0.5;
 
-        auto rail_t = 0.05 * m; // rail half-thickness
-        auto rail_h = 0.05 * m; // rail half-height
+        auto rail_t = 0.05 * m;   // rail half-thickness
+        auto rail_h = 0.05 * m;   // rail half-height
+        auto pocket_r = 0.07 * m; // size of the pocket gaps
 
         // Top of felt is at y = 0.0m
         // We center rails at y = 0.0m so their tops are at 0.05m
-        auto rail_fb = mesh::box(vec3{felt_hx + rail_t, rail_h, rail_t});
-        auto rail_lr = mesh::box(vec3{rail_t, rail_h, felt_hz + rail_t});
+        auto rail_fb_hx = felt_hx - pocket_r;
+        auto rail_fb = mesh::box(vec3{rail_fb_hx, rail_h, rail_t});
+
+        auto rail_lr_hz = (felt_hz - 2.0 * pocket_r) * 0.5;
+        auto rail_lr = mesh::box(vec3{rail_t, rail_h, rail_lr_hz});
+        auto lr_z_offset = pocket_r + rail_lr_hz;
+
         Color3 wood{0.45f, 0.25f, 0.1f};
 
         co_await make_rail(self, rail_fb, vec3{0.0 * m, 0.0 * m, -felt_hz - rail_t}, wood);
         co_await make_rail(self, rail_fb, vec3{0.0 * m, 0.0 * m, felt_hz + rail_t}, wood);
-        co_await make_rail(self, rail_lr, vec3{-felt_hx - rail_t, 0.0 * m, 0.0 * m}, wood);
-        co_await make_rail(self, rail_lr, vec3{felt_hx + rail_t, 0.0 * m, 0.0 * m}, wood);
+
+        co_await make_rail(self, rail_lr, vec3{-felt_hx - rail_t, 0.0 * m, -lr_z_offset}, wood);
+        co_await make_rail(self, rail_lr, vec3{-felt_hx - rail_t, 0.0 * m, lr_z_offset}, wood);
+        co_await make_rail(self, rail_lr, vec3{felt_hx + rail_t, 0.0 * m, -lr_z_offset}, wood);
+        co_await make_rail(self, rail_lr, vec3{felt_hx + rail_t, 0.0 * m, lr_z_offset}, wood);
 
         // --- Balls ---
         auto ball = mesh::sphere(0.0285 * m, 16, 24);
@@ -194,8 +222,8 @@ private:
         double sp = (ball_bounds.max.x() - ball_bounds.min.x()).numerical_value_in(m) +
                     0.001; // just over diameter
 
-        co_await make_ball(self, ball, ball_mass, vec3{0.0 * m, ball_radius, -0.8 * m},
-                           {0.95f, 0.95f, 0.95f});
+        self->M_cue_ball_handle = *co_await make_ball(
+            self, ball, ball_mass, vec3{0.0 * m, ball_radius, -0.8 * m}, {0.95f, 0.95f, 0.95f});
 
         // Rack: 5 rows, apex at z=0.8
         double zsp = sp * 0.866; // equilateral triangle row spacing
