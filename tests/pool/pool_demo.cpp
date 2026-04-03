@@ -85,7 +85,8 @@ private:
         auto fwd = cam().forward();
         auto tip_z = 1.0f * m; // Keep resting position anchor stationary
         auto stick_half_len_float = value_cast<float>(stick_half_len);
-        auto target_pos = cam().pos() + fwd * (tip_z - stick_half_len_float) +
+        auto target_pos = cam().pos() +
+                          fwd * (tip_z + value_cast<float>(M_shoot_offset) - stick_half_len_float) +
                           cam().right() * 0.10f * m + cam().up() * -0.05f * m;
 
         auto magnum_fwd = to_magnum_vector<one, float>(fwd);
@@ -150,8 +151,8 @@ private:
         w.add_constraint(impulse::spring_constraint{
             anchor_obj, stick_obj, anchor_obj.project_to_local(initial_pos),
             stick_obj.project_to_local(initial_pos), 0.0 * m,
-            30.0 * kg / s / s, // stiffness (N/m)
-            10.0 * kg / s      // damping (N*s/m)
+            200.0 * kg / s / s, // stiffness (N/m)
+            15.0 * kg / s       // damping (N*s/m)
         });
 
         // --- Table ---
@@ -264,17 +265,17 @@ private:
                 auto offset = stick.pos() - cur_anchor.value()->pos();
                 auto dist = -offset.dot(fwd);
 
-                // Pull back smoothly, limit max pull to ~2.0m
-                if (dist < 2.0f * m)
+                // Pull back smoothly, limit max pull to ~0.5m for a realistic cue stroke
+                if (dist < 0.5f * m)
                 {
                     // The spring pulls forward with 200 N/m. We must overcome it to pull the stick
                     // back! Overcome the damping as well.
                     auto spring_resistance = 200.0 * kg / s / s * dist;
-                    auto damping_resistance = 10.0 * kg / s * stick.vel().dot(-fwd);
-                    // Apply enough force to perfectly counter the spring, plus 500 N to accelerate
-                    // backward
+                    auto damping_resistance = 15.0 * kg / s * stick.vel().dot(-fwd);
+                    // Apply enough force to perfectly counter the spring, plus enough to accelerate
+                    // backward slowly
                     stick.apply_force(-fwd * (spring_resistance + damping_resistance +
-                                              stick.mass() * (500.0 * m / s / s)));
+                                              stick.mass() * (25.0 * m / s / s)));
                 }
                 else
                 {
@@ -294,9 +295,29 @@ private:
             auto offset = stick.pos() - cur_anchor.value()->pos();
             auto pulled_amount = std::max(0.0 * m, -offset.dot(fwd));
 
-            auto speed = pulled_amount * 35.0 / s;
+            // Shift the anchor forward quickly so the spring permits a natural follow-through past
+            // the ball
+            self->M_shoot_offset = 0.5f * m;
+
+            auto speed = pulled_amount * 15.0 / s;
             stick.vel() = vec3<si::metre / si::second>::zero(); // Stop backing up
             stick.apply_impulse(fwd * stick.mass() * speed);
+        }
+
+        // Allow some time for the stick to travel along its stroke
+        auto t = 0.0f * s;
+        while (t < 0.25f * s)
+        {
+            auto frame_dt = value_cast<float>(*co_await next_frame{});
+            t += frame_dt;
+        }
+
+        // Slowly reel the stick back to its resting state
+        while (self->M_shoot_offset > 0.0f * m)
+        {
+            auto frame_dt = value_cast<float>(*co_await next_frame{});
+            self->M_shoot_offset =
+                std::max(0.0f * m, self->M_shoot_offset - 1.0f * m / s * frame_dt);
         }
     }
 };
