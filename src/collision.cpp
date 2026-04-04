@@ -542,13 +542,14 @@ INSTANTIATE_GJK_EPA(mesh::instance, obb)
 std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
 {
     // SAT must be performed on 2 convex meshes.
-    assert(false && "SAT not implemented");
 
     // need to compare projected intersection across every axis of the follosing types
     // 1. The normal of every face from both meshes.
     // 2. The cross product of every edge from mesh A with every edge from mesh B
 
-    // can optimize by removing parallel axds
+    // can optimize by removing parallel axes
+
+    constexpr auto eps = 1e-12;
 
     auto a_tris = a.geometry().triangles();
     auto b_tris = b.geometry().triangles();
@@ -572,17 +573,63 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
     auto a_vertices = a.geometry().vertices(); // std::span<const vec3<si::metre>>
     auto b_vertices = b.geometry().vertices();
 
+    // extra collision info
+    auto info = collision_info(); // depth is empty?
+
+    // returns a pair of the min and max value of a a set of verticies projected along an axis.
     auto project_mesh = [](auto const &axis, auto const &vertices)
     {
-        auto minv = axis.dot(vertices[0]);
+        // the divide by |axis| can be omitted from the difference
+        // the axis's units are si::metre^2
+        auto minv = vertices[0];
         auto maxv = minv;
+        auto minc = axis.dot(minv);
+        auto maxc = minc;
         for (size_t i = 1; i < vertices.size(); ++i)
         {
             auto p = axis.dot(vertices[i]);
-            if (p < minv) minv = p;
-            if (p > maxv) maxv = p;
+            if (p < minc)
+            {
+                minv = vertices[i];
+                minc = p;
+            }
+            else if (p > maxc)
+            {
+                maxv = vertices[i];
+                maxc = p;
+            }
         }
-        return std::pair{minv, maxv};
+        return std::tuple{minv, maxv, minc, maxc};
+    };
+
+    auto test_axis = [&](const vec3<one> &axis)
+    {
+        auto [a_minv, a_maxv, a_minc, a_maxc] = project_mesh(axis, a_vertices);
+        auto [b_minv, b_maxv, b_minc, b_maxc] = project_mesh(axis, b_vertices);
+
+        // checks if the axes have collision
+        auto overlap_unnormal = (std::min(a_maxc, b_maxc) - std::max(a_minc, b_minc));
+
+        if (overlap_unnormal <= 0 * si::metre) return false; // no collision
+
+        if (overlap_unnormal < info.depth || info.normal == vec3<one>::zero())
+        {
+            // new minimum overlap
+            info.depth = overlap_unnormal; // this is not the actual depth until it is normalized at
+                                           // the end. lazy normalization.
+            info.normal = axis;            // this is not the actual normal yet either
+            if (a_maxc > b_maxc)
+            {
+                info.world_a = a_minv;
+                info.world_b = b_maxv;
+            }
+            else
+            {
+                info.world_a = a_maxv;
+                info.world_b = b_minv;
+            }
+        };
+        return true;
     };
 
     auto vec3_hash = [](const vec3<si::metre> &v)
@@ -593,22 +640,13 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
         return h1 ^ (h2 << 1) ^ (h3 << 2);
     };
 
-    auto vec3_equal = [](const vec3<si::metre> &a, const vec3<si::metre> &b)
-    { 
-        constexpr auto eps = 1e-12 * si::metre;
-        return (abs(a.x() - b.x()) <= eps) && (abs(a.y() - b.y()) <= eps) && (abs(a.y() - b.y()) <= eps); 
+    auto vec3_equal = [eps](const vec3<si::metre> &a, const vec3<si::metre> &b)
+    {
+        return (abs(a.x() - b.x()) <= eps * si::metre) && (abs(a.y() - b.y()) <= eps * si::metre) &&
+               (abs(a.y() - b.y()) <= eps * si::metre);
     };
 
-    // // std::vector<vec3<si::metre>> separating_axes;
-    // std::unordered_set<vec3<si::metre>, decltype(vec3_hash), decltype(vec3_equal)>
-    // separating_axes(
-    //     0, vec3_hash, vec3_equal);
-    // // std::unordered_set<vec3<si::metre>,> separating_axes;
-    // separating_axes.reserve(max_axes);
-
     // edge vectors.
-    // std::vector<vec3<si::metre>> a_edges, b_edges;
-    // std::unordered_set<vec3<si::metre>> a_edges, b_edges;
     std::unordered_set<vec3<si::metre>, decltype(vec3_hash), decltype(vec3_equal)> a_edges(
         0, vec3_hash, vec3_equal);
     std::unordered_set<vec3<si::metre>, decltype(vec3_hash), decltype(vec3_equal)> b_edges(
@@ -619,35 +657,54 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
     // get edges.
     for (const auto &a_tri : a_tris)
     {
-
-        // triangle_t().normal(tri)
-        // making cheap normal
-        // auto [a, b, c] = vertices(a);
         // Need to extract edges and normal
         auto [va, vb, vc] = a_tri.vertices(a);
         auto e1 = (vb - va);
-        auto e2 = (vc - va); // maybe make cyclical?
-        auto e3 = (vc - vb);
-        auto n = e1.cross(e2);
-
-        auto a = project_mesh(n, a_vertices);
-        auto b = project_mesh(n, b_vertices);
-        
-        // lost clangd at this point
-
-        // if (a.first < b.second && a.second > b.first) {// successful}
+        auto e2 = (vc - vb);
+        auto e3 = (va - vc);
 
         // add edges to list
-        // a_edges.insert(e1)
-        // a_edges.insert(e2)
-        // a_edges.insert(e3)
+        a_edges.insert(e1);
+        a_edges.insert(e2);
+        a_edges.insert(e3);
 
+        // face normal
+        auto n = e1.cross(e2) * (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+        if (!test_axis(n)) return std::nullopt;
     }
     // do the same for b_tris
+    for (const auto &b_tri : b_tris)
+    {
+        // Need to extract edges and normal
+        auto [va, vb, vc] = b_tri.vertices(b);
+        auto e1 = (vb - va);
+        auto e2 = (vc - vb);
+        auto e3 = (va - vc);
+
+        // add edges to list
+        b_edges.insert(e1);
+        b_edges.insert(e2);
+        b_edges.insert(e3);
+
+        // face normal
+        auto n = e1.cross(e2) * (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+        if (!test_axis(n)) return std::nullopt;
+    }
 
     // now go through both a_edges and b_edges and cross them and projection test.
+    for (const auto &a_edge : a_edges)
+    {
+        for (const auto &b_edge : b_edges)
+        {
+            auto n = a_edge.cross(b_edge) *
+                     (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
 
-    assert(false && "SAT not implemented");
-    
+            if (n.squared_norm() < eps) continue; // near 0 axis.
+            if (!test_axis(n)) return std::nullopt;
+        }
+    }
+    info.depth /= info.normal.norm();
+    info.normal = info.normal.normalized();
+    return info;
 }
-}
+} // namespace physkit
