@@ -572,8 +572,19 @@ mesh::instance::inertia_tensor(quantity<kg / pow<3>(m)> density) const
     auto i_local = M_mesh->inertia_tensor(density);
     auto mass = density * M_mesh->volume();
 
-    // inertia needs to inertia tensor to world space
-    // need to compute the quaternion
+    // locate the local inertia tensor
+    auto rotate = M_orientation.to_rotation_matrix();
+    auto it_world = rotate * i_local * rotate.transpose();
+
+    auto com_local = M_mesh->mass_center();
+    auto com_world = M_orientation * com_local + M_position;
+    auto r = com_world; // is the vector from world origin to center of mass
+
+    // take the parallel axis theorem
+    auto r_sq = com_world.dot(com_world);
+    auto parallel_axis = mass * (r_sq * mat3<>::identity() - com_world * com_world.transpose());
+
+    return it_world + parallel_axis;
 }
 
 } // namespace physkit
