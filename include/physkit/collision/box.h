@@ -14,12 +14,8 @@
 namespace physkit
 {
 
-class box : public std::enable_shared_from_this<box>
+class box
 {
-    struct key
-    {
-    };
-
 public:
     box (const box &) = default;
     box &operator=(const box &) = default;

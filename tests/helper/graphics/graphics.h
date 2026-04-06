@@ -26,52 +26,6 @@
 
 #endif
 
-namespace mesh_objs
-{
-using namespace Magnum;
-// radius 1
-inline auto cube()
-{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
-
-inline auto box(Magnum::Vector3 half_extents = Magnum::Vector3{1.0f, 1.0f, 1.0f})
-{
-    auto data = MeshTools::copy(Primitives::cubeSolid());
-    for (Vector3& i: data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
-        i = Matrix4::scaling(half_extents).transformPoint(i);
-    return std::make_shared<GL::Mesh>(MeshTools::compile(data));
-}
-
-inline auto sphere(unsigned int subdivisions = 3, float radius = 1.0f)
-{
-    auto data = Primitives::icosphereSolid(subdivisions);
-    if (radius != 1.0f)
-    {
-        for (Vector3& i: data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
-            i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
-    }
-
-
-    return std::make_shared<GL::Mesh>(MeshTools::compile(data));
-}
-
-inline auto cone(unsigned int rings, unsigned int segments, float half_length)
-{
-    return std::make_shared<GL::Mesh>(
-        MeshTools::compile(Primitives::coneSolid(rings, segments, half_length)));
-}
-
-inline auto cylinder(unsigned int rings, unsigned int segments, float half_length,
-                     bool include_caps = true)
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cylinderSolid(
-        rings, segments, half_length,
-        include_caps ? Primitives::CylinderFlag::CapEnds : Primitives::CylinderFlag{})));
-}
-
-inline auto plane()
-{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
-}; // namespace mesh_objs
-
 GRAPHICS_EXPORT namespace graphics
 {
     using namespace Magnum;
@@ -682,12 +636,12 @@ GRAPHICS_EXPORT namespace graphics
                 break;
             case physkit::shape_type::shape_sphere:
                 return M_phys_shape_map
-                    .emplace(&phys_shape, mesh_objs::sphere(3, phys_shape.sphere()->radius().numerical_value_in(physkit::si::metre)))
+                    .emplace(&phys_shape, std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.sphere(), 3)))
                     .first->second;
                 break;
             case physkit::shape_type::shape_box:
                 return M_phys_shape_map
-                    .emplace(&phys_shape, mesh_objs::box(to_magnum_vector<physkit::si::metre, float>(phys_shape.box()->half_extents())))
+                    .emplace(&phys_shape, std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.box())))
                     .first->second;
             }
         }
@@ -812,4 +766,34 @@ GRAPHICS_EXPORT namespace graphics
         bool M_testing = false;
     };
 
+    namespace mesh_objs
+    {
+    // radius 1
+    inline auto cube()
+    { return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
+
+    // radius 1
+    inline auto sphere(unsigned int subdivisions = 3)
+    {
+        return std::make_shared<GL::Mesh>(
+            MeshTools::compile(Primitives::icosphereSolid(subdivisions)));
+    }
+
+    inline auto cone(unsigned int rings, unsigned int segments, float half_length)
+    {
+        return std::make_shared<GL::Mesh>(
+            MeshTools::compile(Primitives::coneSolid(rings, segments, half_length)));
+    }
+
+    inline auto cylinder(unsigned int rings, unsigned int segments, float half_length,
+                         bool include_caps = true)
+    {
+        return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cylinderSolid(
+            rings, segments, half_length,
+            include_caps ? Primitives::CylinderFlag::CapEnds : Primitives::CylinderFlag{})));
+    }
+
+    inline auto plane()
+    { return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
+    }; // namespace mesh_objs
 } // namespace graphics

@@ -14,12 +14,8 @@
 namespace physkit
 {
 
-class sphere : public std::enable_shared_from_this<sphere>
+class sphere
 {
-    struct key
-    {
-    };
-
 public:
     /// @brief A view of a sphere placed in world space.
     /// Provides world-space collision queries by transforming into local space and back.
