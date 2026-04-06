@@ -1,6 +1,6 @@
 #pragma once
-#include "lin_alg.h"
-#include "types.h"
+#include "../algebra/lin_alg.h"
+#include "../algebra/types.h"
 
 #include <algorithm>
 #include <numbers>

@@ -34,29 +34,31 @@ set(PHYSKIT_SOURCES
 	src/world.cpp
 	src/mesh.cpp
 	src/sphere.cpp
+	src/box.cpp
 	src/collision.cpp
 	src/bvh.cpp
-	src/box.cpp
 )
 
 set(PHYSKIT_HEADERS
-	accum.h
-	collision.h
-	integrator.h
-	mesh.h
-	sphere.h
-	box.h
-	shape.h
-	object.h
-	particle.h
 	physkit.h
-	world.h
-	detail/bounds.h
-	detail/bvh.h
-	detail/collision_phases.h
-	detail/eigen_format.h
-	detail/lin_alg.h
-	detail/types.h
+	algebra/eigen_format.h
+	algebra/lin_alg.h
+	algebra/types.h
+	collision/bounds.h
+	collision/bvh.h
+	collision/collision.h
+	collision/collision_phases.h
+	collision/constraint.h
+	collision/mesh.h
+	collision/shape.h
+	collision/sphere.h
+	collision/box.h
+	core/accum.h
+	core/integrator.h
+	core/object.h
+	core/particle.h
+	core/world.h
+	detail/arena.h
 )
 
 list(TRANSFORM PHYSKIT_HEADERS PREPEND "include/physkit/")

@@ -2,9 +2,9 @@
 #include "mesh.h"
 #include "sphere.h"
 #include "box.h"
-#include "detail/bounds.h"
-#include "detail/bvh.h"
-#include "detail/types.h"
+#include "bounds.h"
+#include "bvh.h"
+#include "../algebra/types.h"
 
 #include <mp-units/framework.h>
 #include <mp-units/math.h>

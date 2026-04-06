@@ -1,7 +1,7 @@
 #pragma once
 #include "bvh.h"
-#include "physkit/collision.h"
-#include "physkit/object.h"
+#include "collision.h"
+#include "../core/object.h"
 
 #include <absl/container/flat_hash_map.h>
 #include <absl/container/flat_hash_set.h>

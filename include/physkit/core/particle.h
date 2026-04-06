@@ -1,5 +1,5 @@
 #pragma once
-#include "detail/types.h"
+#include "../algebra/types.h"
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
 

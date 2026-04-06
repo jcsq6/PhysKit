@@ -1,5 +1,5 @@
-#include "physkit/collision.h"
-#include "physkit/detail/bounds.h"
+#include "physkit/collision/collision.h"
+#include "physkit/collision/bounds.h"
 #include "test.h"
 
 #include <cmath>

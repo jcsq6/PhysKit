@@ -1,4 +1,5 @@
-#include "graphics.h"
+#include <physkit/physkit.h>
+#include <graphics/graphics.h>
 #include <mp-units/systems/si/units.h>
 
 using namespace graphics;

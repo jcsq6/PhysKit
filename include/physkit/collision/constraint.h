@@ -1,8 +1,8 @@
 #pragma once
-#include "object.h"
+#include "../core/object.h"
 #include "physkit/detail/arena.h"
-#include "physkit/detail/collision_phases.h"
-#include "physkit/integrator.h"
+#include "collision_phases.h"
+#include "../core/integrator.h"
 
 // TODO: Extended Position Based Dynamics (XPBD) constraints.
 // https://www.emergentmind.com/topics/extended-position-based-dynamics-xpbd

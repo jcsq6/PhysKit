@@ -1,4 +1,4 @@
-#include "physkit/world.h"
+#include "physkit/core/world.h"
 
 namespace physkit
 {

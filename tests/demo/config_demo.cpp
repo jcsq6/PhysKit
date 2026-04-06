@@ -1,7 +1,7 @@
 #include <mp-units/systems/si/unit_symbols.h>
 #include <physkit/physkit.h>
 
-#include <graphics.h>
+#include <graphics/graphics.h>
 
 using namespace mp_units;
 using namespace si::unit_symbols;

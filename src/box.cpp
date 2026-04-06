@@ -1,4 +1,4 @@
-#include "physkit/box.h"
+#include "physkit/collision/box.h"
 
 #include <cmath>
 #include <stdexcept>

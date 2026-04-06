@@ -1,6 +1,6 @@
 #pragma once
-#include "mesh.h"
-#include "shape.h"
+#include "../collision/mesh.h"
+#include "../collision/shape.h"
 #include "particle.h"
 #include <cstdio>
 

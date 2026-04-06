@@ -1,6 +1,6 @@
 #pragma once
 
-#include "detail/types.h"
+#include "../algebra/types.h"
 #include "mesh.h"
 #include "shape.h"
 
