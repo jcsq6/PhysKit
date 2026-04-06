@@ -133,8 +133,51 @@ struct destroy_rigid_command : command_base
     }
 };
 
+using constraint_desc_variant =
+    std::variant<impulse::distance_constraint::desc, impulse::spring_constraint::desc,
+                 impulse::ball_socket_constraint::desc, impulse::hinge_constraint::desc,
+                 impulse::slider_constraint::desc, impulse::weld_constraint::desc>;
+
+template <auto Type>
+using handle_for = typename physkit::detail::arena<impulse::constraint_class_type<Type>>::handle;
+
+using constraint_handle_variant =
+    std::variant<handle_for<constraint_type::distance>, handle_for<constraint_type::ball_socket>,
+                 handle_for<constraint_type::hinge>, handle_for<constraint_type::slider>,
+                 handle_for<constraint_type::weld>, handle_for<constraint_type::spring>>;
+
+using constraint_variant =
+    std::variant<impulse::distance_constraint, impulse::ball_socket_constraint,
+                 impulse::hinge_constraint, impulse::slider_constraint, impulse::weld_constraint,
+                 impulse::spring_constraint>;
+
+struct add_constraint_command : command_base
+{
+    using result_type = constraint_handle_variant;
+    constraint_desc_variant desc;
+
+    add_constraint_command(result_type *storage, std::coroutine_handle<> resume_handle,
+                           constraint_desc_variant desc)
+        : command_base(storage, resume_handle), desc(std::move(desc))
+    {
+    }
+};
+
+struct remove_constraint_command : command_base
+{
+    using result_type = std::optional<constraint_variant>;
+    constraint_handle_variant h;
+
+    remove_constraint_command(result_type *storage, std::coroutine_handle<> resume_handle,
+                              constraint_handle_variant h)
+        : command_base(storage, resume_handle), h(h)
+    {
+    }
+};
+
 using command =
-    std::variant<add_task_command, cancel_task_command, add_rigid_command, destroy_rigid_command>;
+    std::variant<add_task_command, cancel_task_command, add_rigid_command, destroy_rigid_command,
+                 add_constraint_command, remove_constraint_command>;
 } // namespace detail
 
 class world_base
@@ -247,6 +290,17 @@ private:
 
     auto execute_command(detail::destroy_rigid_command &cmd) { return remove_rigid(cmd.h); }
 
+    virtual detail::constraint_handle_variant
+    execute_add_constraint(const detail::constraint_desc_variant &desc) = 0;
+    virtual std::optional<detail::constraint_variant>
+    execute_remove_command(const detail::constraint_handle_variant &h) = 0;
+
+    auto execute_command(detail::add_constraint_command &cmd)
+    { return execute_add_constraint(cmd.desc); }
+
+    auto execute_command(detail::remove_constraint_command &cmd)
+    { return execute_remove_command(cmd.h); }
+
     bool flush_commands()
     {
         return M_command_queue.drain(
@@ -265,11 +319,41 @@ public:
     {
     }
 
-    template <typename T> auto add_constraint(const T &con)
-    { return M_constraints.template add_constraint<T::static_type>(con); }
+    template <typename Desc>
+    auto add_constraint(const Desc &desc)
+        requires requires { Desc::build_constraint; }
+    {
+        auto obj_a = this->get_rigid(world_base::handle::from_id(desc.a));
+        auto obj_b = this->get_rigid(world_base::handle::from_id(desc.b));
+        return M_constraints.add_constraint(
+            Desc::build_constraint(*obj_a.value(), *obj_b.value(), desc));
+    }
+
+    template <typename Handle> auto remove_constraint(Handle h)
+    { return M_constraints.remove_constraint(h); }
 
 private:
     impulse::constraint_solver<Integrator> M_constraints;
+
+    detail::constraint_handle_variant
+    execute_add_constraint(const detail::constraint_desc_variant &desc) override
+    {
+        return std::visit([this](auto &&d) -> detail::constraint_handle_variant
+                          { return this->add_constraint(d); }, desc);
+    }
+
+    std::optional<detail::constraint_variant>
+    execute_remove_command(const detail::constraint_handle_variant &h) override
+    {
+        return std::visit(
+            [this](auto &&handle)
+            {
+                return this->remove_constraint(handle).transform(
+                    [](auto &&c) -> detail::constraint_variant
+                    { return std::forward<decltype(c)>(c); });
+            },
+            h);
+    }
 
     void step_impl(quantity<si::second> dt) override;
 };

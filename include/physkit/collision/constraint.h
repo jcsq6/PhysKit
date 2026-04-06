@@ -141,6 +141,40 @@ class distance_constraint : public constraint_base
 {
 public:
     static constexpr auto static_type = constraint_type::distance;
+
+    struct desc
+    {
+        static constexpr auto static_type = constraint_type::distance;
+
+        physkit::detail::handle_id_t a;
+        physkit::detail::handle_id_t b;
+        vec3<si::metre> local_a = vec3<si::metre>::zero();
+        vec3<si::metre> local_b = vec3<si::metre>::zero();
+        quantity<si::metre> distance = 0 * si::metre;
+
+        template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
+        { return {a.id(), b.id()}; }
+
+        auto &&with_local_anchor_a(this auto &&self, const vec3<si::metre> &l_a)
+        {
+            self.local_a = l_a;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_local_anchor_b(this auto &&self, const vec3<si::metre> &l_b)
+        {
+            self.local_b = l_b;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_distance(this auto &&self, quantity<si::metre> d)
+        {
+            self.distance = d;
+            return std::forward<decltype(self)>(self);
+        }
+
+        static distance_constraint build_constraint(object &oa, object &ob, const desc &d)
+        { return distance_constraint(oa, ob, d.local_a, d.local_b, d.distance); }
+    };
+
     static constexpr auto bias_factor = .1;
 
     static constexpr auto jacobian_dimension = 1;
@@ -210,6 +244,57 @@ class spring_constraint : public constraint_base
 {
 public:
     static constexpr auto static_type = constraint_type::spring;
+
+    struct desc
+    {
+        static constexpr auto static_type = constraint_type::spring;
+
+        physkit::detail::handle_id_t a;
+        physkit::detail::handle_id_t b;
+        vec3<si::metre> local_a = vec3<si::metre>::zero();
+        vec3<si::metre> local_b = vec3<si::metre>::zero();
+        quantity<si::metre> distance = 0 * si::metre;
+        quantity<si::kilogram / (si::second * si::second)> stiffness =
+            0 * si::kilogram / (si::second * si::second);
+        quantity<si::kilogram / si::second> damping = 0 * si::kilogram / si::second;
+
+        template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
+        { return {a.id(), b.id()}; }
+
+        auto &&with_local_anchor_a(this auto &&self, const vec3<si::metre> &l_a)
+        {
+            self.local_a = l_a;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_local_anchor_b(this auto &&self, const vec3<si::metre> &l_b)
+        {
+            self.local_b = l_b;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_distance(this auto &&self, quantity<si::metre> d)
+        {
+            self.distance = d;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_stiffness(this auto &&self,
+                              quantity<si::kilogram / (si::second * si::second)> s)
+        {
+            self.stiffness = s;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_damping(this auto &&self, quantity<si::kilogram / si::second> dp)
+        {
+            self.damping = dp;
+            return std::forward<decltype(self)>(self);
+        }
+
+        static spring_constraint build_constraint(object &oa, object &ob, const desc &d)
+        {
+            return spring_constraint(oa, ob, d.local_a, d.local_b, d.distance, d.stiffness,
+                                     d.damping);
+        }
+    };
+
     static constexpr auto jacobian_dimension = 1;
 
     spring_constraint(object &a, object &b, const vec3<si::metre> &local_anchor_a,
@@ -285,6 +370,28 @@ class ball_socket_constraint : public constraint_base
 {
 public:
     static constexpr auto static_type = constraint_type::ball_socket;
+
+    struct desc
+    {
+        static constexpr auto static_type = constraint_type::ball_socket;
+
+        physkit::detail::handle_id_t a;
+        physkit::detail::handle_id_t b;
+        vec3<si::metre> anchor = vec3<si::metre>::zero();
+
+        template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
+        { return {a.id(), b.id()}; }
+
+        auto &&with_anchor(this auto &&self, const vec3<si::metre> &anc)
+        {
+            self.anchor = anc;
+            return std::forward<decltype(self)>(self);
+        }
+
+        static ball_socket_constraint build_constraint(object &oa, object &ob, const desc &d)
+        { return ball_socket_constraint(oa, ob, d.anchor); }
+    };
+
     static constexpr auto bias_factor = .1;
     static constexpr auto jacobian_dimension = 3;
 
@@ -350,6 +457,46 @@ class hinge_constraint : public constraint_base
 {
 public:
     static constexpr auto static_type = constraint_type::hinge;
+
+    struct desc
+    {
+        static constexpr auto static_type = constraint_type::hinge;
+
+        physkit::detail::handle_id_t a;
+        physkit::detail::handle_id_t b;
+        vec3<si::metre> local_a = vec3<si::metre>::zero();
+        vec3<si::metre> local_b = vec3<si::metre>::zero();
+        vec3<one> local_axis_a = vec3<one>::zero();
+        vec3<one> local_axis_b = vec3<one>::zero();
+
+        template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
+        { return {a.id(), b.id()}; }
+
+        auto &&with_local_anchor_a(this auto &&self, const vec3<si::metre> &l_a)
+        {
+            self.local_a = l_a;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_local_anchor_b(this auto &&self, const vec3<si::metre> &l_b)
+        {
+            self.local_b = l_b;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_local_axis_a(this auto &&self, const vec3<one> &ax_a)
+        {
+            self.local_axis_a = ax_a;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_local_axis_b(this auto &&self, const vec3<one> &ax_b)
+        {
+            self.local_axis_b = ax_b;
+            return std::forward<decltype(self)>(self);
+        }
+
+        static hinge_constraint build_constraint(object &oa, object &ob, const desc &d)
+        { return hinge_constraint(oa, ob, d.local_a, d.local_b, d.local_axis_a, d.local_axis_b); }
+    };
+
     static constexpr auto bias_factor = .2;
     static constexpr auto jacobian_dimension = 5;
 
@@ -448,6 +595,34 @@ class slider_constraint : public constraint_base
 {
 public:
     static constexpr auto static_type = constraint_type::slider;
+
+    struct desc
+    {
+        static constexpr auto static_type = constraint_type::slider;
+
+        physkit::detail::handle_id_t a;
+        physkit::detail::handle_id_t b;
+        vec3<si::metre> anchor = vec3<si::metre>::zero();
+        vec3<one> axis = vec3<one>::zero();
+
+        template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
+        { return {a.id(), b.id()}; }
+
+        auto &&with_anchor(this auto &&self, const vec3<si::metre> &anc)
+        {
+            self.anchor = anc;
+            return std::forward<decltype(self)>(self);
+        }
+        auto &&with_axis(this auto &&self, const vec3<one> &ax)
+        {
+            self.axis = ax;
+            return std::forward<decltype(self)>(self);
+        }
+
+        static slider_constraint build_constraint(object &oa, object &ob, const desc &d)
+        { return slider_constraint(oa, ob, d.anchor, d.axis); }
+    };
+
     static constexpr auto bias_factor = .1;
     static constexpr auto jacobian_dimension = 5;
 
@@ -578,6 +753,28 @@ class weld_constraint : public constraint_base
 {
 public:
     static constexpr auto static_type = constraint_type::weld;
+
+    struct desc
+    {
+        static constexpr auto static_type = constraint_type::weld;
+
+        physkit::detail::handle_id_t a;
+        physkit::detail::handle_id_t b;
+        vec3<si::metre> anchor = vec3<si::metre>::zero();
+
+        template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
+        { return {a.id(), b.id()}; }
+
+        auto &&with_anchor(this auto &&self, const vec3<si::metre> &anc)
+        {
+            self.anchor = anc;
+            return std::forward<decltype(self)>(self);
+        }
+
+        static weld_constraint build_constraint(object &oa, object &ob, const desc &d)
+        { return weld_constraint(oa, ob, d.anchor); }
+    };
+
     static constexpr auto bias_factor = .1;
     static constexpr auto jacobian_dimension = 6;
 
@@ -777,6 +974,48 @@ inline auto make_tuple_helper(std::size_t initial_capacity, std::index_sequence<
             initial_capacity)...};
 }
 
+template <typename T> struct get_constraint_type
+{
+};
+
+template <std::derived_from<constraint_base> Constraint> struct get_constraint_type<Constraint>
+{
+    using type = Constraint;
+};
+
+template <> struct get_constraint_type<typename physkit::detail::arena<distance_constraint>::handle>
+{
+    using type = distance_constraint;
+};
+
+template <>
+struct get_constraint_type<typename physkit::detail::arena<ball_socket_constraint>::handle>
+{
+    using type = ball_socket_constraint;
+};
+
+template <> struct get_constraint_type<typename physkit::detail::arena<hinge_constraint>::handle>
+{
+    using type = hinge_constraint;
+};
+
+template <> struct get_constraint_type<typename physkit::detail::arena<slider_constraint>::handle>
+{
+    using type = slider_constraint;
+};
+
+template <> struct get_constraint_type<typename physkit::detail::arena<weld_constraint>::handle>
+{
+    using type = weld_constraint;
+};
+
+template <> struct get_constraint_type<typename physkit::detail::arena<spring_constraint>::handle>
+{
+    using type = spring_constraint;
+};
+
+template <typename T> using get_constraint_type_t = typename get_constraint_type<T>::type;
+
 constexpr auto constraint_count = static_cast<std::size_t>(constraint_type::contact);
 using constraint_arenas =
     decltype(make_tuple_helper({}, std::make_index_sequence<constraint_count>{}));
@@ -797,18 +1036,17 @@ public:
     {
     }
 
-    template <constraint_type Type>
-    auto add_constraint(const impulse::constraint_class_type<Type> &constraint)
+    template <typename Constraint> auto add_constraint(const Constraint &constraint)
     {
-        return std::get<physkit::detail::arena<impulse::constraint_class_type<Type>>>(M_constraints)
+        return std::get<::physkit::detail::arena<detail::get_constraint_type_t<Constraint>>>(
+                   M_constraints)
             .add(std::forward<decltype(constraint)>(constraint));
     }
 
-    template <constraint_type Type>
-    auto remove_constraint(
-        typename physkit::detail::arena<impulse::constraint_class_type<Type>>::handle h)
+    template <typename Handle> auto remove_constraint(Handle h)
     {
-        return std::get<physkit::detail::arena<impulse::constraint_class_type<Type>>>(M_constraints)
+        return std::get<::physkit::detail::arena<detail::get_constraint_type_t<Handle>>>(
+                   M_constraints)
             .remove(h);
     }
 

@@ -132,6 +132,7 @@ private:
     std::size_t M_contacts{};
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 struct wait_for_collision
 {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
@@ -188,6 +189,7 @@ struct wait_for_collision
     world_base::handle with = world_base::handle::from_id(world_base::handle::null);
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 struct wait_for_separation
 {
     struct awaiter_type : detail::awaiter
@@ -565,6 +567,45 @@ template <policy p = policy::wait> struct cancel_task
         }
     };
     detail::task_handler::task_handle id;
+};
+
+struct add_constraint
+{
+    struct awaiter_type
+        : detail::command_awaiter<detail::add_constraint_command, detail::constraint_desc_variant>
+    {
+        awaiter_type(detail::task_promise_base &promise, add_constraint aw)
+            : command_awaiter(promise, std::move(aw.desc),
+                              detail::handle_for<constraint_type::distance>::from_id(
+                                  detail::handle_for<constraint_type::distance>::null))
+        {
+        }
+    };
+    detail::constraint_desc_variant desc;
+};
+
+template <policy p = policy::wait> struct remove_constraint
+{
+    struct awaiter_type
+        : detail::select_command_awaiter<(p == policy::wait), detail::remove_constraint_command,
+                                         detail::constraint_handle_variant>
+    {
+        awaiter_type(detail::task_promise_base &promise, remove_constraint aw)
+            : detail::select_command_awaiter<(p == policy::wait), detail::remove_constraint_command,
+                                             detail::constraint_handle_variant>(promise,
+                                                                                std::move(aw.h))
+        {
+        }
+
+        auto on_resume()
+            requires(p == policy::wait)
+        {
+            if (auto opt = std::move(this->result)) return std::move(*opt);
+            throw error::stale_handle;
+        }
+    };
+
+    detail::constraint_handle_variant h;
 };
 
 struct create_rigid

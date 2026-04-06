@@ -163,16 +163,19 @@ private:
         auto &w = dynamic_cast<typed_world &>(self->world());
 
         // Slider keeps the stick structurally aligned with the camera vector (Z-axis local)
-        w.add_constraint(impulse::slider_constraint{anchor_obj, stick_obj, initial_pos,
-                                                    vec3<one>{0.0, 1.0, 0.0}});
+        co_await physkit::add_constraint{
+            impulse::slider_constraint::desc::make(self->M_anchor_handle, self->M_stick_handle)
+                .with_anchor(initial_pos)
+                .with_axis(vec3<one>{0.0, 1.0, 0.0})};
 
         // Soft spring keeps it tethered elastically, pulling the stick through dynamic physics
-        w.add_constraint(impulse::spring_constraint{
-            anchor_obj, stick_obj, anchor_obj.project_to_local(initial_pos),
-            stick_obj.project_to_local(initial_pos), 0.0 * m,
-            200.0 * kg / s / s, // stiffness (N/m)
-            15.0 * kg / s       // damping (N*s/m)
-        });
+        co_await physkit::add_constraint{
+            impulse::spring_constraint::desc::make(self->M_anchor_handle, self->M_stick_handle)
+                .with_local_anchor_a(anchor_obj.project_to_local(initial_pos))
+                .with_local_anchor_b(stick_obj.project_to_local(initial_pos))
+                .with_distance(0.0 * m)
+                .with_stiffness(200.0 * kg / s / s)
+                .with_damping(15.0 * kg / s)};
 
         // --- Table ---
         auto felt_mesh = mesh::box(vec3{0.8, 0.1, 1.6} * m);

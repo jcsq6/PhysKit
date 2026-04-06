@@ -58,13 +58,10 @@ public:
             add_object(h1, {0.8f, 0.2f, 0.2f});
             add_object(h2, {1.0f, 0.4f, 0.4f});
 
-            auto obj_1 = w.get_rigid(h1);
-            auto obj_2 = w.get_rigid(h2);
-            w.add_constraint(impulse::distance_constraint{*obj_1.value(),
-                                                          *obj_2.value(),
-                                                          {0 * m, 0 * m, 0 * m},
-                                                          {0 * m, 0 * m, 0 * m},
-                                                          4 * m});
+            w.add_constraint(impulse::distance_constraint::desc::make(h1, h2)
+                                 .with_local_anchor_a({0 * m, 0 * m, 0 * m})
+                                 .with_local_anchor_b({0 * m, 0 * m, 0 * m})
+                                 .with_distance(4 * m));
         }
 
         // 2. Ball Socket Constraint (Pendulum)
@@ -80,10 +77,8 @@ public:
             add_object(h1, {0.2f, 0.8f, 0.2f});
             add_object(h2, {0.4f, 1.0f, 0.4f});
 
-            auto obj_1 = w.get_rigid(h1);
-            auto obj_2 = w.get_rigid(h2);
-            w.add_constraint(impulse::ball_socket_constraint{
-                *obj_1.value(), *obj_2.value(), {-4 * m, 14.5 * m, 0 * m}});
+            w.add_constraint(impulse::ball_socket_constraint::desc::make(h1, h2).with_anchor(
+                {-4 * m, 14.5 * m, 0 * m}));
         }
 
         // 3. Hinge Constraint (Trapdoor / Swing)
@@ -97,16 +92,11 @@ public:
             add_object(h1, {0.2f, 0.2f, 0.8f});
             add_object(h2, {0.4f, 0.4f, 1.0f});
 
-            auto obj_1 = w.get_rigid(h1);
-            auto obj_2 = w.get_rigid(h2);
-            w.add_constraint(impulse::hinge_constraint{
-                *obj_1.value(),
-                *obj_2.value(),
-                {0 * m, 0 * m, 0 * m},  // local to a
-                {-4 * m, 0 * m, 0 * m}, // local to b
-                {0, 0, 1},              // axis a
-                {0, 0, 1}               // axis b
-            });
+            w.add_constraint(impulse::hinge_constraint::desc::make(h1, h2)
+                                 .with_local_anchor_a({0 * m, 0 * m, 0 * m})
+                                 .with_local_anchor_b({-4 * m, 0 * m, 0 * m})
+                                 .with_local_axis_a({0, 0, 1})
+                                 .with_local_axis_b({0, 0, 1}));
         }
 
         // 4. Slider Constraint (Elevator/Diagonal Slide)
@@ -120,14 +110,9 @@ public:
             add_object(h1, {0.8f, 0.8f, 0.2f});
             add_object(h2, {1.0f, 1.0f, 0.4f});
 
-            auto obj_1 = w.get_rigid(h1);
-            auto obj_2 = w.get_rigid(h2);
-            w.add_constraint(impulse::slider_constraint{
-                *obj_1.value(),
-                *obj_2.value(),
-                {12 * m, 15 * m, 0 * m}, // world anchor
-                {1, -2, 0}               // world axis
-            });
+            w.add_constraint(impulse::slider_constraint::desc::make(h1, h2)
+                                 .with_anchor({12 * m, 15 * m, 0 * m}) // world anchor
+                                 .with_axis({1, -2, 0}));              // world axis
         }
 
         // 5. Weld Constraint (Falling glued pair)
@@ -147,11 +132,8 @@ public:
             add_object(h1, {0.8f, 0.2f, 0.8f});
             add_object(h2, {1.0f, 0.4f, 1.0f});
 
-            auto obj_1 = w.get_rigid(h1);
-            auto obj_2 = w.get_rigid(h2);
-            w.add_constraint(impulse::weld_constraint{
-                *obj_1.value(), *obj_2.value(), {20.5 * m, 15 * m, 0.5 * m} // world anchor
-            });
+            w.add_constraint(impulse::weld_constraint::desc::make(h1, h2).with_anchor(
+                {20.5 * m, 15 * m, 0.5 * m})); // world anchor
         }
     }
 
