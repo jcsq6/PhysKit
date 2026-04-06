@@ -10,12 +10,13 @@ import std;
 #include <mp-units/framework.h>
 #include <mp-units/math.h>
 #include <mp-units/systems/si/units.h>
-
+#include <unordered_set>
 #include <optional>
 #endif
 
 #include "../algebra/types.h"
 #include "mesh.h"
+#include "shape.h"
 
 PHYSKIT_EXPORT
 namespace physkit

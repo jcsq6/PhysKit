@@ -37,8 +37,6 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
     {
         std::string name; // must be "sphere"
         float radius;
-        unsigned int stacks = 16;
-        unsigned int sectors = 32;
     };
 
     struct obj // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -49,7 +47,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         std::array<double, 3> angular_velocity = {0.0, 0.0, 0.0}; // rad/s
         std::array<double, 3> inertia_tensor = {1.0, 1.0, 1.0};   // diagonal [Ixx, Iyy, Izz]
         physkit::body_type type = physkit::body_type::dynam;
-        std::variant<box_type, pyramid_type, sphere_type> mesh =
+        std::variant<box_type, pyramid_type, sphere_type> shape =
             box_type{"box", {0.5f, 0.5f, 0.5f}};
         double mass;
         double restitution = 0.5;
@@ -88,29 +86,29 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
     // self.M_integrator = config.integrator;
     self.M_solver_iterations = config.solver_iterations;
 
-    std::map<std::string, std::shared_ptr<physkit::mesh>> mesh_map;
+    std::map<std::string, std::shared_ptr<physkit::shape>> shape_map;
     self.M_objects.reserve(config.objects.size());
     for (const obj &obj : config.objects)
     {
-        auto mesh_name = *glz::write_json(obj.mesh);
-        auto it = mesh_map.find(mesh_name);
-        if (it == mesh_map.end())
+        auto shape_name = *glz::write_json(obj.shape);
+        auto it = shape_map.find(shape_name);
+        if (it == shape_map.end())
         {
-            obj.mesh.visit(
-                [&](auto &&mesh_desc)
+            obj.shape.visit(
+                [&](auto &&shape_desc)
                 {
-                    using T = std::decay_t<decltype(mesh_desc)>;
+                    using T = std::decay_t<decltype(shape_desc)>;
                     if constexpr (std::same_as<T, box_type>)
-                        mesh_map[mesh_name] = physkit::mesh::box(
-                            physkit::vec3{mesh_desc.half_extents[0], mesh_desc.half_extents[1],
-                                          mesh_desc.half_extents[2]} *
-                            m);
+                        shape_map[shape_name] = physkit::shape::make(
+                            physkit::box::make(physkit::vec3{shape_desc.half_extents[0], shape_desc.half_extents[1],
+                                          shape_desc.half_extents[2]} *
+                            m));
                     else if constexpr (std::same_as<T, pyramid_type>)
-                        mesh_map[mesh_name] =
-                            physkit::mesh::pyramid(mesh_desc.height * m, mesh_desc.base_size * m);
+                        shape_map[shape_name] =
+                            physkit::shape::make(physkit::mesh::pyramid(shape_desc.height * m, shape_desc.base_size * m));
                     else if constexpr (std::same_as<T, sphere_type>)
-                        mesh_map[mesh_name] = physkit::mesh::sphere(
-                            mesh_desc.radius * m, mesh_desc.stacks, mesh_desc.sectors);
+                        shape_map[shape_name] = physkit::shape::make(
+                            physkit::sphere::make(shape_desc.radius * m));
                 });
         }
 
@@ -130,7 +128,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                               rad / s)
                 .with_inertia_tensor(inertia)
                 .with_mass(obj.mass * kg)
-                .with_mesh(mesh_map.at(mesh_name))
+                .with_shape(shape_map.at(shape_name))
                 .with_restitution(obj.restitution)
                 .with_friction(obj.friction),
             Color3{obj.color[0], obj.color[1], obj.color[2]});
@@ -203,21 +201,21 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         std::println("      Type: {}",
                      glz::reflect<physkit::body_type>::keys[static_cast<int>(o.type())]); // NOLINT
         std::println("      Color: ({}, {}, {})", color[0], color[1], color[2]);
-        config.objects[i].mesh.visit(
-            [](auto &&mesh_desc)
+        config.objects[i].shape.visit(
+            [](auto &&shape_desc)
             {
-                using T = std::decay_t<decltype(mesh_desc)>;
+                using T = std::decay_t<decltype(shape_desc)>;
                 if constexpr (std::same_as<T, box_type>)
-                    std::println("      Mesh: box (half_extents: {})",
-                                 physkit::vec3{mesh_desc.half_extents[0], mesh_desc.half_extents[1],
-                                               mesh_desc.half_extents[2]} *
+                    std::println("      Shape: box (half_extents: {})",
+                                 physkit::vec3{shape_desc.half_extents[0], shape_desc.half_extents[1],
+                                               shape_desc.half_extents[2]} *
                                      m);
                 else if constexpr (std::same_as<T, pyramid_type>)
-                    std::println("      Mesh: pyramid (height: {}, base_size: {})",
-                                 mesh_desc.height * m, mesh_desc.base_size * m);
+                    std::println("      Shape: pyramid (height: {}, base_size: {})",
+                                 shape_desc.height * m, shape_desc.base_size * m);
                 else if constexpr (std::same_as<T, sphere_type>)
-                    std::println("      Mesh: sphere (radius: {}, stacks: {}, sectors: {})",
-                                 mesh_desc.radius * m, mesh_desc.stacks, mesh_desc.sectors);
+                    std::println("      Mesh: sphere (radius: {})", //TODO
+                                 shape_desc.radius * m);
             });
     }
     std::cout.flush();

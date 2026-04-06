@@ -4,13 +4,12 @@
 #include "../algebra/types.h"
 
 #include <mp-units/framework.h>
-#include <mp-units/math.h>
 #include <mp-units/systems/si/units.h>
 
 #include <cassert>
 #include <memory>
 #include <span>
-#include <vector>
+#include <cstdio>
 
 namespace physkit
 {

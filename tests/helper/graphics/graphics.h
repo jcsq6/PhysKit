@@ -26,6 +26,9 @@
 
 #endif
 
+namespace mesh_objs
+{
+using namespace Magnum;
 // radius 1
 inline auto cube()
 { return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
@@ -68,7 +71,6 @@ inline auto cylinder(unsigned int rings, unsigned int segments, float half_lengt
 inline auto plane()
 { return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
 }; // namespace mesh_objs
-
 
 GRAPHICS_EXPORT namespace graphics
 {
@@ -679,7 +681,7 @@ GRAPHICS_EXPORT namespace graphics
                     .first->second;
                 break;
             case physkit::shape_type::shape_sphere:
-                return M_phys_shape_map //oh boy
+                return M_phys_shape_map
                     .emplace(&phys_shape, mesh_objs::sphere(3, phys_shape.sphere()->radius().numerical_value_in(physkit::si::metre)))
                     .first->second;
                 break;

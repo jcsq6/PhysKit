@@ -20,6 +20,7 @@
 #include <Magnum/Math/Vector.h>
 #include <Magnum/Math/Vector3.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/MeshTools/Copy.h>
 #include <Magnum/Platform/GlfwApplication.h>
 #include <Magnum/Primitives/Cone.h>
 #include <Magnum/Primitives/Cube.h>
