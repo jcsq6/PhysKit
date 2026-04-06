@@ -1,13 +1,29 @@
 #pragma once
-#include "bvh.h"
-#include "collision.h"
-#include "../core/object.h"
 
+#ifdef PHYSKIT_IN_MODULE_IMPL
+
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+
+#else
 #include <absl/container/flat_hash_map.h>
 #include <absl/container/flat_hash_set.h>
 
+#include <algorithm>
 #include <array>
+#include <concepts>
+#include <cstdint>
+#include <ranges>
+#include <span>
+#include <utility>
+#endif
 
+#include "bvh.h"
+#include "physkit/collision/collision.h"
+#include "physkit/core/object.h"
+
+PHYSKIT_EXPORT
 namespace physkit::detail
 {
 class pair_manager

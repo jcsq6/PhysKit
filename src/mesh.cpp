@@ -1,9 +1,6 @@
+#ifndef PHYSKIT_IN_MODULE_IMPL
 #include "physkit/collision/mesh.h"
-
-#include <array>
-#include <cmath>
-#include <limits>
-#include <stdexcept>
+#endif
 
 namespace physkit
 {

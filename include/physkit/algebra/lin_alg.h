@@ -1,6 +1,15 @@
 #pragma once
+
+#ifdef PHYSKIT_IN_MODULE_IMPL
+
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+#else
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+
+#include "physkit/detail/macros.h"
 
 #include <mp-units/framework.h>
 #include <mp-units/math.h>
@@ -9,13 +18,9 @@
 #include <mp-units/systems/si/unit_symbols.h>
 #include <mp-units/systems/si/units.h>
 
-#include <type_traits>
-#include <utility>
+#endif
 
-#include <initializer_list>
-
-#include <Eigen/Core>
-
+PHYSKIT_EXPORT
 namespace physkit
 {
 
@@ -26,6 +31,9 @@ template <Quantity Q> class unit_quat;
 
 namespace detail
 {
+
+template <typename T>
+concept offset_unit = mp_units::Unit<T> && requires { T::_point_origin_; };
 
 template <typename T> constexpr bool is_u_matrix_v = false;
 template <Quantity Q, int Rows, int Cols>
@@ -142,7 +150,7 @@ public:
     {
     }
 
-    constexpr unit_mat(const std::initializer_list<std::initializer_list<rep_type>> &list)
+    constexpr unit_mat(std::initializer_list<std::initializer_list<rep_type>> list)
         requires(ref == one)
         : M_data(list)
     {
@@ -276,6 +284,18 @@ public:
         return res_t(base() / scalar, typename res_t::key{});
     }
 
+    template <Reference R> constexpr auto operator*(R) const
+    {
+        using res_t = unit_mat<decltype(Q{} * (rep_type{1} * R{})), _rows, _cols>;
+        return res_t{base(), typename res_t::key{}};
+    }
+
+    template <Reference R> constexpr auto operator/(R) const
+    {
+        using res_t = unit_mat<decltype(Q{} / (rep_type{1} * R{})), _rows, _cols>;
+        return res_t{base(), typename res_t::key{}};
+    }
+
     constexpr auto operator+(const unit_mat &other) const
     { return unit_mat{base() + other.base(), key{}}; }
 
@@ -326,15 +346,6 @@ public:
 
 private:
     eigen_type M_data;
-
-    template <detail::MatrixType MatrixT, Reference Ref,
-              RepresentationOf<get_quantity_spec(Ref{})> Rep>
-    friend constexpr auto mp_units::operator*(MatrixT && mat, Ref ref)
-        requires(!mp_units::detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>);
-    template <detail::MatrixType MatrixT, Reference Ref,
-              RepresentationOf<get_quantity_spec(Ref{})> Rep>
-    friend constexpr auto mp_units::operator/(MatrixT && mat, Ref ref)
-        requires(!mp_units::detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>);
 
     template <Quantity OQ, int R, int C> friend class unit_mat;
     template <Quantity OQ> friend class unit_quat;
@@ -555,17 +566,22 @@ public:
         requires(ref == one)
     { return unit_quat{eigen_type::FromTwoVectors(a.base(), b.base()), key{}}; }
 
+    /// Multiply by a unit/reference: `quat<one>{...} * m` → `quat<m>{...}`
+    template <Reference R> constexpr auto operator*(R) const
+    {
+        using res_t = unit_quat<decltype(Q{} * (rep_type{1} * R{}))>;
+        return res_t{base(), typename res_t::key{}};
+    }
+
+    /// Divide by a unit/reference: `quat<m>{...} / m` → `quat<one>{...}`
+    template <Reference R> constexpr auto operator/(R) const
+    {
+        using res_t = unit_quat<decltype(Q{} / (rep_type{1} * R{}))>;
+        return res_t{base(), typename res_t::key{}};
+    }
+
 private:
     eigen_type M_data{rep_type(1), rep_type(0), rep_type(0), rep_type(0)};
-
-    template <physkit::detail::QuaternionType QuatT, Reference Ref,
-              RepresentationOf<get_quantity_spec(Ref{})> Rep>
-    friend constexpr auto mp_units::operator/(QuatT && quat, Ref ref)
-        requires(!mp_units::detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>);
-    template <physkit::detail::QuaternionType QuatT, Reference Ref,
-              RepresentationOf<get_quantity_spec(Ref{})> Rep>
-    friend constexpr auto mp_units::operator*(QuatT && quat, Ref ref)
-        requires(!mp_units::detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>);
 
     template <Quantity OQ> friend class unit_quat;
 
@@ -575,49 +591,6 @@ private:
     { return std::forward_like<decltype(self)>(self.M_data); }
 };
 } // namespace physkit
-
-namespace mp_units
-{
-template <physkit::detail::MatrixType MatrixT, Reference Ref,
-          RepresentationOf<get_quantity_spec(Ref{})> Rep =
-              typename std::remove_cvref_t<MatrixT>::rep_type>
-constexpr auto operator*(MatrixT && mat, Ref ref)
-    requires(!detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>)
-{
-    using res_t = physkit::unit_mat<quantity<Ref{} * MatrixT::ref, Rep>, mat.rows(), mat.cols()>;
-    return res_t{std::forward<MatrixT>(mat).base(), typename res_t::key{}};
-}
-
-template <physkit::detail::MatrixType MatrixT, Reference Ref,
-          RepresentationOf<get_quantity_spec(Ref{})> Rep =
-              typename std::remove_cvref_t<MatrixT>::rep_type>
-constexpr auto operator/(MatrixT && mat, Ref ref)
-    requires(!detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>)
-{
-    using res_t = physkit::unit_mat<quantity<MatrixT::ref / Ref{}, Rep>, mat.rows(), mat.cols()>;
-    return res_t{std::forward<MatrixT>(mat).base(), typename res_t::key{}};
-}
-
-template <
-    physkit::detail::QuaternionType QuatT, Reference Ref,
-    RepresentationOf<get_quantity_spec(Ref{})> Rep = typename std::remove_cvref_t<QuatT>::rep_type>
-constexpr auto operator*(QuatT && quat, Ref ref)
-    requires(!detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>)
-{
-    using res_t = physkit::unit_quat<quantity<Ref{} * QuatT::ref, Rep>>;
-    return res_t{std::forward<QuatT>(quat).base(), typename res_t::key{}};
-}
-
-template <
-    physkit::detail::QuaternionType QuatT, Reference Ref,
-    RepresentationOf<get_quantity_spec(Ref{})> Rep = typename std::remove_cvref_t<QuatT>::rep_type>
-constexpr auto operator/(QuatT && quat, Ref ref)
-    requires(!detail::OffsetUnit<decltype(mp_units::get_unit(Ref{}))>)
-{
-    using res_t = physkit::unit_quat<quantity<QuatT::ref / Ref{}, Rep>>;
-    return res_t{std::forward<QuatT>(quat).base(), typename res_t::key{}};
-}
-} // namespace mp_units
 
 namespace std
 {

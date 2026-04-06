@@ -1,11 +1,10 @@
 # FilterCompileCommands.cmake
 # Filters compile_commands.json to exclude specific files that crash clangd.
-# Runs automatically when compiling with GCC (clangd struggles with GCC-compiled
-# deps), or when PHYSKIT_FILTER_COMPILE_COMMANDS is explicitly set to ON.
+# On older clangd versions, may need to run on gcc
 
 option(PHYSKIT_FILTER_COMPILE_COMMANDS "Filter _deps from compile_commands.json" OFF)
 
-if(CMAKE_EXPORT_COMPILE_COMMANDS AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR PHYSKIT_FILTER_COMPILE_COMMANDS))
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND PHYSKIT_FILTER_COMPILE_COMMANDS)
     find_package(Python3 QUIET COMPONENTS Interpreter)
     if(Python3_FOUND)
         file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/filter_compile_commands.py" CONTENT [[

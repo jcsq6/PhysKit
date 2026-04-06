@@ -1,8 +1,24 @@
 #pragma once
-#include "bounds.h"
-#include <cstdint>
-#include <vector>
 
+#ifdef PHYSKIT_IN_MODULE_IMPL
+
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+#else
+#include <array>
+#include <cmath>
+#include <concepts>
+#include <cstdint>
+#include <limits>
+#include <optional>
+#include <span>
+#include <vector>
+#endif
+
+#include "bounds.h"
+
+PHYSKIT_EXPORT
 namespace physkit
 {
 namespace detail

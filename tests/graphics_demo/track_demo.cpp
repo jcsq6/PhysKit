@@ -1,6 +1,18 @@
+// Magnum header needed for MAGNUM_APPLICATION_MAIN macro
+#include <Magnum/Platform/GlfwApplication.h>
+
+#ifdef PHYSKIT_MODULES
+import physkit;
+import mp_units;
+#else
 #include <physkit/physkit.h>
+#endif
+
+#ifdef PHYSKIT_GRAPHICS_MODULES
+import graphics;
+#else
 #include <graphics/graphics.h>
-#include <mp-units/systems/si/units.h>
+#endif
 
 using namespace graphics;
 using namespace physkit;
@@ -8,16 +20,15 @@ using namespace physkit;
 class app : public graphics::graphics_app
 {
 public:
-    explicit app(const Arguments &arguments)
+    explicit app(const Platform::Application::Arguments &arguments)
         : graphics::graphics_app{g_config(arguments, false)
                                      .window_size({800, 600})
                                      .title("Camera Track Test")
                                      .cam_pos(fvec3{0.0f, 8.0f, -18.0f} * si::metre)
-                                     .cam_dir(fvec3{0.0f, -8.0f, 18.0f} * physkit::one)}
+                                     .cam_dir(fvec3{0.0f, -8.0f, 18.0f} * mp_units::one)}
     // NOLINT
     {
-        using namespace si::unit_symbols;
-        using namespace physkit;
+        using namespace mp_units::si::unit_symbols;
 
         auto sphere = mesh_objs::sphere();
 
@@ -57,8 +68,8 @@ public:
                 .with_extrap(camera_track::reverse));
     }
 
-    void update(physkit::quantity<physkit::si::second> dt) override
-    { using namespace si::unit_symbols; }
+    void update(mp_units::quantity<mp_units::si::second> dt) override
+    { using namespace mp_units::si::unit_symbols; }
 
 private:
     gfx_obj *M_center{};

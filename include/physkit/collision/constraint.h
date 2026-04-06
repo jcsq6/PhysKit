@@ -1,13 +1,14 @@
 #pragma once
 #include "../core/object.h"
+#include "physkit/collision/collision_phases.h"
+#include "physkit/core/integrator.h"
 #include "physkit/detail/arena.h"
-#include "collision_phases.h"
-#include "../core/integrator.h"
 
 // TODO: Extended Position Based Dynamics (XPBD) constraints.
 // https://www.emergentmind.com/topics/extended-position-based-dynamics-xpbd
 // TODO: Block Gauss-Seidel solver for better convergence
 
+PHYSKIT_EXPORT
 namespace physkit
 {
 
@@ -101,7 +102,7 @@ concept constraint_impl = requires(const std::remove_cvref_t<T> &c, quantity<si:
 };
 
 // "Building an Orthonormal Basis, Revisited" (2017).
-static std::pair<vec3<one>, vec3<one>> build_orthonormal_basis(const vec3<one> &n)
+inline std::pair<vec3<one>, vec3<one>> build_orthonormal_basis(const vec3<one> &n)
 {
     double sign = std::copysign(1.0f, static_cast<double>(n.z()));
 

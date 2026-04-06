@@ -1,9 +1,9 @@
-#include "physkit/collision/collision.h"
-#include "physkit/collision/bounds.h"
 #include "test.h"
 
-#include <cmath>
-#include <numbers>
+#ifndef PHYSKIT_MODULES
+#include "physkit/collision/bounds.h"
+#include "physkit/collision/collision.h"
+#endif
 
 using namespace mp_units;
 using namespace mp_units::si::unit_symbols;

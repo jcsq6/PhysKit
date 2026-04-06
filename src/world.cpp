@@ -1,4 +1,6 @@
+#ifndef PHYSKIT_IN_MODULE_IMPL
 #include "physkit/core/world.h"
+#endif
 
 namespace physkit
 {
@@ -38,5 +40,4 @@ template <> void world<semi_implicit_euler>::step(quantity<si::second> dt)
         semi_implicit_euler::integrate_pos(slot.value.obj, dt);
     }
 }
-
 } // namespace physkit

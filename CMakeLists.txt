@@ -39,6 +39,14 @@ set(PHYSKIT_SOURCES
 	src/bvh.cpp
 )
 
+set(PHYSKIT_MODULE_SOURCES
+	src/modules/physkit-decl.cpp
+	src/modules/physkit.cpp
+	src/modules/bvh_m.cpp
+	src/modules/collision_m.cpp
+	src/modules/mesh_m.cpp
+	src/modules/world_m.cpp)
+
 set(PHYSKIT_HEADERS
 	physkit.h
 	algebra/eigen_format.h
@@ -50,9 +58,9 @@ set(PHYSKIT_HEADERS
 	collision/collision_phases.h
 	collision/constraint.h
 	collision/mesh.h
-	collision/shape.h
-	collision/sphere.h
-	collision/box.h
+    collision/shape.h
+    collision/sphere.h
+    collision/box.h
 	core/accum.h
 	core/integrator.h
 	core/object.h
@@ -63,7 +71,20 @@ set(PHYSKIT_HEADERS
 
 list(TRANSFORM PHYSKIT_HEADERS PREPEND "include/physkit/")
 
-add_library(physkit ${PHYSKIT_SOURCES})
+option(PHYSKIT_MODULES "Build PhysKit as C++ modules" OFF)
+option(PHYSKIT_BUILD_STATIC "Build PhysKit as a static library" OFF)
+
+if (PHYSKIT_MODULES)
+	set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+else()
+	set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+endif()
+
+if (PHYSKIT_BUILD_STATIC)
+	add_library(physkit STATIC)
+else()
+	add_library(physkit SHARED)
+endif()
 
 target_sources(physkit
   	PUBLIC
@@ -72,6 +93,24 @@ target_sources(physkit
     FILES
     	${PHYSKIT_HEADERS}
 )
+
+if (PHYSKIT_MODULES)
+	set(MP_UNITS_BUILD_CXX_MODULES ON)
+
+	target_sources(physkit
+		PUBLIC
+		FILE_SET modules TYPE CXX_MODULES
+		FILES
+			${PHYSKIT_MODULE_SOURCES}
+	)
+	target_compile_definitions(physkit PUBLIC PHYSKIT_MODULES)
+	if (PHYSKIT_IMPORT_STD)
+		target_compile_definitions(physkit PUBLIC PHYSKIT_IMPORT_STD)
+		set(MP_UNITS_API_STD_FORMAT ON)
+	endif()
+else()
+	target_sources(physkit PRIVATE ${PHYSKIT_SOURCES})
+endif()
 
 target_include_directories(physkit
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -90,8 +129,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 	endif()
 endif()
 
-set(MP_UNITS_BUILD_CXX_MODULES ON)
-set(MP_UNITS_API_STD_FORMAT ON)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	if (PHYSKIT_MODULES)
+		target_compile_options(physkit PUBLIC -Winclude-angled-in-module-purview)
+	endif()
+endif()
+
 find_package(mp-units REQUIRED)
 
 find_package(Eigen3 REQUIRED)
@@ -101,6 +144,15 @@ find_package(absl REQUIRED)
 target_link_libraries(physkit
     PUBLIC mp-units::mp-units Eigen3::Eigen absl::flat_hash_map absl::flat_hash_set absl::inlined_vector
 )
+
+if (NOT PHYSKIT_MODULES)
+	target_precompile_headers(physkit PRIVATE
+		<Eigen/Dense>
+		<Eigen/Geometry>
+	)
+else()
+	set_source_files_properties(${PHYSKIT_SOURCES} ${PHYSKIT_MODULE_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()
 
 add_library(physkit::physkit ALIAS physkit)
 

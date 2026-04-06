@@ -1,11 +1,25 @@
 #pragma once
+
+#ifdef PHYSKIT_IN_MODULE_IMPL
+
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+
+#else
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <numbers>
+#include <span>
+#include <stdexcept>
+#endif
+
 #include "../algebra/lin_alg.h"
 #include "../algebra/types.h"
 
-#include <algorithm>
-#include <numbers>
-#include <span>
-
+PHYSKIT_EXPORT
 namespace physkit
 {
 

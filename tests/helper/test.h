@@ -1,13 +1,36 @@
 #pragma once
-#include <physkit/physkit.h>
 
+// Standard headers must be included BEFORE any module imports to avoid
+// ODR conflicts between header-declared and module-declared std types.
+#include <algorithm>
+#include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <format>
 #include <functional>
 #include <iostream> // IWYU pragma: keep
+#include <limits>
+#include <memory>
+#include <numbers>
+#include <numeric>
+#include <optional>
 #include <print>
+#include <random>
+#include <ranges>
+#include <set>
 #include <source_location> // IWYU pragma: keep
+#include <span>
 #include <string_view>
+#include <variant>
 #include <vector>
+
+#ifdef PHYSKIT_MODULES
+import physkit;
+import mp_units;
+#else
+#include <physkit/physkit.h>
+#endif
 
 namespace testing
 {

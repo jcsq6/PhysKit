@@ -1,8 +1,13 @@
 #pragma once
-#include "../algebra/types.h"
+
+#ifndef PHYSKIT_IN_MODULE_IMPL
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
+#endif
 
+#include "../algebra/types.h"
+
+PHYSKIT_EXPORT
 namespace physkit
 {
 class particle

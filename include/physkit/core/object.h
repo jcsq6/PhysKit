@@ -2,8 +2,8 @@
 #include "../collision/mesh.h"
 #include "../collision/shape.h"
 #include "particle.h"
-#include <cstdio>
 
+PHYSKIT_EXPORT
 namespace physkit
 {
 
@@ -62,7 +62,6 @@ public:
     auto &&with_mesh(this auto &&self, std::shared_ptr<const physkit::mesh> msh)
     {
         self.M_shape = physkit::shape::make(std::move(msh));
-        //self.M_mesh = std::move(msh);
         return std::forward<decltype(self)>(self);
     }
     auto &&with_shape(this auto &&self, std::shared_ptr<const physkit::shape> shp)

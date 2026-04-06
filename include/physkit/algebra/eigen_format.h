@@ -1,9 +1,16 @@
 #pragma once
+
+#ifdef PHYSKIT_IN_MODULE_IMPL
+
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+
+#else
 #include <Eigen/Dense>
 #include <Eigen/src/Core/IO.h>
 #include <Eigen/src/Core/Matrix.h>
-#include <format>
-#include <ranges>
+#endif
 
 #include "lin_alg.h"
 

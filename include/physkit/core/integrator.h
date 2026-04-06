@@ -1,9 +1,20 @@
 #pragma once
-#include "object.h"
+
+#ifdef PHYSKIT_IN_MODULE_IMPL
+
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+
+#else
 #include <cassert>
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
+#endif
 
+#include "object.h"
+
+PHYSKIT_EXPORT
 namespace physkit
 {
 

@@ -1,12 +1,24 @@
 #pragma once
+
+#ifdef PHYSKIT_IN_MODULE_IMPL
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+#else
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
+#include <expected>
+#include <utility>
+#endif
+
+#include "../collision/collision_phases.h"
 #include "../collision/constraint.h"
 #include "../detail/arena.h"
-#include "../collision/collision_phases.h"
 #include "integrator.h"
 #include "object.h"
 
-#include <expected>
-
+PHYSKIT_EXPORT
 namespace physkit
 {
 
