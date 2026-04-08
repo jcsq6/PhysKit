@@ -161,14 +161,13 @@ vec3<m> mesh::mass_center() const
         const auto &v0 = M_vertices[tri[0]];
         const auto &v1 = M_vertices[tri[1]];
         const auto &v2 = M_vertices[tri[2]];
-        auto vol = v0.dot(v1.cross(v2));
-        volume += vol;
-
-        auto centroid = (v0 + v1 + v2) / 4.0;
-        contribution += (vol / 6.0) * (centroid);
+        auto vol6 = v0.dot(v1.cross(v2)); // 6 * tretra vol
+        volume += vol6;
+        // tetra centroid = (0 + v0 + v1 + v2) / 4.0;
+        contribution += (vol6) * (v0 + v1 + v2);
     }
-    volume /= 6.0;
-    return contribution / volume;
+    // no need to divide by 6 since it can be factored out to ((1/6)*...) / ((1/6)*...)
+    return contribution / 4.0 / volume;
 }
 
 mat3<kg * pow<2>(m)>
