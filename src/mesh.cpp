@@ -153,8 +153,22 @@ quantity<pow<3>(m)> mesh::volume() const
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 vec3<m> mesh::mass_center() const
 {
-    // TODO: implement volume-weighted centroid via divergence theorem
-    throw std::runtime_error("mesh::mass_center not yet implemented");
+    // volume-weighted centroid via divergence theorem
+    auto volume = 0.0 * m * m * m;
+    auto contribution = vec3<pow<4>(m)>::zero();
+    for (const auto &tri : M_triangles)
+    {
+        const auto &v0 = M_vertices[tri[0]];
+        const auto &v1 = M_vertices[tri[1]];
+        const auto &v2 = M_vertices[tri[2]];
+        auto vol = v0.dot(v1.cross(v2));
+        volume += vol;
+
+        auto centroid = (v0 + v1 + v2) / 4.0;
+        contribution += (vol / 6.0) * (centroid);
+    }
+    volume /= 6.0;
+    return contribution / volume;
 }
 
 mat3<kg * pow<2>(m)>
