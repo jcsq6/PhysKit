@@ -536,6 +536,7 @@ INSTANTIATE_GJK_EPA(mesh::instance, obb)
 
 std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
 {
+    // could be made faster if unique edges were stored in mesh.
     // SAT must be performed on 2 convex meshes.
 
     // need to compare projected intersection across every axis of the follosing types
@@ -554,6 +555,8 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
     //  Polyhedra are convex
     //  All faces are triangles
     //  Edges are manifold (each edge belongs to exactly 2 faces)
+    //  all verticies of every triangle are ordered CCW such that the norm generated using vertex 0
+    //      as the base points away from the center
 
     // The edge count for mesh A
     auto a_edge_count = (a_tris.size() * 3) / 2;
@@ -569,7 +572,8 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
     auto b_vertices = b.geometry().vertices();
 
     // extra collision info
-    auto info = collision_info(); // depth is empty?
+    auto info = collision_info();
+    info.depth = quantity<si::metre>::max();
 
     // returns a pair of the min and max value of a a set of verticies projected along an axis.
     auto project_mesh = [](auto const &axis, auto const &vertices)
@@ -607,7 +611,7 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
 
         if (overlap_unnormal <= 0 * si::metre) return false; // no collision
 
-        if (overlap_unnormal < info.depth || info.normal == vec3<one>::zero())
+        if (overlap_unnormal < info.depth)
         {
             // new minimum overlap
             info.depth = overlap_unnormal; // this is not the actual depth until it is normalized at
@@ -627,77 +631,47 @@ std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance 
         return true;
     };
 
-    auto vec3_hash = [](const vec3<si::metre> &v)
-    {
-        auto h1 = std::hash<double>{}(v.x().force_numerical_value_in(si::metre));
-        auto h2 = std::hash<double>{}(v.y().force_numerical_value_in(si::metre));
-        auto h3 = std::hash<double>{}(v.z().force_numerical_value_in(si::metre));
-        return h1 ^ (h2 << 1) ^ (h3 << 2);
-    };
-
-    auto vec3_equal = [eps](const vec3<si::metre> &a, const vec3<si::metre> &b)
-    {
-        return (abs(a.x() - b.x()) <= eps * si::metre) && (abs(a.y() - b.y()) <= eps * si::metre) &&
-               (abs(a.y() - b.y()) <= eps * si::metre);
-    };
-
-    // edge vectors.
-    std::unordered_set<vec3<si::metre>, decltype(vec3_hash), decltype(vec3_equal)> a_edges(
-        0, vec3_hash, vec3_equal);
-    std::unordered_set<vec3<si::metre>, decltype(vec3_hash), decltype(vec3_equal)> b_edges(
-        0, vec3_hash, vec3_equal);
-    a_edges.reserve(a_edge_count);
-    b_edges.reserve(b_edge_count);
-
-    // get edges.
+    // if unique edges were stored in mesh this would be 4 times more efficient.
     for (const auto &a_tri : a_tris)
     {
-        // Need to extract edges and normal
-        auto [va, vb, vc] = a_tri.vertices(a);
-        auto e1 = (vb - va);
-        auto e2 = (vc - vb);
-        auto e3 = (va - vc);
+        auto a_ver = a_tri.vertices(a);
+        std::array<vec3<si::metre>, 3> a_edges = {(a_ver[1] - a_ver[0]), (a_ver[2] - a_ver[1]),
+                                                  (a_ver[0] - a_ver[2])};
 
-        // add edges to list
-        a_edges.insert(e1);
-        a_edges.insert(e2);
-        a_edges.insert(e3);
-
-        // face normal
-        auto n = e1.cross(e2) * (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+        // Face axis
+        auto n = (a_edges[0]).cross(a_edges[1]) *
+                 (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
         if (!test_axis(n)) return std::nullopt;
-    }
-    // do the same for b_tris
-    for (const auto &b_tri : b_tris)
-    {
-        // Need to extract edges and normal
-        auto [va, vb, vc] = b_tri.vertices(b);
-        auto e1 = (vb - va);
-        auto e2 = (vc - vb);
-        auto e3 = (va - vc);
 
-        // add edges to list
-        b_edges.insert(e1);
-        b_edges.insert(e2);
-        b_edges.insert(e3);
-
-        // face normal
-        auto n = e1.cross(e2) * (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
-        if (!test_axis(n)) return std::nullopt;
-    }
-
-    // now go through both a_edges and b_edges and cross them and projection test.
-    for (const auto &a_edge : a_edges)
-    {
-        for (const auto &b_edge : b_edges)
+        for (const auto &b_tri : b_tris)
         {
-            auto n = a_edge.cross(b_edge) *
-                     (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+            auto b_ver = b_tri.vertices(b);
+            std::array<vec3<si::metre>, 3> b_edges = {(b_ver[1] - b_ver[0]), (b_ver[2] - b_ver[1]),
+                                                      (b_ver[0] - b_ver[2])};
 
-            if (n.squared_norm() < eps) continue; // near 0 axis.
-            if (!test_axis(n)) return std::nullopt;
+            // Face axis
+            if (a_tri == a_tris.front())
+            { // once per tri
+                n = (b_edges[0]).cross(b_edges[1]) *
+                    (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+                if (!test_axis(n)) return std::nullopt;
+            }
+
+            // edge cross axes
+            for (size_t i = 0; i < 3; i++)
+            {
+                for (size_t j = 0; j < 3; j++)
+                {
+                    n = (a_edges[i]).cross(b_edges[j]) *
+                        (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+
+                    if (n.squared_norm() < eps) continue; // near 0 axis.
+                    if (!test_axis(n)) return std::nullopt;
+                }
+            }
         }
     }
+
     info.depth /= info.normal.norm();
     info.normal = info.normal.normalized();
     return info;
