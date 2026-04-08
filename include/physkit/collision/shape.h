@@ -1,17 +1,17 @@
 #pragma once
+#include "../algebra/types.h"
+#include "bounds.h"
+#include "box.h"
+#include "bvh.h"
 #include "mesh.h"
 #include "sphere.h"
-#include "box.h"
-#include "bounds.h"
-#include "bvh.h"
-#include "../algebra/types.h"
 
 #include <mp-units/framework.h>
 #include <mp-units/math.h>
 #include <mp-units/systems/si/units.h>
 
-#include <cstdio>
 #include <cassert>
+#include <cstdio>
 #include <memory>
 #include <span>
 #include <vector>
@@ -21,12 +21,19 @@
 namespace physkit
 {
 
-enum shape_type {shape_sphere=0, shape_box=1, shape_cylinder=2, shape_pill=3, shape_convex_hull=4, shape_mesh=5};
+enum shape_type
+{
+    shape_sphere = 0,
+    shape_box = 1,
+    shape_cylinder = 2,
+    shape_pill = 3,
+    shape_convex_hull = 4,
+    shape_mesh = 5
+};
 
 class shape : public std::enable_shared_from_this<shape>
 {
 public:
-
     shape(const shape &) = default;
     shape &operator=(const shape &) = default;
     shape(shape &&) = default;
@@ -48,22 +55,18 @@ public:
     }
 
     shape(const std::shared_ptr<const mesh> &m) : M_type(shape_mesh), M_mesh()
-    {
-        M_mesh = std::shared_ptr<const physkit::mesh>(m);
-    }
+    { M_mesh = std::shared_ptr<const physkit::mesh>(m); }
     shape(const std::shared_ptr<const sphere> &s) : M_type(shape_sphere), M_sphere()
-    {
-        M_sphere = std::shared_ptr<const physkit::sphere>(s);
-    }
-    shape (const std::shared_ptr<const box> &b) : M_type(shape_box), M_box()
-    {
-        M_box = std::shared_ptr<const physkit::box>(b);
-    }
+    { M_sphere = std::shared_ptr<const physkit::sphere>(s); }
+    shape(const std::shared_ptr<const box> &b) : M_type(shape_box), M_box()
+    { M_box = std::shared_ptr<const physkit::box>(b); }
 
-    static std::shared_ptr<shape> make(const std::shared_ptr<const mesh> &m) { return std::make_shared<shape>(m);}
-    static std::shared_ptr<shape> make(const std::shared_ptr<const sphere> &s) { return std::make_shared<shape>(s);}
-    static std::shared_ptr<shape> make(const std::shared_ptr<const box> &b) { return std::make_shared<shape>(b);}
-
+    static std::shared_ptr<shape> make(const std::shared_ptr<const mesh> &m)
+    { return std::make_shared<shape>(m); }
+    static std::shared_ptr<shape> make(const std::shared_ptr<const sphere> &s)
+    { return std::make_shared<shape>(s); }
+    static std::shared_ptr<shape> make(const std::shared_ptr<const box> &b)
+    { return std::make_shared<shape>(b); }
 
     [[nodiscard]] std::shared_ptr<const struct mesh> mesh() const
     {
@@ -89,7 +92,7 @@ public:
         case shape_mesh:
             return M_mesh->bounds();
         case shape_sphere:
-            return  M_sphere->bounds();
+            return M_sphere->bounds();
         case shape_box:
             return M_box->bounds();
         }
@@ -121,7 +124,6 @@ public:
         case shape_box:
             return M_box->volume();
         }
-
     }
 
     [[nodiscard]] vec3<si::metre> mass_center() const
@@ -240,9 +242,9 @@ public:
         }
     }
 
-    [[nodiscard]] shape_type type() const { return M_type;};
+    [[nodiscard]] shape_type type() const { return M_type; };
 
-    //mesh only methods for compatibility
+    // mesh only methods for compatibility
     [[nodiscard]] std::span<const vec3<si::metre>> vertices() const
     {
         assert(M_type == shape_mesh);
@@ -348,8 +350,7 @@ public:
     }
 
     /// @brief Gathers indices of triangles whose vertices overlap the given world-space sphere.
-    [[nodiscard]] std::vector<std::uint32_t>
-    overlap_sphere(const bounding_sphere &sphere) const
+    [[nodiscard]] std::vector<std::uint32_t> overlap_sphere(const bounding_sphere &sphere) const
     {
         auto inv_orient = M_orientation.conjugate();
         bounding_sphere local_sphere{
@@ -377,7 +378,7 @@ public:
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
     {
 
-        //TODO is this correct???
+        // TODO is this correct???
         return M_shape->inertia_tensor(density) * M_orientation.to_rotation_matrix();
     }
 
@@ -388,9 +389,9 @@ private:
 };
 
 inline instance::instance(const shape &shp, const vec3<si::metre> &position,
-                                const quat<one> &orientation)
+                          const quat<one> &orientation)
     : M_shape{&shp}, M_position{position}, M_orientation{orientation}
 {
 }
 
-}
+} // namespace physkit

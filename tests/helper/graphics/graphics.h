@@ -434,32 +434,33 @@ GRAPHICS_EXPORT namespace graphics
         graphics_app(graphics_app &&) = delete;
         graphics_app &operator=(graphics_app &&) = delete;
 
-    /// @brief Register and create, or fetch a previously registered shared mesh for this
-    /// physkit::mesh instance. This mesh will be used across all methods with this physkit::mesh.
-    /// @param phys_shape The physkit::shape to get the shared GL::Mesh for.
-    /// @return A shared pointer to the GL::Mesh corresponding to the given physkit::shape
-    std::shared_ptr<GL::Mesh> get_mesh(const physkit::shape &phys_shape)
-    {
-        if (auto it = M_phys_shape_map.find(&phys_shape); it != M_phys_shape_map.end())
-            return it->second;
-        return internal_shape_map_emplace(phys_shape);
-    }
+        /// @brief Register and create, or fetch a previously registered shared mesh for this
+        /// physkit::mesh instance. This mesh will be used across all methods with this
+        /// physkit::mesh.
+        /// @param phys_shape The physkit::shape to get the shared GL::Mesh for.
+        /// @return A shared pointer to the GL::Mesh corresponding to the given physkit::shape
+        std::shared_ptr<GL::Mesh> get_mesh(const physkit::shape &phys_shape)
+        {
+            if (auto it = M_phys_shape_map.find(&phys_shape); it != M_phys_shape_map.end())
+                return it->second;
+            return internal_shape_map_emplace(phys_shape);
+        }
 
-    /// @brief Add a physics object to the scene with the specified color. This method will create
-    /// or fetch a shared GL::Mesh for the object's mesh, as if by calling get_mesh().
-    /// @param world The physics world that owns the object.
-    /// @param handle Handle to the rigid body in the world.
-    /// @param color The color to use for rendering the object.
-    /// @return A pointer to the created physics_obj instance.
-    auto add_object(physkit::world_base::handle handle, Color3 color)
-    {
-        auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
-        auto &obj = phys_obj->obj();
-        std::shared_ptr<GL::Mesh> mesh;
-        if (auto it = M_phys_shape_map.find(&obj.shape()); it == M_phys_shape_map.end())
-            mesh = internal_shape_map_emplace(obj.shape());
-        else
-            mesh = it->second;
+        /// @brief Add a physics object to the scene with the specified color. This method will
+        /// create or fetch a shared GL::Mesh for the object's mesh, as if by calling get_mesh().
+        /// @param world The physics world that owns the object.
+        /// @param handle Handle to the rigid body in the world.
+        /// @param color The color to use for rendering the object.
+        /// @return A pointer to the created physics_obj instance.
+        auto add_object(physkit::world_base::handle handle, Color3 color)
+        {
+            auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
+            auto &obj = phys_obj->obj();
+            std::shared_ptr<GL::Mesh> mesh;
+            if (auto it = M_phys_shape_map.find(&obj.shape()); it == M_phys_shape_map.end())
+                mesh = internal_shape_map_emplace(obj.shape());
+            else
+                mesh = it->second;
 
             internal_add_obj(phys_obj, std::move(mesh), color);
 
@@ -467,28 +468,29 @@ GRAPHICS_EXPORT namespace graphics
             return phys_obj;
         }
 
-    /// @brief Add a physics object to the scene with the specified color. This method will create
-    /// or fetch a shared GL::Mesh for the object's mesh, as if by calling get_mesh().
-    /// @param world The physics world that owns the object.
-    /// @param handle Handle to the rigid body in the world.
-    /// @param mesh The shared GL::Mesh to use for rendering.
-    /// @param color The color to use for rendering the object.
-    /// @return A pointer to the created physics_obj instance.
-    auto add_object(physkit::world_base::handle handle, std::shared_ptr<GL::Mesh> mesh,
-                    Color3 color)
-    {
+        /// @brief Add a physics object to the scene with the specified color. This method will
+        /// create or fetch a shared GL::Mesh for the object's mesh, as if by calling get_mesh().
+        /// @param world The physics world that owns the object.
+        /// @param handle Handle to the rigid body in the world.
+        /// @param mesh The shared GL::Mesh to use for rendering.
+        /// @param color The color to use for rendering the object.
+        /// @return A pointer to the created physics_obj instance.
+        auto add_object(physkit::world_base::handle handle, std::shared_ptr<GL::Mesh> mesh,
+                        Color3 color)
+        {
 
-        return M_world->get_rigid(handle)
-            .transform(
-                [&](auto obj)
-                {
-                    if (auto it = M_phys_shape_map.find(&obj->shape()); it == M_phys_shape_map.end())
-                        M_phys_shape_map.emplace(&obj->shape(), mesh);
-                    else if (it->second != mesh)
-                        throw std::runtime_error(
-                            "graphics_app::add_object: provided mesh does not match "
-                            "physkit::object mesh");
-                    auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
+            return M_world->get_rigid(handle)
+                .transform(
+                    [&](auto obj)
+                    {
+                        if (auto it = M_phys_shape_map.find(&obj->shape());
+                            it == M_phys_shape_map.end())
+                            M_phys_shape_map.emplace(&obj->shape(), mesh);
+                        else if (it->second != mesh)
+                            throw std::runtime_error(
+                                "graphics_app::add_object: provided mesh does not match "
+                                "physkit::object mesh");
+                        auto *phys_obj = new physics_obj{M_scene, *M_world, handle};
 
                         internal_add_obj(phys_obj, std::move(mesh), color);
 
@@ -631,17 +633,20 @@ GRAPHICS_EXPORT namespace graphics
             default:
             case physkit::shape_type::shape_mesh:
                 return M_phys_shape_map
-                    .emplace(&phys_shape, std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.mesh())))
+                    .emplace(&phys_shape,
+                             std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.mesh())))
                     .first->second;
                 break;
             case physkit::shape_type::shape_sphere:
                 return M_phys_shape_map
-                    .emplace(&phys_shape, std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.sphere(), 3)))
+                    .emplace(&phys_shape,
+                             std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.sphere(), 3)))
                     .first->second;
                 break;
             case physkit::shape_type::shape_box:
                 return M_phys_shape_map
-                    .emplace(&phys_shape, std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.box())))
+                    .emplace(&phys_shape,
+                             std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.box())))
                     .first->second;
             }
         }

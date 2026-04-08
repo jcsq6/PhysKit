@@ -99,16 +99,16 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                 {
                     using T = std::decay_t<decltype(shape_desc)>;
                     if constexpr (std::same_as<T, box_type>)
-                        shape_map[shape_name] = physkit::shape::make(
-                            physkit::box::make(physkit::vec3{shape_desc.half_extents[0], shape_desc.half_extents[1],
+                        shape_map[shape_name] = physkit::shape::make(physkit::box::make(
+                            physkit::vec3{shape_desc.half_extents[0], shape_desc.half_extents[1],
                                           shape_desc.half_extents[2]} *
                             m));
                     else if constexpr (std::same_as<T, pyramid_type>)
-                        shape_map[shape_name] =
-                            physkit::shape::make(physkit::mesh::pyramid(shape_desc.height * m, shape_desc.base_size * m));
+                        shape_map[shape_name] = physkit::shape::make(physkit::mesh::pyramid(
+                            shape_desc.height * m, shape_desc.base_size * m));
                     else if constexpr (std::same_as<T, sphere_type>)
-                        shape_map[shape_name] = physkit::shape::make(
-                            physkit::sphere::make(shape_desc.radius * m));
+                        shape_map[shape_name] =
+                            physkit::shape::make(physkit::sphere::make(shape_desc.radius * m));
                 });
         }
 
@@ -207,14 +207,15 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                 using T = std::decay_t<decltype(shape_desc)>;
                 if constexpr (std::same_as<T, box_type>)
                     std::println("      Shape: box (half_extents: {})",
-                                 physkit::vec3{shape_desc.half_extents[0], shape_desc.half_extents[1],
+                                 physkit::vec3{shape_desc.half_extents[0],
+                                               shape_desc.half_extents[1],
                                                shape_desc.half_extents[2]} *
                                      m);
                 else if constexpr (std::same_as<T, pyramid_type>)
                     std::println("      Shape: pyramid (height: {}, base_size: {})",
                                  shape_desc.height * m, shape_desc.base_size * m);
                 else if constexpr (std::same_as<T, sphere_type>)
-                    std::println("      Mesh: sphere (radius: {})", //TODO
+                    std::println("      Mesh: sphere (radius: {})", // TODO
                                  shape_desc.radius * m);
             });
     }

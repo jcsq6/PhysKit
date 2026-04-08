@@ -10,8 +10,8 @@ import std;
 #include <mp-units/framework.h>
 #include <mp-units/math.h>
 #include <mp-units/systems/si/units.h>
-#include <unordered_set>
 #include <optional>
+#include <unordered_set>
 #endif
 
 #include "../algebra/types.h"

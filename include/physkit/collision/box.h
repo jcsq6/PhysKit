@@ -1,15 +1,15 @@
 #pragma once
+#include "../algebra/types.h"
 #include "bounds.h"
 #include "bvh.h"
-#include "../algebra/types.h"
 
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
 
 #include <cassert>
+#include <cstdio>
 #include <memory>
 #include <span>
-#include <cstdio>
 
 namespace physkit
 {
@@ -17,25 +17,22 @@ namespace physkit
 class box
 {
 public:
-    box (const box &) = default;
+    box(const box &) = default;
     box &operator=(const box &) = default;
-    box (box &&) = default;
+    box(box &&) = default;
     box &operator=(box &&) = default;
-    ~box () = default;
+    ~box() = default;
 
-    box (const vec3<si::metre> &half_extents) : M_half_extents(half_extents)
+    box(const vec3<si::metre> &half_extents) : M_half_extents(half_extents)
     {
-        M_aabb = aabb::from_points({
-            half_extents,
-            -half_extents});
+        M_aabb = aabb::from_points({half_extents, -half_extents});
 
-        M_bsphere =  bounding_sphere({0.0f*si::metre,0.0f*si::metre,0.0f*si::metre}, half_extents.norm());
+        M_bsphere = bounding_sphere({0.0f * si::metre, 0.0f * si::metre, 0.0f * si::metre},
+                                    half_extents.norm());
     }
 
     static std::shared_ptr<box> make(const vec3<si::metre> &half_extents)
-    {
-        return std::make_shared<box>(half_extents);
-    }
+    { return std::make_shared<box>(half_extents); }
 
     [[nodiscard]] const vec3<si::metre> &half_extents() const { return M_half_extents; }
     [[nodiscard]] const aabb &bounds() const;

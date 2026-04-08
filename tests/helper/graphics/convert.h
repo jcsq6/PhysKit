@@ -111,23 +111,23 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::box &phys_box)
     using namespace Magnum;
     Vector3 half_extents = to_magnum_vector<physkit::si::metre, float>(phys_box.half_extents());
     auto data = MeshTools::copy(Primitives::cubeSolid());
-    for (Vector3& i: data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
+    for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
         i = Matrix4::scaling(half_extents).transformPoint(i);
 
     return MeshTools::compile(data);
 }
 
-inline Magnum::GL::Mesh to_magnum_mesh(const physkit::sphere &phys_sphere, unsigned int subdivisions = 3)
+inline Magnum::GL::Mesh to_magnum_mesh(const physkit::sphere &phys_sphere,
+                                       unsigned int subdivisions = 3)
 {
     using namespace Magnum;
     float radius = phys_sphere.radius().numerical_value_in(physkit::si::metre);
     auto data = Primitives::icosphereSolid(subdivisions);
     if (radius != 1.0f)
     {
-        for (Vector3& i: data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
+        for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
             i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
     }
-
 
     return MeshTools::compile(data);
 }

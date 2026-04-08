@@ -1,15 +1,15 @@
 #pragma once
+#include "../algebra/types.h"
 #include "bounds.h"
 #include "bvh.h"
-#include "../algebra/types.h"
 
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
 
 #include <cassert>
+#include <cstdio>
 #include <memory>
 #include <span>
-#include <cstdio>
 
 namespace physkit
 {
@@ -20,20 +20,19 @@ public:
     /// @brief A view of a sphere placed in world space.
     /// Provides world-space collision queries by transforming into local space and back.
 
-    sphere (const sphere &) = default;
+    sphere(const sphere &) = default;
     sphere &operator=(const sphere &) = default;
-    sphere (sphere &&) = default;
+    sphere(sphere &&) = default;
     sphere &operator=(sphere &&) = default;
     ~sphere() = default;
 
-    sphere(const quantity<si::metre> radius) :
-        M_radius{radius}
+    sphere(const quantity<si::metre> radius) : M_radius{radius}
     {
-        M_aabb = aabb::from_points({
-            vec3<si::metre>{M_radius, M_radius, M_radius},
-            vec3<si::metre>{-M_radius, -M_radius, -M_radius}});
+        M_aabb = aabb::from_points({vec3<si::metre>{M_radius, M_radius, M_radius},
+                                    vec3<si::metre>{-M_radius, -M_radius, -M_radius}});
 
-        M_bsphere =  bounding_sphere({0.0f*si::metre,0.0f*si::metre,0.0f*si::metre}, M_radius);
+        M_bsphere =
+            bounding_sphere({0.0f * si::metre, 0.0f * si::metre, 0.0f * si::metre}, M_radius);
     }
 
     static std::shared_ptr<sphere> make(const quantity<si::metre> radius)
@@ -42,7 +41,7 @@ public:
         auto a = std::make_shared<sphere>(radius);
     }
 
-    [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius;}
+    [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius; }
     [[nodiscard]] const aabb &bounds() const;
     [[nodiscard]] const bounding_sphere &bsphere() const;
 

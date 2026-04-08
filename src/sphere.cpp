@@ -17,9 +17,7 @@ const aabb &sphere::bounds() const { return M_aabb; }
 const bounding_sphere &sphere::bsphere() const { return M_bsphere; }
 
 quantity<pow<3>(m)> sphere::volume() const
-{
-    return (4.0f / 3.0f) * std::numbers::pi * mp_units::pow<3>(M_radius);
-}
+{ return (4.0f / 3.0f) * std::numbers::pi * mp_units::pow<3>(M_radius); }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 vec3<m> sphere::mass_center() const { return {0.0f * m, 0.0f * m, 0.0f * m}; }
@@ -97,8 +95,6 @@ bool sphere::contains(const vec3<m> &point) const
 
 // point on sphere that gives greatest dot product with direction????
 vec3<m> sphere::support(const vec3<one> &direction) const
-{
-    return direction.normalized() * M_radius;
-}
+{ return direction.normalized() * M_radius; }
 
 } // namespace physkit

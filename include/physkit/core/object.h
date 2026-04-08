@@ -99,7 +99,7 @@ public:
     [[nodiscard]] auto &&mesh(this auto &&self)
     { return std::forward_like<decltype(self)>(self.M_shape->mesh()); }
     [[nodiscard]] auto &&shape(this auto &&self)
-    {return std::forward_like<decltype(self)>(self.M_shape); }
+    { return std::forward_like<decltype(self)>(self.M_shape); }
     [[nodiscard]] body_type type() const { return M_type; }
 
 private:
@@ -111,7 +111,7 @@ private:
     vec3<si::radian / si::second> M_ang_vel = vec3<si::radian / si::second>::zero();
     mat3<si::kilogram * si::metre * si::metre> M_inertia =
         mat3<si::kilogram * si::metre * si::metre>::identity();
-    //std::shared_ptr<const physkit::mesh> M_mesh;
+    // std::shared_ptr<const physkit::mesh> M_mesh;
     std::shared_ptr<const physkit::shape> M_shape;
     double M_restitution = 0.5;
     double M_friction = 0.5;
@@ -131,7 +131,7 @@ public:
     [[nodiscard]] const struct mesh &mesh() const
     {
         assert(M_shape != nullptr);
-        //return *M_mesh;
+        // return *M_mesh;
         return *(M_shape->mesh());
     }
     [[nodiscard]] const struct shape &shape() const
@@ -151,10 +151,11 @@ public:
 
     /// @brief Return a lightweight view for world-space queries.
     [[nodiscard]] physkit::instance instance() const { return {*M_shape, pos(), orientation()}; }
-    //[[nodiscard]] struct mesh::instance instance() const { return {*M_mesh, pos(), orientation()}; }
+    //[[nodiscard]] struct mesh::instance instance() const { return {*M_mesh, pos(), orientation()};
+    //}
 
 private:
-    //std::shared_ptr<const struct mesh> M_mesh;
+    // std::shared_ptr<const struct mesh> M_mesh;
     std::shared_ptr<const struct shape> M_shape;
     body_type M_type;
     double M_restitution;
