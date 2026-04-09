@@ -61,10 +61,10 @@ public:
 
     auto &&with_mesh(this auto &&self, std::shared_ptr<const physkit::mesh> msh)
     {
-        self.M_shape = physkit::shape::make(std::move(msh));
+        self.M_shape = std::move(msh);
         return std::forward<decltype(self)>(self);
     }
-    auto &&with_shape(this auto &&self, std::shared_ptr<const physkit::shape> shp)
+    auto &&with_shape(this auto &&self, physkit::shape shp)
     {
         self.M_shape = std::move(shp);
         return std::forward<decltype(self)>(self);
@@ -97,7 +97,7 @@ public:
     [[nodiscard]] double friction() const { return M_friction; }
 
     [[nodiscard]] auto &&mesh(this auto &&self)
-    { return std::forward_like<decltype(self)>(self.M_shape->mesh()); }
+    { return std::forward_like<decltype(self)>(self.M_shape.mesh()); }
     [[nodiscard]] auto &&shape(this auto &&self)
     { return std::forward_like<decltype(self)>(self.M_shape); }
     [[nodiscard]] body_type type() const { return M_type; }
@@ -112,7 +112,7 @@ private:
     mat3<si::kilogram * si::metre * si::metre> M_inertia =
         mat3<si::kilogram * si::metre * si::metre>::identity();
     // std::shared_ptr<const physkit::mesh> M_mesh;
-    std::shared_ptr<const physkit::shape> M_shape;
+    physkit::shape M_shape;
     double M_restitution = 0.5;
     double M_friction = 0.5;
 };
@@ -128,17 +128,7 @@ public:
     {
     }
 
-    [[nodiscard]] const struct mesh &mesh() const
-    {
-        assert(M_shape != nullptr);
-        // return *M_mesh;
-        return *(M_shape->mesh());
-    }
-    [[nodiscard]] const struct shape &shape() const
-    {
-        assert(M_shape != nullptr);
-        return *M_shape;
-    }
+    [[nodiscard]] const struct shape &shape() const { return M_shape; }
 
     [[nodiscard]] body_type type() const { return M_type; }
     [[nodiscard]] bool is_dynamic() const { return M_type == body_type::dynam; }
@@ -150,13 +140,12 @@ public:
     void friction(double f) { M_friction = f; }
 
     /// @brief Return a lightweight view for world-space queries.
-    [[nodiscard]] physkit::instance instance() const { return {*M_shape, pos(), orientation()}; }
+    [[nodiscard]] physkit::instance instance() const { return {M_shape, pos(), orientation()}; }
     //[[nodiscard]] struct mesh::instance instance() const { return {*M_mesh, pos(), orientation()};
     //}
 
 private:
-    // std::shared_ptr<const struct mesh> M_mesh;
-    std::shared_ptr<const struct shape> M_shape;
+    physkit::shape M_shape;
     body_type M_type;
     double M_restitution;
     double M_friction;

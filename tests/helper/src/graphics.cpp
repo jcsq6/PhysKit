@@ -86,7 +86,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
     // self.M_integrator = config.integrator;
     self.M_solver_iterations = config.solver_iterations;
 
-    std::map<std::string, std::shared_ptr<physkit::shape>> shape_map;
+    std::map<std::string, physkit::shape> shape_map;
     self.M_objects.reserve(config.objects.size());
     for (const obj &obj : config.objects)
     {
@@ -99,16 +99,15 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                 {
                     using T = std::decay_t<decltype(shape_desc)>;
                     if constexpr (std::same_as<T, box_type>)
-                        shape_map[shape_name] = physkit::shape::make(physkit::box::make(
+                        shape_map[shape_name] = physkit::box{
                             physkit::vec3{shape_desc.half_extents[0], shape_desc.half_extents[1],
                                           shape_desc.half_extents[2]} *
-                            m));
+                            m};
                     else if constexpr (std::same_as<T, pyramid_type>)
-                        shape_map[shape_name] = physkit::shape::make(physkit::mesh::pyramid(
-                            shape_desc.height * m, shape_desc.base_size * m));
-                    else if constexpr (std::same_as<T, sphere_type>)
                         shape_map[shape_name] =
-                            physkit::shape::make(physkit::sphere::make(shape_desc.radius * m));
+                            physkit::mesh::pyramid(shape_desc.height * m, shape_desc.base_size * m);
+                    else if constexpr (std::same_as<T, sphere_type>)
+                        shape_map[shape_name] = physkit::sphere{shape_desc.radius * m};
                 });
         }
 

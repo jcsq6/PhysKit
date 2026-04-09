@@ -640,13 +640,13 @@ GRAPHICS_EXPORT namespace graphics
             case physkit::shape_type::shape_sphere:
                 return M_phys_shape_map
                     .emplace(&phys_shape,
-                             std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.sphere(), 3)))
+                             std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape.sphere(), 3)))
                     .first->second;
                 break;
             case physkit::shape_type::shape_box:
                 return M_phys_shape_map
                     .emplace(&phys_shape,
-                             std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.box())))
+                             std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape.box())))
                     .first->second;
             }
         }

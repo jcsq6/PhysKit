@@ -1,9 +1,6 @@
 // tests written by claude opus 4.6
 
-#include "test.h"
-#include <physkit/collision/bvh.h>
-
-#include <algorithm>
+#include <test.h>
 
 using namespace testing;
 
