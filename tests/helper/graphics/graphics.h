@@ -631,19 +631,19 @@ GRAPHICS_EXPORT namespace graphics
             switch (phys_shape.type())
             {
             default:
-            case physkit::shape_type::shape_mesh:
+            case physkit::shape::type::shape_mesh:
                 return M_phys_shape_map
                     .emplace(&phys_shape,
                              std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.mesh())))
                     .first->second;
                 break;
-            case physkit::shape_type::shape_sphere:
+            case physkit::shape::type::shape_sphere:
                 return M_phys_shape_map
                     .emplace(&phys_shape,
                              std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape.sphere(), 3)))
                     .first->second;
                 break;
-            case physkit::shape_type::shape_box:
+            case physkit::shape::type::shape_box:
                 return M_phys_shape_map
                     .emplace(&phys_shape,
                              std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape.box())))

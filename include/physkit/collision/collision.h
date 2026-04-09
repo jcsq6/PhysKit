@@ -11,7 +11,6 @@ import std;
 #include <mp-units/math.h>
 #include <mp-units/systems/si/units.h>
 #include <optional>
-#include <unordered_set>
 #endif
 
 #include "../algebra/types.h"
@@ -38,7 +37,7 @@ concept SupportShape = requires(const T &shape, const vec3<one> &dir) {
     { shape.support(dir) } -> std::same_as<vec3<si::metre>>;
 };
 
-/// @brief minkowski differenec support for convex shapes
+/// @brief minkowski difference support for convex shapes
 template <typename ShapeA, typename ShapeB>
     requires SupportShape<ShapeA> && SupportShape<ShapeB>
 [[nodiscard]] inline support_pt minkowski_support(const ShapeA &a, const ShapeB &b,

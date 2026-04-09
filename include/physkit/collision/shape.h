@@ -14,7 +14,6 @@ import std;
 #include <cassert>
 #include <memory>
 #include <span>
-#include <variant>
 #include <vector>
 #endif
 
@@ -45,13 +44,35 @@ public:
     }
 
     [[nodiscard]] const vec3<si::metre> &half_extents() const { return M_half_extents; }
-    [[nodiscard]] const aabb &bounds() const;
-    [[nodiscard]] const bounding_sphere &bsphere() const;
+    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
+    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
 
-    [[nodiscard]] quantity<pow<3>(si::metre)> volume() const;
-    [[nodiscard]] vec3<si::metre> mass_center() const;
+    [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
+    { return 2 * M_half_extents.x() * 2 * M_half_extents.y() * 2 * M_half_extents.z(); }
+
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    [[nodiscard]] vec3<si::metre> mass_center() const
+    {
+        using namespace mp_units::si::unit_symbols;
+        return {0.0f * m, 0.0f * m, 0.0f * m};
+    }
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
-    inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
+    inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
+    {
+        using namespace mp_units::si::unit_symbols;
+        auto mass = density * volume();
+        auto x = M_half_extents.x() * 2;
+        auto y = M_half_extents.y() * 2;
+        auto z = M_half_extents.z() * 2;
+        auto i1 = ((mass / 12) * (mp_units::pow<2>(y) + mp_units::pow<2>(z)))
+                      .numerical_value_in(kg * m * m);
+        auto i2 = ((mass / 12) * (mp_units::pow<2>(x) + mp_units::pow<2>(z)))
+                      .numerical_value_in(kg * m * m);
+        auto i3 = ((mass / 12) * (mp_units::pow<2>(x) + mp_units::pow<2>(y)))
+                      .numerical_value_in(kg * m * m);
+
+        return mat3{{i1, 0.0f, 0.0f, 0.0f, i2, 0.0f, 0.0f, 0.0f, i3}} * kg * m * m;
+    }
 
     /// @brief Ray intersection in local (model) space. O(log N) time.
     [[nodiscard]] std::optional<ray::hit>
@@ -60,7 +81,12 @@ public:
     /// @brief Closest point on the box surface in local space. O(N) time.
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
     /// @brief Point containment test in local space. O(N) time.
-    [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
+    [[nodiscard]] bool contains(const vec3<si::metre> &point) const
+    {
+        return (mp_units::abs(point.x()) <= M_half_extents.x() &&
+                mp_units::abs(point.y()) <= M_half_extents.y() &&
+                mp_units::abs(point.z()) <= M_half_extents.z());
+    }
 
     /// @brief GJK support function in local space.
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const;
@@ -69,8 +95,8 @@ public:
 
 private:
     vec3<si::metre> M_half_extents;
-    bounding_sphere M_bsphere;
     aabb M_aabb;
+    bounding_sphere M_bsphere;
 };
 
 class sphere
@@ -95,47 +121,92 @@ public:
     }
 
     [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius; }
-    [[nodiscard]] const aabb &bounds() const;
-    [[nodiscard]] const bounding_sphere &bsphere() const;
+    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
+    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
 
-    [[nodiscard]] quantity<pow<3>(si::metre)> volume() const;
-    [[nodiscard]] vec3<si::metre> mass_center() const;
+    [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
+    { return (4.0f / 3.0f) * std::numbers::pi * mp_units::pow<3>(M_radius); }
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    [[nodiscard]] vec3<si::metre> mass_center() const
+    {
+        using namespace mp_units::si::unit_symbols;
+        return {0.0f * m, 0.0f * m, 0.0f * m};
+    }
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
-    inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
+    inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
+    {
+        using namespace mp_units::si::unit_symbols;
+        auto val = ((2.0f / 5.0f) * density * volume() * (mp_units::pow<2>(M_radius)))
+                       .numerical_value_in(kg * m * m);
+
+        return mat3{{val, 0.0f, 0.0f, 0.0f, val, 0.0f, 0.0f, 0.0f, val}} * kg * m * m;
+    }
 
     /// @brief Ray intersection in local (model) space. O(log N) time.
     [[nodiscard]] std::optional<ray::hit>
     ray_intersect(const ray &r, quantity<si::metre> max_distance =
-                                    std::numeric_limits<quantity<si::metre>>::infinity()) const;
-    /// @brief Closest point on the sphere surface in local space. O(N) time.
-    [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
-    /// @brief Point containment test in local space. O(N) time.
-    [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
+                                    std::numeric_limits<quantity<si::metre>>::infinity()) const
+    {
+        using namespace mp_units::si::unit_symbols;
+        std::optional<ray::hit> best;
+
+        // should be able to manually fill in the ray hit.
+        // point of impact
+        // normal of surface point
+        // distance along the ray
+        auto origin = r.origin();
+        auto direction = r.direction();
+
+        auto a = direction.dot(direction);
+        auto b = 2 * (origin.dot(direction));
+        auto c = origin.dot(origin) - mp_units::pow<2>(M_radius);
+
+        auto det = mp_units::pow<2>(b) - 4 * a * c;
+        if (det < 0 * m * m) return std::nullopt;
+
+        auto dist = (b - mp_units::sqrt(det)) / (2 * a);
+        if (dist >= max_distance) return std::nullopt;
+
+        auto pos = origin + dist * direction;
+        auto normal = pos.normalized();
+
+        return ray::hit{.pos = pos, .normal = normal, .distance = dist};
+    }
+    /// @brief Closest point on the sphere surface in local space. O(1) time.
+    [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const
+    { return point.normalized() * M_radius; }
+    /// @brief Point containment test in local space. O(1) time.
+    [[nodiscard]] bool contains(const vec3<si::metre> &point) const
+    {
+        // return (point - M_position).norm() <= M_radius;
+        return point.norm() <= M_radius;
+    }
 
     /// @brief GJK support function in local space.
-    [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const;
+    [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
+    { return direction.normalized() * M_radius; }
 
     /// @brief - Add in support to return obb objects -> much more tedious, more research later.
 
 private:
-    quantity<si::metre> M_radius;
-    bounding_sphere M_bsphere;
     aabb M_aabb;
-};
-
-enum shape_type
-{
-    shape_sphere = 0,
-    shape_box = 1,
-    shape_cylinder = 2,
-    shape_pill = 3,
-    shape_convex_hull = 4,
-    shape_mesh = 5
+    bounding_sphere M_bsphere;
+    quantity<si::metre> M_radius;
 };
 
 class shape
 {
 public:
+    enum class type : std::uint8_t
+    {
+        shape_sphere = 0,
+        shape_box,
+        // shape_cylinder,
+        // shape_pill,
+        // shape_convex_hull,
+        shape_mesh
+    };
+
     shape(const shape &other) : M_type(other.M_type) { copy_from(other); }
 
     shape &operator=(const shape &other)
@@ -163,35 +234,35 @@ public:
     }
     ~shape() { destroy_active(); }
 
-    shape() : M_type(shape_box) { construct_box(vec3{0.5f, 0.5f, 0.5f} * si::metre); }
+    shape() : M_type(type::shape_box) { construct_box(vec3{0.5f, 0.5f, 0.5f} * si::metre); }
 
-    shape(std::shared_ptr<const physkit::mesh> m) : M_type(shape_mesh)
+    shape(std::shared_ptr<const physkit::mesh> m) : M_type(type::shape_mesh)
     { construct_mesh(std::move(m)); }
 
-    shape(const physkit::sphere &s) : M_type(shape_sphere) { construct_sphere(s); }
+    shape(const physkit::sphere &s) : M_type(type::shape_sphere) { construct_sphere(s); }
 
-    shape(const physkit::box &b) : M_type(shape_box) { construct_box(b); }
+    shape(const physkit::box &b) : M_type(type::shape_box) { construct_box(b); }
 
     [[nodiscard]] const std::shared_ptr<const physkit::mesh> &mesh() const
     {
-        assert(M_type == shape_mesh);
+        assert(M_type == type::shape_mesh);
         return M_storage.msh;
     }
     [[nodiscard]] const physkit::sphere &sphere() const
     {
-        assert(M_type == shape_sphere);
+        assert(M_type == type::shape_sphere);
         return M_storage.sph;
     }
     [[nodiscard]] const physkit::box &box() const
     {
-        assert(M_type == shape_box);
+        assert(M_type == type::shape_box);
         return M_storage.bx;
     }
 
     shape &operator=(std::shared_ptr<const physkit::mesh> m)
     {
         destroy_active();
-        M_type = shape_mesh;
+        M_type = type::shape_mesh;
         construct_mesh(std::move(m));
         return *this;
     }
@@ -203,11 +274,11 @@ private:
     {
         switch (M_type)
         {
-        case shape_sphere:
+        case type::shape_sphere:
             return std::forward<F>(f)(M_storage.sph);
-        case shape_box:
+        case type::shape_box:
             return std::forward<F>(f)(M_storage.bx);
-        case shape_mesh:
+        case type::shape_mesh:
             return std::forward<F>(f)(*M_storage.msh);
         default:
             std::unreachable();
@@ -262,9 +333,9 @@ public:
     }
 
     /// @brief Gathers indices of triangles whose vertices overlap the given sphere.
-    std::vector<std::uint32_t> overlap_sphere(const bounding_sphere &sphere) const
+    [[nodiscard]] std::vector<std::uint32_t> overlap_sphere(const bounding_sphere &sphere) const
     {
-        assert(M_type == shape_mesh);
+        assert(M_type == type::shape_mesh);
         return M_storage.msh->overlap_sphere(sphere);
     }
 
@@ -279,57 +350,62 @@ public:
         switch (M_type)
         {
         default:
-        case shape_mesh:
+        case type::shape_mesh:
             return M_storage.msh->is_convex();
-        case shape_sphere:
-        case shape_box:
+        case type::shape_sphere:
+        case type::shape_box:
             return true;
         }
     }
 
-    [[nodiscard]] shape_type type() const { return M_type; };
+    [[nodiscard]] type type() const { return M_type; };
 
     // mesh only methods for compatibility
     [[nodiscard]] std::span<const vec3<si::metre>> vertices() const
     {
-        assert(M_type == shape_mesh);
+        assert(M_type == type::shape_mesh);
         return M_storage.msh->vertices();
     }
     [[nodiscard]] std::span<const triangle_t> triangles() const
     {
-        assert(M_type == shape_mesh);
+        assert(M_type == type::shape_mesh);
         return M_storage.msh->triangles();
     }
     [[nodiscard]] const vec3<si::metre> &vertex(unsigned int index) const
     {
-        assert(M_type == shape_mesh);
+        assert(M_type == type::shape_mesh);
         const auto &msh = M_storage.msh;
         assert(index < msh->vertices().size());
         return msh->vertices()[index];
     }
 
 private:
-    shape_type M_type;
     union storage_t
     {
         std::shared_ptr<const physkit::mesh> msh;
         physkit::sphere sph;
         physkit::box bx;
         storage_t() {}
+        storage_t(const storage_t &other) = delete;
+        storage_t &operator=(const storage_t &other) = delete;
+        storage_t(storage_t &&other) = delete;
+        storage_t &operator=(storage_t &&other) = delete;
         ~storage_t() {}
     } M_storage;
+
+    enum type M_type;
 
     void destroy_active()
     {
         switch (M_type)
         {
-        case shape_mesh:
+        case type::shape_mesh:
             M_storage.msh.~shared_ptr();
             break;
-        case shape_sphere:
+        case type::shape_sphere:
             M_storage.sph.~sphere();
             break;
-        case shape_box:
+        case type::shape_box:
             M_storage.bx.~box();
             break;
         }
@@ -348,13 +424,13 @@ private:
     {
         switch (M_type)
         {
-        case shape_mesh:
+        case type::shape_mesh:
             construct_mesh(other.M_storage.msh);
             break;
-        case shape_sphere:
+        case type::shape_sphere:
             construct_sphere(other.M_storage.sph);
             break;
-        case shape_box:
+        case type::shape_box:
             construct_box(other.M_storage.bx);
             break;
         default:
@@ -362,17 +438,18 @@ private:
         }
     }
 
+    // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
     void move_from(shape &&other)
     {
         switch (M_type)
         {
-        case shape_mesh:
+        case type::shape_mesh:
             construct_mesh(std::move(other.M_storage.msh));
             break;
-        case shape_sphere:
+        case type::shape_sphere:
             construct_sphere(std::move(other.M_storage.sph));
             break;
-        case shape_box:
+        case type::shape_box:
             construct_box(std::move(other.M_storage.bx));
             break;
         default:
@@ -397,7 +474,7 @@ public:
 
     [[nodiscard]] vec3<si::metre> vertex(unsigned int index) const
     {
-        assert(M_shape->type() == shape_mesh);
+        assert(M_shape->type() == shape::type::shape_mesh);
         assert(index < M_shape->vertices().size());
         return M_orientation * M_shape->vertices()[index] + M_position;
     }
