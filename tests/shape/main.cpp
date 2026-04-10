@@ -63,27 +63,27 @@ void test_box_inertia_tensor()
     // Unit cube, density 1 kg/m³ → mass = 1 kg
     // I_xx = (m/12)(y² + z²) = (1/12)(1 + 1) = 1/6
     box unit(vec3{0.5, 0.5, 0.5} * m);
-    auto density = 1.0f * kg / (m * m * m);
+    auto density = 1.0 * kg / (m * m * m);
     auto I = unit.inertia_tensor(density);
-    auto expected = 1.0f / 6.0f;
+    auto expected = 1.0 / 6.0;
     CHECK_APPROX(I[0, 0], expected * kg * m * m);
     CHECK_APPROX(I[1, 1], expected * kg * m * m);
     CHECK_APPROX(I[2, 2], expected * kg * m * m);
     // Off-diagonal should be zero
-    CHECK_APPROX(I[0, 1], 0.0f * kg * m * m);
-    CHECK_APPROX(I[0, 2], 0.0f * kg * m * m);
-    CHECK_APPROX(I[1, 2], 0.0f * kg * m * m);
+    CHECK_APPROX(I[0, 1], 0.0 * kg * m * m);
+    CHECK_APPROX(I[0, 2], 0.0 * kg * m * m);
+    CHECK_APPROX(I[1, 2], 0.0 * kg * m * m);
 
     // Asymmetric box: half_extents (1,2,3) → sides (2,4,6), volume=48
     // density=1 → mass=48
     // I_xx = (48/12)(16+36) = 208
     // I_yy = (48/12)(4+36)  = 160
     // I_zz = (48/12)(4+16)  = 80
-    box bx(vec3{1.0f, 2.0f, 3.0f} * m);
+    box bx(vec3{1.0, 2.0, 3.0} * m);
     auto I2 = bx.inertia_tensor(density);
-    CHECK_APPROX(I2[0, 0], 208.0f * kg * m * m);
-    CHECK_APPROX(I2[1, 1], 160.0f * kg * m * m);
-    CHECK_APPROX(I2[2, 2], 80.0f * kg * m * m);
+    CHECK_APPROX(I2[0, 0], 208.0 * kg * m * m);
+    CHECK_APPROX(I2[1, 1], 160.0 * kg * m * m);
+    CHECK_APPROX(I2[2, 2], 80.0 * kg * m * m);
 }
 
 // ===========================================================================
@@ -438,22 +438,22 @@ void test_sphere_inertia_tensor()
 {
     // I = (2/5) * mass * r² * identity
     // For r=1, density=1: mass = 4π/3, I = (2/5)(4π/3)(1) = 8π/15
-    sphere unit(1.0f * m);
-    auto density = 1.0f * kg / (m * m * m);
+    sphere unit(1.0 * m);
+    auto density = 1.0 * kg / (m * m * m);
     auto I = unit.inertia_tensor(density);
-    auto expected = static_cast<float>(8.0 * std::numbers::pi / 15.0);
+    auto expected = static_cast<double>(8.0 * std::numbers::pi / 15.0);
     CHECK_APPROX(I[0, 0], expected * kg * m * m);
     CHECK_APPROX(I[1, 1], expected * kg * m * m);
     CHECK_APPROX(I[2, 2], expected * kg * m * m);
     // Off-diagonal zero
-    CHECK_APPROX(I[0, 1], 0.0f * kg * m * m);
-    CHECK_APPROX(I[0, 2], 0.0f * kg * m * m);
-    CHECK_APPROX(I[1, 2], 0.0f * kg * m * m);
+    CHECK_APPROX(I[0, 1], 0.0 * kg * m * m);
+    CHECK_APPROX(I[0, 2], 0.0 * kg * m * m);
+    CHECK_APPROX(I[1, 2], 0.0 * kg * m * m);
 
     // For r=2: mass = 4π/3 * 8 = 32π/3, I = (2/5)(32π/3)(4) = 256π/15
-    sphere sph2(2.0f * m);
+    sphere sph2(2.0 * m);
     auto I2 = sph2.inertia_tensor(density);
-    auto expected2 = static_cast<float>(256.0 * std::numbers::pi / 15.0);
+    auto expected2 = static_cast<double>(256.0 * std::numbers::pi / 15.0);
     CHECK_APPROX(I2[0, 0], expected2 * kg * m * m);
     CHECK_APPROX(I2[1, 1], expected2 * kg * m * m);
     CHECK_APPROX(I2[2, 2], expected2 * kg * m * m);
@@ -653,23 +653,23 @@ void test_shape_default()
     shape s;
     CHECK(s.type() == shape::type::shape_box);
     // Default box has half_extents (0.5, 0.5, 0.5), volume = 1
-    CHECK_APPROX(s.volume(), 1.0f * m * m * m);
+    CHECK_APPROX(s.volume(), 1.0 * m * m * m);
 }
 
 void test_shape_from_sphere()
 {
-    sphere sph(2.0f * m);
+    sphere sph(2.0 * m);
     shape s(sph);
     CHECK(s.type() == shape::type::shape_sphere);
     CHECK_APPROX(s.volume(), sph.volume());
     CHECK_APPROX(s.mass_center(), sph.mass_center());
     CHECK(s.is_convex());
-    CHECK_APPROX(s.sphere().radius(), 2.0f * m);
+    CHECK_APPROX(s.sphere().radius(), 2.0 * m);
 }
 
 void test_shape_from_box()
 {
-    box bx(vec3{1.0f, 2.0f, 3.0f} * m);
+    box bx(vec3{1.0, 2.0, 3.0} * m);
     shape s(bx);
     CHECK(s.type() == shape::type::shape_box);
     CHECK_APPROX(s.volume(), bx.volume());
@@ -689,15 +689,15 @@ void test_shape_from_mesh()
 
 void test_shape_copy()
 {
-    sphere sph(1.0f * m);
+    sphere sph(1.0 * m);
     shape s1(sph);
     shape s2 = s1; // NOLINT(performance-unnecessary-copy-initialization)
     CHECK(s2.type() == shape::type::shape_sphere);
     CHECK_APPROX(s2.volume(), s1.volume());
-    CHECK_APPROX(s2.sphere().radius(), 1.0f * m);
+    CHECK_APPROX(s2.sphere().radius(), 1.0 * m);
 
     // Copy assign
-    box bx(vec3{1.0f, 1.0f, 1.0f} * m);
+    box bx(vec3{1.0, 1.0, 1.0} * m);
     shape s3(bx);
     s2 = s3;
     CHECK(s2.type() == shape::type::shape_box);
@@ -706,14 +706,14 @@ void test_shape_copy()
 
 void test_shape_move()
 {
-    sphere sph(1.0f * m);
+    sphere sph(1.0 * m);
     shape s1(sph);
     shape s2 = std::move(s1);
     CHECK(s2.type() == shape::type::shape_sphere);
     CHECK_APPROX(s2.volume(), sph.volume());
 
     // Move assign
-    box bx(vec3{2.0f, 2.0f, 2.0f} * m);
+    box bx(vec3{2.0, 2.0, 2.0} * m);
     shape s3(bx);
     s2 = std::move(s3);
     CHECK(s2.type() == shape::type::shape_box);
@@ -724,22 +724,22 @@ void test_shape_dispatch()
     // Verify dispatched methods match underlying primitive for both types
 
     // Sphere dispatch
-    sphere sph(2.0f * m);
+    sphere sph(2.0 * m);
     shape ss(sph);
     CHECK_APPROX(ss.bounds(), sph.bounds());
     CHECK_APPROX(ss.bsphere(), sph.bsphere());
     CHECK_APPROX(ss.mass_center(), sph.mass_center());
     CHECK_APPROX(ss.support({1, 0, 0}), sph.support({1, 0, 0}));
-    CHECK(ss.contains(vec3{0.0f, 0.0f, 0.0f} * m) == sph.contains(vec3{0.0f, 0.0f, 0.0f} * m));
+    CHECK(ss.contains(vec3{0.0, 0.0, 0.0} * m) == sph.contains(vec3{0.0, 0.0, 0.0} * m));
 
     // Box dispatch
-    box bx(vec3{1.0f, 1.0f, 1.0f} * m);
+    box bx(vec3{1.0, 1.0, 1.0} * m);
     shape sb(bx);
     CHECK_APPROX(sb.bounds(), bx.bounds());
     CHECK_APPROX(sb.bsphere(), bx.bsphere());
     CHECK_APPROX(sb.mass_center(), bx.mass_center());
     CHECK_APPROX(sb.support({0, 0, -1}), bx.support({0, 0, -1}));
-    CHECK(sb.contains(vec3{0.5f, 0.5f, 0.5f} * m) == bx.contains(vec3{0.5f, 0.5f, 0.5f} * m));
+    CHECK(sb.contains(vec3{0.5, 0.5, 0.5} * m) == bx.contains(vec3{0.5, 0.5, 0.5} * m));
 }
 
 // ===========================================================================
@@ -749,56 +749,56 @@ void test_shape_dispatch()
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_instance_translated_box()
 {
-    box bx(vec3{1.0f, 1.0f, 1.0f} * m);
+    box bx(vec3{1.0, 1.0, 1.0} * m);
     shape s(bx);
-    auto pos = vec3{10.0f, 0.0f, 0.0f} * m;
+    auto pos = vec3{10.0, 0.0, 0.0} * m;
     instance inst(s, pos);
 
     // Bounds should be shifted
-    CHECK_APPROX(inst.bounds().min, vec3{9.0f, -1.0f, -1.0f} * m);
-    CHECK_APPROX(inst.bounds().max, vec3{11.0f, 1.0f, 1.0f} * m);
+    CHECK_APPROX(inst.bounds().min, vec3{9.0, -1.0, -1.0} * m);
+    CHECK_APPROX(inst.bounds().max, vec3{11.0, 1.0, 1.0} * m);
 
     // Bsphere center should be shifted
     CHECK_APPROX(inst.bsphere().center, pos);
-    CHECK_APPROX(inst.bsphere().radius, std::sqrt(3.0f) * m);
+    CHECK_APPROX(inst.bsphere().radius, std::sqrt(3.0) * m);
 
     // Contains at world position
-    CHECK(inst.contains(vec3{10.0f, 0.0f, 0.0f} * m));
-    CHECK(inst.contains(vec3{10.5f, 0.5f, 0.5f} * m));
-    CHECK(!inst.contains(vec3{0.0f, 0.0f, 0.0f} * m)); // original location
-    CHECK(!inst.contains(vec3{11.5f, 0.0f, 0.0f} * m));
+    CHECK(inst.contains(vec3{10.0, 0.0, 0.0} * m));
+    CHECK(inst.contains(vec3{10.5, 0.5, 0.5} * m));
+    CHECK(!inst.contains(vec3{0.0, 0.0, 0.0} * m)); // original location
+    CHECK(!inst.contains(vec3{11.5, 0.0, 0.0} * m));
 }
 
 void test_instance_translated_sphere()
 {
-    sphere sph(2.0f * m);
+    sphere sph(2.0 * m);
     shape s(sph);
-    auto pos = vec3{0.0f, 5.0f, 0.0f} * m;
+    auto pos = vec3{0.0, 5.0, 0.0} * m;
     instance inst(s, pos);
 
     CHECK_APPROX(inst.bsphere().center, pos);
-    CHECK_APPROX(inst.bsphere().radius, 2.0f * m);
-    CHECK(inst.contains(vec3{0.0f, 5.0f, 0.0f} * m));
-    CHECK(inst.contains(vec3{1.0f, 5.0f, 0.0f} * m));
-    CHECK(!inst.contains(vec3{0.0f, 0.0f, 0.0f} * m));
-    CHECK(!inst.contains(vec3{0.0f, 8.0f, 0.0f} * m));
+    CHECK_APPROX(inst.bsphere().radius, 2.0 * m);
+    CHECK(inst.contains(vec3{0.0, 5.0, 0.0} * m));
+    CHECK(inst.contains(vec3{1.0, 5.0, 0.0} * m));
+    CHECK(!inst.contains(vec3{0.0, 0.0, 0.0} * m));
+    CHECK(!inst.contains(vec3{0.0, 8.0, 0.0} * m));
 }
 
 void test_instance_ray_translated()
 {
-    box bx(vec3{1.0f, 1.0f, 1.0f} * m);
+    box bx(vec3{1.0, 1.0, 1.0} * m);
     shape s(bx);
-    auto pos = vec3{5.0f, 0.0f, 0.0f} * m;
+    auto pos = vec3{5.0, 0.0, 0.0} * m;
     instance inst(s, pos);
 
     // Ray from far left toward the translated box
-    auto hit = inst.ray_intersect({vec3{0.0f, 0.0f, 0.0f} * m, {1, 0, 0}});
+    auto hit = inst.ray_intersect({vec3{0.0, 0.0, 0.0} * m, {1, 0, 0}});
     CHECK(hit.has_value());
-    CHECK_APPROX(hit->pos, vec3{4.0f, 0.0f, 0.0f} * m);
-    CHECK_APPROX(hit->distance, 4.0f * m);
+    CHECK_APPROX(hit->pos, vec3{4.0, 0.0, 0.0} * m);
+    CHECK_APPROX(hit->distance, 4.0 * m);
 
     // Miss: ray along Y, missing the box
-    CHECK(!inst.ray_intersect({vec3{0.0f, 0.0f, 0.0f} * m, {0, 1, 0}}).has_value());
+    CHECK(!inst.ray_intersect({vec3{0.0, 0.0, 0.0} * m, {0, 1, 0}}).has_value());
 }
 
 void test_instance_rotated_box()
@@ -806,105 +806,105 @@ void test_instance_rotated_box()
     // Rotate a box with half_extents (2, 1, 1) by 90° around Z
     // In local space: extends ±2 in x, ±1 in y,z
     // After rotation: ±1 in x (from y), ±2 in y (from x), ±1 in z
-    box bx(vec3{2.0f, 1.0f, 1.0f} * m);
+    box bx(vec3{2.0, 1.0, 1.0} * m);
     shape s(bx);
-    auto rot = quat<one>::from_angle_axis(static_cast<float>(std::numbers::pi / 2.0) * si::radian,
-                                          vec3{0.0f, 0.0f, 1.0f});
-    instance inst(s, vec3{0.0f, 0.0f, 0.0f} * m, rot);
+    auto rot = quat<one>::from_angle_axis(static_cast<double>(std::numbers::pi / 2.0) * si::radian,
+                                          vec3{0.0, 0.0, 1.0});
+    instance inst(s, vec3{0.0, 0.0, 0.0} * m, rot);
 
     // World-space bounds should swap x and y extents
     auto b = inst.bounds();
-    CHECK_APPROX(b.min.x(), -1.0f * m, 0.01f * m);
-    CHECK_APPROX(b.max.x(), 1.0f * m, 0.01f * m);
-    CHECK_APPROX(b.min.y(), -2.0f * m, 0.01f * m);
-    CHECK_APPROX(b.max.y(), 2.0f * m, 0.01f * m);
+    CHECK_APPROX(b.min.x(), -1.0 * m, 0.01 * m);
+    CHECK_APPROX(b.max.x(), 1.0 * m, 0.01 * m);
+    CHECK_APPROX(b.min.y(), -2.0 * m, 0.01 * m);
+    CHECK_APPROX(b.max.y(), 2.0 * m, 0.01 * m);
 
     // Point at (0, 1.5, 0): was outside local box in y, but after rotation
     // the long axis is now y. Should be contained.
-    CHECK(inst.contains(vec3{0.0f, 1.5f, 0.0f} * m));
+    CHECK(inst.contains(vec3{0.0, 1.5, 0.0} * m));
 
     // Point at (1.5, 0, 0): was inside local box in x, but after rotation
     // the short axis is now x. Should NOT be contained.
-    CHECK(!inst.contains(vec3{1.5f, 0.0f, 0.0f} * m));
+    CHECK(!inst.contains(vec3{1.5, 0.0, 0.0} * m));
 }
 
 void test_instance_support_translated()
 {
-    box bx(vec3{1.0f, 1.0f, 1.0f} * m);
+    box bx(vec3{1.0, 1.0, 1.0} * m);
     shape s(bx);
-    auto pos = vec3{5.0f, 0.0f, 0.0f} * m;
+    auto pos = vec3{5.0, 0.0, 0.0} * m;
     instance inst(s, pos);
 
     // Support in +x: local support is (1,1,1), world = (1,1,1) + (5,0,0) = (6,1,1)
-    CHECK_APPROX(inst.support({1, 0, 0}), vec3{6.0f, 1.0f, 1.0f} * m);
+    CHECK_APPROX(inst.support({1, 0, 0}), vec3{6.0, 1.0, 1.0} * m);
 
     // Support in -x: local support is (-1,1,1), world = (-1,1,1) + (5,0,0) = (4,1,1)
-    CHECK_APPROX(inst.support({-1, 0, 0}), vec3{4.0f, 1.0f, 1.0f} * m);
+    CHECK_APPROX(inst.support({-1, 0, 0}), vec3{4.0, 1.0, 1.0} * m);
 }
 
 void test_instance_closest_point_translated()
 {
-    box bx(vec3{1.0f, 1.0f, 1.0f} * m);
+    box bx(vec3{1.0, 1.0, 1.0} * m);
     shape s(bx);
-    auto pos = vec3{5.0f, 0.0f, 0.0f} * m;
+    auto pos = vec3{5.0, 0.0, 0.0} * m;
     instance inst(s, pos);
 
     // Point far along +x: closest should be on +x face of translated box
-    auto cp = inst.closest_point(vec3{10.0f, 0.0f, 0.0f} * m);
-    CHECK_APPROX(cp, vec3{6.0f, 0.0f, 0.0f} * m);
+    auto cp = inst.closest_point(vec3{10.0, 0.0, 0.0} * m);
+    CHECK_APPROX(cp, vec3{6.0, 0.0, 0.0} * m);
 
     // Point behind the box
-    auto cp2 = inst.closest_point(vec3{0.0f, 0.0f, 0.0f} * m);
-    CHECK_APPROX(cp2, vec3{4.0f, 0.0f, 0.0f} * m);
+    auto cp2 = inst.closest_point(vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(cp2, vec3{4.0, 0.0, 0.0} * m);
 }
 
 void test_instance_rotated_ray()
 {
     // Box (2,1,1) rotated 90° around Z, placed at origin
     // After rotation: extends ±1 in x, ±2 in y, ±1 in z
-    box bx(vec3{2.0f, 1.0f, 1.0f} * m);
+    box bx(vec3{2.0, 1.0, 1.0} * m);
     shape s(bx);
-    auto rot = quat<one>::from_angle_axis(static_cast<float>(std::numbers::pi / 2.0) * si::radian,
-                                          vec3{0.0f, 0.0f, 1.0f});
-    instance inst(s, vec3{0.0f, 0.0f, 0.0f} * m, rot);
+    auto rot = quat<one>::from_angle_axis(static_cast<double>(std::numbers::pi / 2.0) * si::radian,
+                                          vec3{0.0, 0.0, 1.0});
+    instance inst(s, vec3{0.0, 0.0, 0.0} * m, rot);
 
     // Ray along +y from outside: should hit the rotated box face at y = -2
-    auto hit = inst.ray_intersect({vec3{0.0f, -5.0f, 0.0f} * m, {0, 1, 0}});
+    auto hit = inst.ray_intersect({vec3{0.0, -5.0, 0.0} * m, {0, 1, 0}});
     CHECK(hit.has_value());
-    CHECK_APPROX(hit->pos.y(), -2.0f * m, 0.05f * m);
-    CHECK_APPROX(hit->distance, 3.0f * m, 0.05f * m);
+    CHECK_APPROX(hit->pos.y(), -2.0 * m, 0.05 * m);
+    CHECK_APPROX(hit->distance, 3.0 * m, 0.05 * m);
 
     // Ray along +x: should hit at x = -1 (the short axis after rotation)
-    auto hit_x = inst.ray_intersect({vec3{-5.0f, 0.0f, 0.0f} * m, {1, 0, 0}});
+    auto hit_x = inst.ray_intersect({vec3{-5.0, 0.0, 0.0} * m, {1, 0, 0}});
     CHECK(hit_x.has_value());
-    CHECK_APPROX(hit_x->pos.x(), -1.0f * m, 0.05f * m);
-    CHECK_APPROX(hit_x->distance, 4.0f * m, 0.05f * m);
+    CHECK_APPROX(hit_x->pos.x(), -1.0 * m, 0.05 * m);
+    CHECK_APPROX(hit_x->distance, 4.0 * m, 0.05 * m);
 }
 
 void test_instance_translated_and_rotated()
 {
     // Sphere at (3, 0, 0), rotation doesn't matter for a sphere
-    sphere sph(1.0f * m);
+    sphere sph(1.0 * m);
     shape s(sph);
-    auto rot = quat<one>::from_angle_axis(static_cast<float>(std::numbers::pi / 4.0) * si::radian,
-                                          vec3{0.0f, 1.0f, 0.0f});
-    instance inst(s, vec3{3.0f, 0.0f, 0.0f} * m, rot);
+    auto rot = quat<one>::from_angle_axis(static_cast<double>(std::numbers::pi / 4.0) * si::radian,
+                                          vec3{0.0, 1.0, 0.0});
+    instance inst(s, vec3{3.0, 0.0, 0.0} * m, rot);
 
     // Bsphere center should be at (3, 0, 0)
-    CHECK_APPROX(inst.bsphere().center, vec3{3.0f, 0.0f, 0.0f} * m);
-    CHECK_APPROX(inst.bsphere().radius, 1.0f * m);
+    CHECK_APPROX(inst.bsphere().center, vec3{3.0, 0.0, 0.0} * m);
+    CHECK_APPROX(inst.bsphere().radius, 1.0 * m);
 
     // Contains
-    CHECK(inst.contains(vec3{3.0f, 0.0f, 0.0f} * m));
-    CHECK(inst.contains(vec3{3.5f, 0.0f, 0.0f} * m));
-    CHECK(!inst.contains(vec3{0.0f, 0.0f, 0.0f} * m));
-    CHECK(!inst.contains(vec3{4.5f, 0.0f, 0.0f} * m));
+    CHECK(inst.contains(vec3{3.0, 0.0, 0.0} * m));
+    CHECK(inst.contains(vec3{3.5, 0.0, 0.0} * m));
+    CHECK(!inst.contains(vec3{0.0, 0.0, 0.0} * m));
+    CHECK(!inst.contains(vec3{4.5, 0.0, 0.0} * m));
 
     // Ray intersect
-    auto hit = inst.ray_intersect({vec3{0.0f, 0.0f, 0.0f} * m, {1, 0, 0}});
+    auto hit = inst.ray_intersect({vec3{0.0, 0.0, 0.0} * m, {1, 0, 0}});
     CHECK(hit.has_value());
-    CHECK_APPROX(hit->pos, vec3{2.0f, 0.0f, 0.0f} * m);
-    CHECK_APPROX(hit->distance, 2.0f * m);
+    CHECK_APPROX(hit->pos, vec3{2.0, 0.0, 0.0} * m);
+    CHECK_APPROX(hit->distance, 2.0 * m);
 }
 
 // ===========================================================================
