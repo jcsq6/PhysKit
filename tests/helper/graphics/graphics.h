@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <print>
 #include <string>
 #include <string_view>
 #include <thread>
