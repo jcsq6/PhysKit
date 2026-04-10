@@ -39,7 +39,7 @@ public:
     {
         M_aabb = aabb::from_points({half_extents, -half_extents});
 
-        M_bsphere = bounding_sphere({0.0f * si::metre, 0.0f * si::metre, 0.0f * si::metre},
+        M_bsphere = bounding_sphere({0.0 * si::metre, 0.0 * si::metre, 0.0 * si::metre},
                                     half_extents.norm());
     }
 
@@ -54,7 +54,7 @@ public:
     [[nodiscard]] vec3<si::metre> mass_center() const
     {
         using namespace mp_units::si::unit_symbols;
-        return {0.0f * m, 0.0f * m, 0.0f * m};
+        return {0.0 * m, 0.0 * m, 0.0 * m};
     }
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
@@ -71,7 +71,7 @@ public:
         auto i3 = ((mass / 12) * (mp_units::pow<2>(x) + mp_units::pow<2>(y)))
                       .numerical_value_in(kg * m * m);
 
-        return mat3{{i1, 0.0f, 0.0f, 0.0f, i2, 0.0f, 0.0f, 0.0f, i3}} * kg * m * m;
+        return vec3{i1, i2, i3}.as_diagonal() * kg * m * m;
     }
 
     /// @brief Ray intersection in local (model) space. O(log N) time.
@@ -116,8 +116,7 @@ public:
         M_aabb = aabb::from_points({vec3<si::metre>{M_radius, M_radius, M_radius},
                                     vec3<si::metre>{-M_radius, -M_radius, -M_radius}});
 
-        M_bsphere =
-            bounding_sphere({0.0f * si::metre, 0.0f * si::metre, 0.0f * si::metre}, M_radius);
+        M_bsphere = bounding_sphere(vec3<si::metre>::zero(), M_radius);
     }
 
     [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius; }
@@ -125,21 +124,20 @@ public:
     [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
-    { return (4.0f / 3.0f) * std::numbers::pi * mp_units::pow<3>(M_radius); }
+    { return (4.0 / 3.0) * std::numbers::pi * mp_units::pow<3>(M_radius); }
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] vec3<si::metre> mass_center() const
     {
         using namespace mp_units::si::unit_symbols;
-        return {0.0f * m, 0.0f * m, 0.0f * m};
+        return vec3<si::metre>::zero();
     }
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
     {
         using namespace mp_units::si::unit_symbols;
-        auto val = ((2.0f / 5.0f) * density * volume() * (mp_units::pow<2>(M_radius)))
-                       .numerical_value_in(kg * m * m);
+        auto val = ((2.0 / 5.0) * density * volume() * (mp_units::pow<2>(M_radius)));
 
-        return mat3{{val, 0.0f, 0.0f, 0.0f, val, 0.0f, 0.0f, 0.0f, val}} * kg * m * m;
+        return vec3{val, val, val}.as_diagonal();
     }
 
     /// @brief Ray intersection in local (model) space. O(log N) time.
@@ -164,8 +162,10 @@ public:
         auto det = mp_units::pow<2>(b) - 4 * a * c;
         if (det < 0 * m * m) return std::nullopt;
 
-        auto dist = (b - mp_units::sqrt(det)) / (2 * a);
-        if (dist >= max_distance) return std::nullopt;
+        auto sqrt_det = mp_units::sqrt(det);
+        auto dist = (-b - sqrt_det) / (2 * a);
+        if (dist < 0.0 * m) dist = (-b + sqrt_det) / (2 * a);
+        if (dist < 0.0 * m || dist > max_distance) return std::nullopt;
 
         auto pos = origin + dist * direction;
         auto normal = pos.normalized();
