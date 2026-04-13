@@ -180,7 +180,7 @@ private:
             auto *obj = *rigid;
             if (res.index() == 1) co_return *co_await end(*obj);
 
-            auto dt = *std::get<0>(res);
+            auto dt = std::get<0>(res);
             time_s += dt;
 
             desired_speed += desired_accel_delta * dt;
@@ -262,7 +262,7 @@ private:
         // Wait for apex — vertical velocity flips sign
         while (true)
         {
-            co_await next_frame{};
+            co_await physkit::next_frame{};
             auto rigid = co_await get_rigid(carrier_h);
             if (!rigid) co_return;
             if ((*rigid)->vel().y() <= 0 * m / s) break;

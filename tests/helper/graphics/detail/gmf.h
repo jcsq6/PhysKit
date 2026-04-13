@@ -15,6 +15,7 @@
 #ifndef PHYSKIT_IMPORT_STD
 #include <algorithm>
 #include <cmath>
+#include <coroutine>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>

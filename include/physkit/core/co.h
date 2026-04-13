@@ -41,6 +41,44 @@ struct error
     };
     code value;
     std::exception_ptr exception;
+
+    [[nodiscard]] std::string message() const
+    {
+        std::string_view code_str;
+        switch (value)
+        {
+        case stale_handle:
+            code_str = "Stale handle";
+            break;
+        case object_destroyed:
+            code_str = "Object destroyed";
+            break;
+        case exception_thrown:
+            code_str = "Exception thrown in task";
+            break;
+        case unknown:
+            code_str = "Unknown error";
+            break;
+        }
+        if (exception)
+        {
+            try
+            {
+                std::rethrow_exception(exception);
+            }
+            catch (const std::exception &e)
+            {
+                return std::format("Code: {}, Exception: {}", code_str, e.what());
+            }
+            catch (...)
+            {
+                return std::format("Code: {}, Unknown exception thrown", code_str);
+            }
+        }
+        return std::format("Code: {}", code_str);
+    }
+
+private:
 };
 
 namespace detail
@@ -52,12 +90,23 @@ template <typename T> class task_promise;
 template <typename T> class task_awaiter;
 class task_handler;
 
+struct no_expect_t
+{
+};
+
+template <typename T>
+concept no_expect_awaiter = requires {
+    typename T::no_expect;
+    requires std::same_as<typename T::no_expect, no_expect_t>;
+};
+
 class awaiter
 {
 public:
     awaiter(task_promise_base &promise) : M_promise(promise) {}
 
     auto await_resume(this auto &&self) -> std::expected<decltype(self.on_resume()), error>
+        requires(!no_expect_awaiter<std::remove_cvref_t<decltype(self)>>)
     {
         try
         {
@@ -82,6 +131,10 @@ public:
                 error{.value = error::exception_thrown, .exception = std::current_exception()});
         }
     }
+
+    decltype(auto) await_resume(this auto &&self)
+        requires(no_expect_awaiter<std::remove_cvref_t<decltype(self)>>)
+    { return self.on_resume(); }
 
 protected:
     [[nodiscard]] task_promise_base &promise() const { return M_promise; }
@@ -384,10 +437,16 @@ public:
         return handle;
     }
 
-    void cancel_task(const task_id id, passkey<world_base, detail::awaiter> /*key*/)
+    bool cancel_task(const task_id id, passkey<world_base, detail::awaiter, world_base> /*key*/)
     {
         auto handle = detail::arena<task<>>::handle::from_id(id);
-        M_tasks.remove(handle);
+        return M_tasks.remove(handle).has_value();
+    }
+
+    [[nodiscard]] bool task_active(const task_id id) const
+    {
+        auto handle = detail::arena<task<>>::handle::from_id(id);
+        return M_tasks.get(handle) != nullptr;
     }
 
     void dispatch_pre(passkey<world_base> /*key*/)

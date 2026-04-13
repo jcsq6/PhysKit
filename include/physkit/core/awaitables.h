@@ -36,11 +36,11 @@ struct wait_for
     mp_units::quantity<mp_units::si::second> duration;
 };
 
-struct wait_until
+struct wait_until_time
 {
     struct awaiter_type : detail::awaiter
     {
-        awaiter_type(detail::task_promise_base &promise, wait_until aw)
+        awaiter_type(detail::task_promise_base &promise, wait_until_time aw)
             : detail::awaiter(promise), time{aw.time}, start_time(handler().time())
         {
         }
@@ -336,6 +336,19 @@ struct race_barrier
 template <awaitable Awaitable>
 using raw_await_result_t = decltype(std::declval<awaitable_awaiter_t<Awaitable>>().await_resume());
 
+template <typename T> using wrap_void_t = std::conditional_t<std::is_void_v<T>, std::monostate, T>;
+
+template <awaitable Awaitable>
+using await_result_t =
+    std::conditional_t<detail::no_expect_awaiter<Awaitable>,
+                       wrap_void_t<raw_await_result_t<Awaitable>>, raw_await_result_t<Awaitable>>;
+
+template <awaitable Awaitable>
+using unwrap_await_result_t =
+    std::conditional_t<detail::no_expect_awaiter<Awaitable>,
+                       wrap_void_t<raw_await_result_t<Awaitable>>,
+                       typename raw_await_result_t<Awaitable>::value_type>;
+
 } // namespace detail
 
 template <detail::awaitable... Awaitables>
@@ -344,6 +357,8 @@ struct wait_for_all
 {
     struct awaiter_type : detail::awaiter
     {
+        using no_expect = detail::no_expect_t;
+
         awaiter_type(detail::task_promise_base &promise, wait_for_all aw)
             : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
         { std::ranges::fill(child_ids, detail::arena<task<>>::handle::null); }
@@ -360,10 +375,15 @@ struct wait_for_all
                 if (id != detail::arena<task<>>::handle::null) cancel_task(id);
         }
 
-        template <typename Awaitable> detail::raw_await_result_t<Awaitable> default_for()
-        { return std::unexpected(error{.value = error::unknown}); }
+        template <typename Awaitable> detail::await_result_t<Awaitable> default_for()
+        {
+            if constexpr (detail::no_expect_awaiter<Awaitable>)
+                return {};
+            else
+                return std::unexpected(error{.value = error::unknown});
+        }
 
-        std::tuple<detail::raw_await_result_t<Awaitables>...> results{default_for<Awaitables>()...};
+        std::tuple<detail::await_result_t<Awaitables>...> results{default_for<Awaitables>()...};
         std::tuple<Awaitables...> awaitables;
         std::optional<detail::completion_barrier> barrier;
         std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
@@ -375,7 +395,7 @@ struct wait_for_all
             barrier.emplace(sizeof...(Awaitables), promise().id, &handler());
             spawn_children(std::index_sequence_for<Awaitables...>{});
         }
-        auto on_resume() { return std::move(results); }
+        auto on_resume() noexcept { return std::move(results); }
 
     private:
         template <std::size_t... Is> void spawn_children(std::index_sequence<Is...> /*unused*/)
@@ -387,7 +407,10 @@ struct wait_for_all
 
         template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
         {
-            std::get<I>(results) = co_await std::move(aw);
+            if constexpr (std::is_void_v<detail::raw_await_result_t<Aw>>)
+                co_await std::move(aw);
+            else
+                std::get<I>(results) = co_await std::move(aw);
             barrier->arrive();
         }
     };
@@ -419,12 +442,12 @@ struct wait_for_any
                 if (id != detail::arena<task<>>::handle::null) cancel_task(id);
         }
 
-        std::variant<detail::raw_await_result_t<Awaitables>..., std::monostate> result =
-            std::monostate{};
+        std::variant<detail::unwrap_await_result_t<Awaitables>..., std::monostate> result{
+            std::in_place_index<sizeof...(Awaitables)>};
         std::tuple<Awaitables...> awaitables;
         std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
         std::optional<detail::race_barrier> barrier;
-        std::exception_ptr child_exception;
+        std::array<std::optional<error>, sizeof...(Awaitables)> errors;
 
         [[nodiscard]] bool await_ready() const noexcept { return false; }
 
@@ -439,8 +462,17 @@ struct wait_for_any
             for (auto &id : child_ids)
                 cancel_task(std::exchange(id, detail::arena<task<>>::handle::null));
 
-            if (child_exception && barrier->failures.load() == barrier->total)
-                std::rethrow_exception(child_exception);
+            if (barrier->failures.load() == barrier->total)
+                throw std::runtime_error(std::format(
+                    "All awaitables failed: {:s}", errors |
+                                                       std::views::transform(
+                                                           [](auto &e)
+                                                           {
+                                                               if (e)
+                                                                   return std::to_string(e->value);
+                                                               return std::string();
+                                                           }) |
+                                                       std::views::join_with(std::string(", "))));
             return std::move(result);
         }
 
@@ -455,19 +487,43 @@ struct wait_for_any
         template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
         {
             using await_result = detail::raw_await_result_t<Aw>;
-            try
+            if constexpr (detail::no_expect_awaiter<Aw>)
             {
-                auto res = co_await std::move(aw);
-                if (barrier->claim_win())
+                if constexpr (std::is_void_v<await_result>)
                 {
-                    result.template emplace<I>(std::move(res));
-                    barrier->wake_parent();
+                    co_await std::move(aw);
+                    if (barrier->claim_win())
+                    {
+                        result.template emplace<I>();
+                        barrier->wake_parent();
+                    }
+                }
+                else
+                {
+                    auto res = co_await std::move(aw);
+                    if (barrier->claim_win())
+                    {
+                        result.template emplace<I>(std::move(res));
+                        barrier->wake_parent();
+                    }
                 }
             }
-            catch (...)
+            else
             {
-                if (!child_exception) child_exception = std::current_exception();
-                barrier->arrive_error();
+                auto res = co_await std::move(aw);
+                if (res)
+                {
+                    if (barrier->claim_win())
+                    {
+                        result.template emplace<I>(std::move(res).value());
+                        barrier->wake_parent();
+                    }
+                }
+                else
+                {
+                    errors[I] = res.error();
+                    barrier->arrive_error();
+                }
             }
         }
     };
@@ -475,6 +531,108 @@ struct wait_for_any
     wait_for_any(Awaitables &&...awaitables) : awaitables(std::move(awaitables)...) {}
     std::tuple<Awaitables...> awaitables;
 };
+
+// TODO: wait for clang to fix their feature test macro/implement P2714R1
+#if __cpp_lib_bind_front < 202306L || defined(__clang__)
+#define physkit_bind_front(fn, ...) std::bind_front(fn, __VA_ARGS__) // NOLINT
+#else
+#define physkit_bind_front(fn, ...) std::bind_front<fn>(__VA_ARGS__) // NOLINT
+#endif
+
+template <typename SetupFn, typename DestroyFn = void> struct wait_for_event
+{
+    struct awaiter_type_base : detail::awaiter
+    {
+        awaiter_type_base(detail::task_promise_base &promise) : detail::awaiter(promise) {}
+
+        void queue_resume() { handler().queue_pre_task(promise().id); }
+    };
+
+    using construct_result_t =
+        std::invoke_result_t<SetupFn,
+                             decltype(physkit_bind_front(&awaiter_type_base::queue_resume,
+                                                         std::declval<awaiter_type_base *>()))>;
+    struct awaiter_type : awaiter_type_base
+    {
+        awaiter_type(detail::task_promise_base &promise, wait_for_event aw)
+            : awaiter_type_base(promise), setup_fn(std::move(aw.setup_fn)),
+              destroy_fn(std::move(aw.destroy_fn))
+        {
+        }
+
+        awaiter_type(const awaiter_type &) = delete;
+        awaiter_type &operator=(const awaiter_type &) = delete;
+        awaiter_type(awaiter_type &&) = delete;
+        awaiter_type &operator=(awaiter_type &&) = delete;
+
+        ~awaiter_type()
+        {
+            if (is_suspended) std::invoke(std::move(destroy_fn), std::move(value.value()));
+        }
+
+        using construct_storage_t = std::conditional_t<std::is_void_v<construct_result_t>,
+                                                       std::monostate, construct_result_t>;
+
+        SetupFn setup_fn;
+        DestroyFn destroy_fn;
+        std::optional<construct_storage_t> value;
+        bool is_suspended = false;
+
+        [[nodiscard]] bool await_ready() const noexcept { return false; }
+        void await_suspend(std::coroutine_handle<> /*handle*/)
+        {
+            is_suspended = true;
+            if constexpr (std::is_void_v<construct_result_t>)
+                std::invoke(std::move(setup_fn),
+                            physkit_bind_front(&awaiter_type_base::queue_resume, this));
+            else
+                value = std::invoke(std::move(setup_fn),
+                                    physkit_bind_front(&awaiter_type_base::queue_resume, this));
+        }
+
+        void on_resume()
+        {
+            is_suspended = false;
+            std::invoke(std::move(destroy_fn), std::move(value.value()));
+        }
+    };
+
+    SetupFn setup_fn;
+    DestroyFn destroy_fn;
+};
+
+template <typename SetupFn> struct wait_for_event<SetupFn, void>
+{
+    struct awaiter_type : detail::awaiter
+    {
+        awaiter_type(detail::task_promise_base &promise, wait_for_event aw)
+            : detail::awaiter(promise), setup_fn(std::move(aw.setup_fn))
+        {
+        }
+
+        SetupFn setup_fn;
+
+        void queue_resume() { handler().queue_pre_task(promise().id); }
+
+        [[nodiscard]] bool await_ready() const noexcept { return false; }
+        void await_suspend(std::coroutine_handle<> /*handle*/)
+        {
+            std::invoke(std::move(setup_fn),
+                        physkit_bind_front(&awaiter_type::queue_resume, *this));
+        }
+
+        void on_resume() {}
+    };
+
+    SetupFn setup_fn;
+};
+
+#undef physkit_bind_front
+
+task<> wait_until(std::predicate auto condition)
+{
+    while (!condition()) { co_await next_frame{}; }
+}
 
 namespace detail
 {
@@ -500,6 +658,8 @@ template <typename T, typename... Args> struct command_awaiter : awaiter
 };
 template <typename T, typename... Args> struct command_awaiter_no_wait : awaiter
 {
+    using no_expect = detail::no_expect_t;
+
     command_awaiter_no_wait(task_promise_base &promise, Args... args)
         : awaiter(promise), args(std::move(args)...)
     {
@@ -657,7 +817,7 @@ struct get_rigid
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
         [[nodiscard]] bool await_ready() const noexcept { return true; }
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-        bool await_suspend(std::coroutine_handle<> handle) { return false; }
+        bool await_suspend(std::coroutine_handle<> /*handle*/) { return false; }
         auto on_resume()
         {
             if (auto r = world().get_rigid(handle)) return *r;
@@ -665,6 +825,49 @@ struct get_rigid
         }
     };
     object_handle h;
+};
+
+struct get_world
+{
+    struct awaiter_type : detail::awaiter
+    {
+        using no_expect = detail::no_expect_t;
+
+        awaiter_type(detail::task_promise_base &promise, get_world aw) : awaiter(promise) {}
+
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        [[nodiscard]] bool await_ready() const noexcept { return true; }
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        bool await_suspend(std::coroutine_handle<> /*handle*/) { return false; }
+        auto &on_resume() noexcept { return world(); }
+    };
+};
+
+struct raycast
+{
+    struct awaiter_type : detail::awaiter
+    {
+        using no_expect = detail::no_expect_t;
+
+        awaiter_type(detail::task_promise_base &promise, raycast aw)
+            : awaiter(promise), r(aw.r), max_dist(aw.max_dist)
+        {
+        }
+
+        ray r;
+        quantity<si::metre> max_dist;
+
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        [[nodiscard]] bool await_ready() const noexcept { return true; }
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        bool await_suspend(std::coroutine_handle<> /*handle*/) { return false; }
+
+        generator<std::pair<world_base::handle, quantity<si::metre>>> on_resume()
+        { return world().raycast(r, max_dist); }
+    };
+
+    ray r;
+    quantity<si::metre> max_dist = std::numeric_limits<quantity<si::metre>>::max();
 };
 
 } // namespace physkit

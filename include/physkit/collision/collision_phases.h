@@ -336,6 +336,9 @@ public:
           M_pair_manager(pair_capacity)
     { M_moved.reserve((static_capacity + dynamic_capacity) / 3); }
 
+    [[nodiscard]] auto &static_tree() const { return M_static_tree; }
+    [[nodiscard]] auto &dynamic_tree() const { return M_dynamic_tree; }
+
     auto add(dynamic_bvh::object_handle object_id, const aabb &bounds, bool is_static)
     {
         if (is_static) return M_static_tree.add(object_id, bounds);

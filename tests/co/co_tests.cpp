@@ -35,7 +35,7 @@ void wait()
         elapsed = *co_await next_frame{};
         CHECK_APPROX(elapsed, frame_ds.in(s));
 
-        elapsed = *co_await wait_until(2 * s);
+        elapsed = *co_await wait_until_time(2 * s);
         CHECK_APPROX(elapsed, 1.0 * s, time_eps);
     };
     w.add_task(t());
@@ -97,8 +97,8 @@ void wait_until_past_time()
     {
         // First advance the clock
         co_await wait_for(1.0 * s);
-        // Then wait_until a time already passed — should be ready immediately
-        auto elapsed = *co_await wait_until(0.5 * s);
+        // Then wait_until_time a time already passed — should be ready immediately
+        auto elapsed = *co_await wait_until_time(0.5 * s);
         CHECK_APPROX(elapsed, 0.0 * s, time_eps);
         completed = true;
     };
@@ -128,7 +128,7 @@ void wait_for_multiple_sequential()
         CHECK_APPROX(e3, 0.2 * s, time_eps);
 
         // Total elapsed should be 1.0s
-        auto e4 = *co_await wait_until(1.0 * s);
+        auto e4 = *co_await wait_until_time(1.0 * s);
         CHECK_APPROX(e4, 0.0 * s, time_eps);
         completed = true;
     };
@@ -416,10 +416,7 @@ void collision_with_specific_object()
     auto t2 = [](object_handle a, object_handle c) -> task<>
     {
         auto result = *co_await wait_for_any{wait_for_collision(a, c), wait_for(4 * s)};
-        if (result.index() == 1)
-            completed_ac = false;
-        else
-            completed_ac = true;
+        completed_ac = result.index() != 1;
     };
 
     w.add_task(t(a, b));
@@ -556,7 +553,7 @@ void wait_for_all_temporal()
     {
         // wait_for_all with different durations — should complete after the longest
         auto [e1, e2, e3] =
-            *co_await wait_for_all{wait_for(0.2 * s), wait_for(0.5 * s), wait_for(0.1 * s)};
+            co_await wait_for_all{wait_for(0.2 * s), wait_for(0.5 * s), wait_for(0.1 * s)};
         CHECK_APPROX(*e1, 0.2 * s, time_eps);
         CHECK_APPROX(*e2, 0.5 * s, time_eps);
         CHECK_APPROX(*e3, 0.1 * s, time_eps);
@@ -578,7 +575,7 @@ void wait_for_all_with_subtasks()
 
     auto t = []() -> task<>
     {
-        auto [a, b] = *co_await wait_for_all{make_value(10), make_value(20)};
+        auto [a, b] = co_await wait_for_all{make_value(10), make_value(20)};
         CHECK(a == 10);
         CHECK(b == 20);
         completed = true;
@@ -602,7 +599,7 @@ void wait_for_all_void_and_value()
     auto t = []() -> task<>
     {
         // Mix void and valued awaitables
-        auto [_, val] = *co_await wait_for_all{void_wait_task(), make_value(42)};
+        auto [_, val] = co_await wait_for_all{void_wait_task(), make_value(42)};
         CHECK(val == 42);
         completed = true;
     };
@@ -622,7 +619,7 @@ void wait_for_all_exception()
 
     auto t = []() -> task<>
     {
-        auto tuple_res = *co_await wait_for_all{failing_subtask(), make_value(10)};
+        auto tuple_res = co_await wait_for_all{failing_subtask(), make_value(10)};
         auto &fail_res = std::get<0>(tuple_res);
         CHECK(!fail_res.has_value());
         CHECK(fail_res.error().value == error::exception_thrown);
@@ -661,7 +658,7 @@ void wait_for_any_temporal()
             *co_await wait_for_any{wait_for(1.0 * s), wait_for(0.1 * s), wait_for(0.5 * s)};
         // Index 1 (the 0.1s wait) should complete first
         CHECK(result.index() == 1);
-        CHECK_APPROX(*std::get<1>(result), 0.1 * s, time_eps);
+        CHECK_APPROX(std::get<1>(result), 0.1 * s, time_eps);
         completed = true;
     };
     w.add_task(t());
@@ -703,31 +700,16 @@ void wait_for_any_all_fail()
 {
     world<semi_implicit_euler> w(no_gravity());
 
-    static bool caught = false;
-    caught = false;
-
     auto t = []() -> task<>
     {
-        auto result_variant = *co_await wait_for_any{failing_subtask(), failing_subtask()};
-
-        std::visit(
-            [&](auto &&val)
-            {
-                using T = std::decay_t<decltype(val)>;
-                if constexpr (!std::is_same_v<T, std::monostate>)
-                {
-                    CHECK(!val.has_value());
-                    CHECK(val.error().value == error::exception_thrown);
-                    caught = true;
-                }
-            },
-            result_variant);
+        auto result_expected = co_await wait_for_any{failing_subtask(), failing_subtask()};
+        CHECK(!result_expected.has_value());
+        CHECK(result_expected.error().value == error::exception_thrown);
     };
     w.add_task(t());
 
     stepper stepper(w, frame_ds);
     stepper.update(2 * s);
-    CHECK(caught);
 }
 
 void wait_for_any_collision_or_timeout()
@@ -997,8 +979,7 @@ void wait_for_all_with_next_frame()
     auto t = []() -> task<>
     {
         // Both should complete: next_frame in one frame, wait_for in many
-        auto [frame_elapsed, wait_elapsed] =
-            *co_await wait_for_all{next_frame{}, wait_for(0.1 * s)};
+        auto [frame_elapsed, wait_elapsed] = co_await wait_for_all{next_frame{}, wait_for(0.1 * s)};
         CHECK_APPROX(*frame_elapsed, frame_ds.in(s));
         CHECK_APPROX(*wait_elapsed, 0.1 * s, time_eps);
         completed = true;
@@ -1069,7 +1050,7 @@ int main()
     s.group("Temporal waits").test("basic waits", tests::wait);
     s.group("Temporal waits").test("zero duration", tests::wait_for_zero_duration);
     s.group("Temporal waits").test("negative duration", tests::wait_for_negative_duration);
-    s.group("Temporal waits").test("wait_until past time", tests::wait_until_past_time);
+    s.group("Temporal waits").test("wait_until_time past time", tests::wait_until_past_time);
     s.group("Temporal waits").test("sequential waits", tests::wait_for_multiple_sequential);
     s.group("Temporal waits").test("next_physics_tick", tests::next_physics_tick_test);
     s.group("Temporal waits").test("multiple next_frames", tests::multiple_next_frames);

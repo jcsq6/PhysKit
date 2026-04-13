@@ -49,6 +49,8 @@ private:
     std::size_t M_solver_iterations = 10;
 };
 
+using task_handle = detail::task_handler::task_handle;
+
 namespace detail
 {
 struct obj_node
@@ -223,7 +225,15 @@ public:
 
     [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
 
-    void add_task(task<> t) { M_task_handler.add_task(std::move(t), {}); }
+    task_handle add_task(task<> t) { return M_task_handler.add_task(std::move(t), {}); }
+    bool cancel_task(task_handle handle)
+    {
+        M_task_handler.cancel_task(handle.id(), {});
+        return true;
+    }
+
+    [[nodiscard]] bool task_active(task_handle handle) const
+    { return M_task_handler.task_active(handle.id()); }
 
     void step(quantity<si::second> dt)
     {
@@ -249,6 +259,68 @@ public:
     virtual ~world_base() = default;
 
     [[nodiscard]] auto &gravity() const { return M_gravity; }
+
+    // Raycast into world, return range of object hit and distance
+    [[nodiscard]] generator<std::pair<handle, mp_units::quantity<si::metre>>>
+    raycast(ray r, quantity<si::metre> max_dist) const
+    {
+        auto static_gen = M_broad.static_tree().raycast(r, max_dist);
+        auto dynamic_gen = M_broad.dynamic_tree().raycast(r, max_dist);
+
+        auto static_it = static_gen.begin();
+        auto dynamic_it = dynamic_gen.begin();
+
+        auto static_distance = std::numeric_limits<quantity<si::metre>>::max();
+        auto dynamic_distance = std::numeric_limits<quantity<si::metre>>::max();
+
+        auto static_handle = handle::from_id(handle::null);
+        auto dynamic_handle = handle::from_id(handle::null);
+
+        bool has_static = static_it != static_gen.end();
+        bool has_dynamic = dynamic_it != dynamic_gen.end();
+
+        auto make_value = [this](auto &&entry)
+        { return std::make_pair(M_rigid.get_slot_handle(entry.first), entry.second); };
+
+        auto fetch = [make_value](auto &gen_it, auto &handle, auto &distance)
+        {
+            std::tie(handle, distance) = make_value(*gen_it);
+            ++gen_it;
+        };
+
+        if (has_static) fetch(static_it, static_handle, static_distance);
+        if (has_dynamic) fetch(dynamic_it, dynamic_handle, dynamic_distance);
+
+        while (has_static && has_dynamic)
+        {
+            if (static_distance <= dynamic_distance)
+            {
+                co_yield {static_handle, static_distance};
+                has_static = static_it != static_gen.end();
+                if (has_static) fetch(static_it, static_handle, static_distance);
+            }
+            else
+            {
+                co_yield {dynamic_handle, dynamic_distance};
+                has_dynamic = dynamic_it != dynamic_gen.end();
+                if (has_dynamic) fetch(dynamic_it, dynamic_handle, dynamic_distance);
+            }
+        }
+
+        while (has_static)
+        {
+            co_yield {static_handle, static_distance};
+            has_static = static_it != static_gen.end();
+            if (has_static) fetch(static_it, static_handle, static_distance);
+        }
+
+        while (has_dynamic)
+        {
+            co_yield {dynamic_handle, dynamic_distance};
+            has_dynamic = dynamic_it != dynamic_gen.end();
+            if (has_dynamic) fetch(dynamic_it, dynamic_handle, dynamic_distance);
+        }
+    }
 
 protected:
     auto &rigids(this auto &&self) { return self.M_rigid; }
@@ -282,10 +354,7 @@ private:
     auto execute_command(detail::add_task_command &cmd)
     { return M_task_handler.add_task(std::move(cmd.t), {}); }
     bool execute_command(detail::cancel_task_command &cmd)
-    {
-        M_task_handler.cancel_task(cmd.handle.id(), {});
-        return true;
-    }
+    { return M_task_handler.cancel_task(cmd.handle.id(), {}); }
     auto execute_command(detail::add_rigid_command &cmd) { return create_rigid(cmd.desc); }
 
     auto execute_command(detail::destroy_rigid_command &cmd) { return remove_rigid(cmd.h); }

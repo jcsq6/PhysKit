@@ -16,6 +16,7 @@ import std;
 #include <vector>
 #endif
 
+#include "../detail/generator.h"
 #include "bounds.h"
 
 PHYSKIT_EXPORT
@@ -366,6 +367,57 @@ public:
                 // distance. returning 0.0 * m ends the raycast
                 max_distance = callback(node.data, *d_node, max_distance);
                 if (max_distance <= 0.0 * si::metre) return;
+                continue;
+            }
+
+            assert(sp + 1 < stack_size &&
+                   "BVH stack overflow: adjust detail::dynamic_bvh::stack_size");
+
+            auto [left, right] = node.children;
+            auto d_left = r.intersect_distance(M_nodes[left].bounds, max_distance);
+            auto d_right = r.intersect_distance(M_nodes[right].bounds, max_distance);
+
+            if (d_left && d_right)
+            {
+                // push further node first so that closer one is processed first
+                if (*d_left > *d_right)
+                {
+                    stack[sp++] = left;
+                    stack[sp++] = right;
+                }
+                else
+                {
+                    stack[sp++] = right;
+                    stack[sp++] = left;
+                }
+            }
+            else if (d_left)
+                stack[sp++] = left;
+            else if (d_right)
+                stack[sp++] = right;
+        }
+    }
+
+    [[nodiscard]] generator<std::pair<object_handle, quantity<si::metre>>>
+    raycast(ray r, quantity<si::metre> max_distance) const
+    {
+        if (M_root == node::null) co_return;
+
+        std::array<node_handle, stack_size> stack{};
+        int sp = 0;
+        stack[sp++] = M_root;
+
+        while (sp > 0)
+        {
+            auto node_idx = stack[--sp];
+            const auto &node = M_nodes[node_idx];
+
+            auto d_node = r.intersect_distance(node.bounds, max_distance);
+            if (!d_node.has_value()) continue;
+
+            if (node.is_leaf())
+            {
+                co_yield {node.data, *d_node};
                 continue;
             }
 
