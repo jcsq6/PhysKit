@@ -26,7 +26,7 @@ template <typename T> struct arena
     struct slot
     {
         std::optional<T> value;
-        std::uint16_t gen;
+        std::uint32_t gen;
 
         [[nodiscard]] bool available() const { return !value.has_value(); }
     };

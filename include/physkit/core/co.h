@@ -105,7 +105,7 @@ class awaiter
 public:
     awaiter(task_promise_base &promise) : M_promise(promise) {}
 
-    auto await_resume(this auto &&self) -> std::expected<decltype(self.on_resume()), error>
+    auto await_resume(this auto &&self) noexcept -> std::expected<decltype(self.on_resume()), error>
         requires(!no_expect_awaiter<std::remove_cvref_t<decltype(self)>>)
     {
         try
@@ -117,9 +117,7 @@ public:
                 return {};
             }
             else
-            {
                 return self.on_resume();
-            }
         }
         catch (error::code c)
         {
@@ -134,7 +132,10 @@ public:
 
     decltype(auto) await_resume(this auto &&self)
         requires(no_expect_awaiter<std::remove_cvref_t<decltype(self)>>)
-    { return self.on_resume(); }
+    {
+        self.promise().check_rethrow();
+        return self.on_resume();
+    }
 
 protected:
     [[nodiscard]] task_promise_base &promise() const { return M_promise; }
@@ -203,9 +204,9 @@ struct task_promise_base
 
     auto await_transform(auto &&other) = delete;
 
-    void check_rethrow() const
+    void check_rethrow()
     {
-        if (exception) std::rethrow_exception(exception);
+        if (exception) std::rethrow_exception(std::exchange(exception, nullptr));
     }
 
     void set_error(auto &&e) { exception = std::make_exception_ptr(std::forward<decltype(e)>(e)); }
@@ -560,9 +561,8 @@ public:
 
         if (auto it = M_object_deps.find(obj); it != M_object_deps.end())
         {
-            thread_local std::vector<dependency> copy;
-            copy = it->second;
-            for (auto [tid, source_obj] : copy)
+            auto tmp = std::move(it->second);
+            for (auto [tid, source_obj] : tmp)
             {
                 remove_collision_waiter(source_obj, tid);
                 remove_collision_exit_waiter(source_obj, tid);

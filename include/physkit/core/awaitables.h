@@ -296,7 +296,8 @@ namespace detail
 {
 struct completion_barrier
 {
-    std::atomic<std::size_t> remaining; // atomic to prepare for threading support
+    // std::atomic<std::size_t> remaining; // atomic to prepare for threading support
+    std::size_t remaining;
     task_id parent;
     task_handler *handler;
 
@@ -308,16 +309,20 @@ struct completion_barrier
 
 struct race_barrier
 {
-    std::atomic<bool> finished{false};
-    std::atomic<std::size_t> failures{0};
+    // std::atomic<bool> finished{false};
+    // std::atomic<std::size_t> failures{0};
+    bool finished = false;
+    std::size_t failures = 0;
     std::size_t total;
     task_id parent;
     task_handler *handler;
 
     bool claim_win()
     {
-        bool expected = false;
-        return finished.compare_exchange_strong(expected, true);
+        // bool expected = false;
+        // return finished.compare_exchange_strong(expected, true);
+        if (finished) return false;
+        return (finished = true);
     }
 
     void wake_parent() const { handler->queue_immediate_task(parent); }
@@ -327,8 +332,8 @@ struct race_barrier
         if (++failures == total)
         {
             bool expected = false;
-            if (finished.compare_exchange_strong(expected, true))
-                handler->queue_immediate_task(parent);
+            // if (finished.compare_exchange_strong(expected, true))
+            if (!finished) handler->queue_immediate_task(parent);
         }
     }
 };
@@ -340,12 +345,12 @@ template <typename T> using wrap_void_t = std::conditional_t<std::is_void_v<T>, 
 
 template <awaitable Awaitable>
 using await_result_t =
-    std::conditional_t<detail::no_expect_awaiter<Awaitable>,
+    std::conditional_t<no_expect_awaiter<awaitable_awaiter_t<Awaitable>>,
                        wrap_void_t<raw_await_result_t<Awaitable>>, raw_await_result_t<Awaitable>>;
 
 template <awaitable Awaitable>
 using unwrap_await_result_t =
-    std::conditional_t<detail::no_expect_awaiter<Awaitable>,
+    std::conditional_t<no_expect_awaiter<awaitable_awaiter_t<Awaitable>>,
                        wrap_void_t<raw_await_result_t<Awaitable>>,
                        typename raw_await_result_t<Awaitable>::value_type>;
 
@@ -377,7 +382,7 @@ struct wait_for_all
 
         template <typename Awaitable> detail::await_result_t<Awaitable> default_for()
         {
-            if constexpr (detail::no_expect_awaiter<Awaitable>)
+            if constexpr (detail::no_expect_awaiter<detail::awaitable_awaiter_t<Awaitable>>)
                 return {};
             else
                 return std::unexpected(error{.value = error::unknown});
@@ -407,8 +412,21 @@ struct wait_for_all
 
         template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
         {
-            if constexpr (std::is_void_v<detail::raw_await_result_t<Aw>>)
-                co_await std::move(aw);
+            if constexpr (detail::no_expect_awaiter<detail::awaitable_awaiter_t<Aw>>)
+            {
+                try
+                {
+                    if constexpr (std::is_void_v<detail::raw_await_result_t<Aw>>)
+                        co_await std::move(aw);
+                    else
+                        std::get<I>(results) = co_await std::move(aw);
+                }
+                catch (...)
+                {
+                    barrier->arrive();
+                    throw;
+                }
+            }
             else
                 std::get<I>(results) = co_await std::move(aw);
             barrier->arrive();
@@ -462,7 +480,8 @@ struct wait_for_any
             for (auto &id : child_ids)
                 cancel_task(std::exchange(id, detail::arena<task<>>::handle::null));
 
-            if (barrier->failures.load() == barrier->total)
+            // if (barrier->failures.load() == barrier->total)
+            if (barrier->failures == barrier->total)
                 throw std::runtime_error(std::format(
                     "All awaitables failed: {:s}", errors |
                                                        std::views::transform(
@@ -487,7 +506,7 @@ struct wait_for_any
         template <std::size_t I, typename Aw> task<> wrap_awaitable(Aw aw)
         {
             using await_result = detail::raw_await_result_t<Aw>;
-            if constexpr (detail::no_expect_awaiter<Aw>)
+            if constexpr (detail::no_expect_awaiter<detail::awaitable_awaiter_t<Aw>>)
             {
                 if constexpr (std::is_void_v<await_result>)
                 {
@@ -616,10 +635,7 @@ template <typename SetupFn> struct wait_for_event<SetupFn, void>
 
         [[nodiscard]] bool await_ready() const noexcept { return false; }
         void await_suspend(std::coroutine_handle<> /*handle*/)
-        {
-            std::invoke(std::move(setup_fn),
-                        physkit_bind_front(&awaiter_type::queue_resume, *this));
-        }
+        { std::invoke(std::move(setup_fn), physkit_bind_front(&awaiter_type::queue_resume, this)); }
 
         void on_resume() {}
     };
