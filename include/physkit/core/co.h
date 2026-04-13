@@ -250,21 +250,24 @@ public:
         if (M_handle) M_handle.promise().root_leaf = M_handle;
     }
     task(const task &) = delete;
-    task(task &&other) noexcept : M_handle(other.M_handle) { other.M_handle = nullptr; }
+    task(task &&other) noexcept : M_handle(std::exchange(other.M_handle, nullptr)) {}
     task &operator=(const task &) = delete;
     task &operator=(task &&other) noexcept
     {
         if (this != &other)
         {
             if (M_handle) M_handle.destroy();
-            M_handle = other.M_handle;
-            other.M_handle = nullptr;
+            M_handle = std::exchange(other.M_handle, nullptr);
         }
         return *this;
     }
     ~task()
     {
-        if (M_handle) M_handle.destroy();
+        if (M_handle)
+        {
+            M_handle.destroy();
+            M_handle = nullptr;
+        }
     }
 
     void set_world(world_base &w, detail::passkey<detail::task_handler> /*key*/) const
@@ -283,12 +286,7 @@ public:
             auto leaf = *M_handle.promise().root_leaf_ptr;
             if (leaf && !leaf.done()) leaf.resume();
 
-            if (M_handle.done())
-            {
-                M_handle.destroy();
-                M_handle = nullptr;
-                return true;
-            }
+            if (M_handle.done()) return true;
         }
 
         return false;

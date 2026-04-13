@@ -44,7 +44,6 @@ Using PhysKit's `task<>`, we can write the exact same logic sequentially using `
 
 ```cpp
 task<vec3<si::metre>> throw_grenade(app* self, vec3<si::metre> pos, vec3<si::metre> vel, quantity<si::second> fuse_time) {
-    // All co_await operations return a std::expected<T, physkit::error>.
     // Use * or .value() to extract the result when success is guaranteed.
     
     // 1. Create the grenade

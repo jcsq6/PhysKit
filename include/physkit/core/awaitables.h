@@ -581,13 +581,13 @@ template <typename SetupFn, typename DestroyFn = void> struct wait_for_event
         [[nodiscard]] bool await_ready() const noexcept { return false; }
         void await_suspend(std::coroutine_handle<> /*handle*/)
         {
-            is_suspended = true;
             if constexpr (std::is_void_v<construct_result_t>)
                 std::invoke(std::move(setup_fn),
                             physkit_bind_front(&awaiter_type_base::queue_resume, this));
             else
                 value = std::invoke(std::move(setup_fn),
                                     physkit_bind_front(&awaiter_type_base::queue_resume, this));
+            is_suspended = true;
         }
 
         void on_resume()
