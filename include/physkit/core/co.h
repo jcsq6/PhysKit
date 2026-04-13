@@ -42,24 +42,27 @@ struct error
     code value;
     std::exception_ptr exception;
 
-    [[nodiscard]] std::string message() const
+    static error from_exception(std::exception_ptr e);
+
+    [[nodiscard]] constexpr static std::string_view code_string(code value) noexcept
     {
-        std::string_view code_str;
         switch (value)
         {
         case stale_handle:
-            code_str = "Stale handle";
-            break;
+            return "Stale handle";
         case object_destroyed:
-            code_str = "Object destroyed";
-            break;
+            return "Object destroyed";
         case exception_thrown:
-            code_str = "Exception thrown in task";
-            break;
+            return "Exception thrown in task";
         case unknown:
-            code_str = "Unknown error";
-            break;
+            return "Unknown error";
+        default:
+            return "Invalid error code";
         }
+    }
+
+    [[nodiscard]] std::string message() const
+    {
         if (exception)
         {
             try
@@ -68,18 +71,40 @@ struct error
             }
             catch (const std::exception &e)
             {
-                return std::format("Code: {}, Exception: {}", code_str, e.what());
+                return std::format("({}, {})", code_string(value), e.what());
             }
             catch (...)
             {
-                return std::format("Code: {}, Unknown exception thrown", code_str);
+                return std::format("({}, unknown exception thrown)", code_string(value));
             }
         }
-        return std::format("Code: {}", code_str);
+        return std::format("({})", code_string(value));
     }
-
-private:
 };
+
+struct internal_error : std::runtime_error
+{
+    // NOLINTNEXTLINE
+    internal_error(error::code c) : std::runtime_error(error::code_string(c).data()), value(c) {}
+
+    error::code value;
+};
+
+inline error error::from_exception(std::exception_ptr e)
+{
+    try
+    {
+        std::rethrow_exception(std::move(e));
+    }
+    catch (const internal_error &err)
+    {
+        return {.value = err.value};
+    }
+    catch (...)
+    {
+        return error{.value = exception_thrown, .exception = std::current_exception()};
+    }
+}
 
 namespace detail
 {
@@ -119,14 +144,9 @@ public:
             else
                 return self.on_resume();
         }
-        catch (error::code c)
-        {
-            return std::unexpected(error{.value = c});
-        }
         catch (...)
         {
-            return std::unexpected(
-                error{.value = error::exception_thrown, .exception = std::current_exception()});
+            return std::unexpected(error::from_exception(std::current_exception()));
         }
     }
 
@@ -346,14 +366,9 @@ template <typename T> struct task_awaiter
             else
                 return t.get_result();
         }
-        catch (error::code c)
-        {
-            return std::unexpected(error{.value = c});
-        }
         catch (...)
         {
-            return std::unexpected(
-                error{.value = error::exception_thrown, .exception = std::current_exception()});
+            return std::unexpected(error::from_exception(std::current_exception()));
         }
     }
 };
@@ -492,6 +507,7 @@ public:
                               if (w.with != other_id && w.with != null_id) return false;
 
                               if (w.result_storage) *w.result_storage = man_info;
+                              if (w.with != null_id) remove_dependency(w.with, w.task);
                               queue_post_task(w.task);
                               return true;
                           });
@@ -519,6 +535,8 @@ public:
 
                               if (w.a) *w.a = obj_a;
                               if (w.b) *w.b = obj_b;
+
+                              if (w.with != null_id) remove_dependency(w.with, w.task);
 
                               queue_post_task(w.task);
                               return true;

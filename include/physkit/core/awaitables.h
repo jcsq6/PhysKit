@@ -175,7 +175,7 @@ struct wait_for_collision
 
         result_type on_resume()
         {
-            if (!is_suspended) throw error::stale_handle;
+            if (!is_suspended) throw internal_error(error::stale_handle);
             is_suspended = false;
             if (result.a == object.index())
                 return {.other = world_base::handle::from_id(result.b),
@@ -227,7 +227,7 @@ struct wait_for_separation
 
         world_base::handle on_resume()
         {
-            if (!is_suspended) throw error::stale_handle;
+            if (!is_suspended) throw internal_error(error::stale_handle);
             is_suspended = false;
             return world_base::handle::from_id((result_a == object.id()) ? result_b : result_a);
         }
@@ -282,7 +282,7 @@ struct wait_until_destroyed
 
         void on_resume()
         {
-            if (!is_suspended) throw error::stale_handle;
+            if (!is_suspended) throw internal_error(error::stale_handle);
             is_suspended = false;
         }
     };
@@ -356,6 +356,28 @@ using unwrap_await_result_t =
 
 } // namespace detail
 
+class aggregate_exception : std::exception
+{
+    absl::InlinedVector<error, 4> M_errors;
+    std::string M_message;
+
+public:
+    template <std::ranges::range Range>
+    aggregate_exception(Range &&err_range) // NOLINT
+        : M_errors(std::ranges::begin(err_range), std::ranges::end(err_range)),
+          M_message(
+              std::format("{} errors occurred: {:n}", this->M_errors.size(),
+                          M_errors | std::views::transform([](auto &e) { return e.message(); })))
+    {
+    }
+
+    [[nodiscard]] bool empty() const { return M_errors.empty(); }
+
+    [[nodiscard]] auto errors() const { return std::span{M_errors.data(), M_errors.size()}; }
+
+    [[nodiscard]] const char *what() const noexcept override { return M_message.c_str(); }
+};
+
 template <detail::awaitable... Awaitables>
     requires(sizeof...(Awaitables) > 1)
 struct wait_for_all
@@ -363,6 +385,24 @@ struct wait_for_all
     struct awaiter_type : detail::awaiter
     {
         using no_expect = detail::no_expect_t;
+
+        static constexpr std::size_t num_no_expect_awaitables =
+            (std::size_t{0} + ... +
+             (detail::no_expect_awaiter<detail::awaitable_awaiter_t<Awaitables>> ? 1 : 0));
+
+        [[nodiscard]] consteval std::size_t no_expect_index(std::size_t i) const
+        {
+            std::size_t count = 0;
+            for (std::size_t idx = 0; idx < sizeof...(Awaitables); ++idx)
+            {
+                if (detail::no_expect_awaiter<detail::awaitable_awaiter_t<Awaitables...[idx]>>)
+                {
+                    if (count == i) return idx;
+                    ++count;
+                }
+            }
+            throw std::out_of_range("Invalid no-expect awaitable index");
+        }
 
         awaiter_type(detail::task_promise_base &promise, wait_for_all aw)
             : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
@@ -392,6 +432,7 @@ struct wait_for_all
         std::tuple<Awaitables...> awaitables;
         std::optional<detail::completion_barrier> barrier;
         std::array<detail::task_id, sizeof...(Awaitables)> child_ids;
+        [[no_unique_address]] std::array<std::optional<error>, num_no_expect_awaitables> errors;
 
         [[nodiscard]] bool await_ready() const noexcept { return false; }
 
@@ -400,7 +441,17 @@ struct wait_for_all
             barrier.emplace(sizeof...(Awaitables), promise().id, &handler());
             spawn_children(std::index_sequence_for<Awaitables...>{});
         }
-        auto on_resume() noexcept { return std::move(results); }
+        auto on_resume()
+        {
+            if constexpr (num_no_expect_awaitables > 0)
+            {
+                aggregate_exception ex(errors |
+                                       std::views::filter([](auto &e) { return e.has_value(); }) |
+                                       std::views::transform([](auto &e) { return *e; }));
+                if (!ex.empty()) throw std::move(ex);
+            }
+            return std::move(results);
+        }
 
     private:
         template <std::size_t... Is> void spawn_children(std::index_sequence<Is...> /*unused*/)
@@ -423,8 +474,7 @@ struct wait_for_all
                 }
                 catch (...)
                 {
-                    barrier->arrive();
-                    throw;
+                    errors[no_expect_index(I)] = error::from_exception(std::current_exception());
                 }
             }
             else
@@ -482,16 +532,9 @@ struct wait_for_any
 
             // if (barrier->failures.load() == barrier->total)
             if (barrier->failures == barrier->total)
-                throw std::runtime_error(std::format(
-                    "All awaitables failed: {:s}", errors |
-                                                       std::views::transform(
-                                                           [](auto &e)
-                                                           {
-                                                               if (e)
-                                                                   return std::to_string(e->value);
-                                                               return std::string();
-                                                           }) |
-                                                       std::views::join_with(std::string(", "))));
+                throw aggregate_exception(
+                    errors | std::views::filter([](auto &e) { return e.has_value(); }) |
+                    std::views::transform([](auto &e) { return *e; }));
             return std::move(result);
         }
 
@@ -777,7 +820,7 @@ template <policy p = policy::wait> struct remove_constraint
             requires(p == policy::wait)
         {
             if (auto opt = std::move(this->result)) return std::move(*opt);
-            throw error::stale_handle;
+            throw internal_error(error::stale_handle);
         }
     };
 
@@ -813,7 +856,7 @@ template <policy p = policy::wait> struct destroy_rigid
             requires(p == policy::wait)
         {
             if (auto opt = std::move(this->result)) return std::move(*opt);
-            throw error::stale_handle;
+            throw internal_error(error::stale_handle);
         }
     };
     object_handle h;
@@ -837,7 +880,7 @@ struct get_rigid
         auto on_resume()
         {
             if (auto r = world().get_rigid(handle)) return *r;
-            throw error::stale_handle;
+            throw internal_error(error::stale_handle);
         }
     };
     object_handle h;
