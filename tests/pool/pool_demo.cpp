@@ -6,6 +6,7 @@
 #ifndef PHYSKIT_IMPORT_STD
 #include <algorithm>
 #include <coroutine> // IWYU pragma: keep
+#include <optional>
 #endif
 
 #ifdef PHYSKIT_MODULES
