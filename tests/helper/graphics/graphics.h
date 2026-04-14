@@ -631,7 +631,6 @@ GRAPHICS_EXPORT namespace graphics
         {
             switch (phys_shape.type())
             {
-            default:
             case physkit::shape::type::shape_mesh:
                 return M_phys_shape_map
                     .emplace(&phys_shape,
@@ -649,6 +648,13 @@ GRAPHICS_EXPORT namespace graphics
                     .emplace(&phys_shape,
                              std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape.box())))
                     .first->second;
+            case physkit::shape::type::shape_cone:
+                return M_phys_shape_map
+                    .emplace(&phys_shape,
+                             std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape.cone())))
+                    .first->second;
+            default:
+                std::unreachable();
             }
         }
         void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
