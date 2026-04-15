@@ -1,6 +1,9 @@
 #pragma once
+
+#include "physkit/detail/util.h"
 #include "world.h"
 
+PHYSKIT_EXPORT
 namespace physkit
 {
 class fixed_accum
@@ -8,7 +11,13 @@ class fixed_accum
 public:
     fixed_accum(quantity<si::second> fixed_dt) : M_dt(fixed_dt) {}
 
-    void update(quantity<si::second> dt) { M_accum += dt; }
+    void update(quantity<si::second> dt)
+    {
+#if !defined(NDEBUG) && !defined(PHYSKIT_NO_DEBUG_LIMITER)
+        if (detail::is_debugger_present()) dt = std::min(dt, 0.1 * si::second);
+#endif
+        M_accum += dt;
+    }
 
     [[nodiscard]] bool should_step()
     {
@@ -33,7 +42,7 @@ class stepper
 {
 public:
     stepper() : M_accum(1.0 / 60.0 * si::second), M_w{} {}
-    stepper(world &w, quantity<si::second> dt) : M_accum(dt), M_w(&w) {}
+    stepper(world_base &w, quantity<si::second> dt) : M_accum(dt), M_w(&w) {}
 
     void update(quantity<si::second> dt)
     {
@@ -46,7 +55,7 @@ public:
     [[nodiscard]] auto alpha() const { return M_accum.alpha(); }
 
     // resets accumulator and sets world
-    void reset(world &w, quantity<si::second> dt)
+    void reset(world_base &w, quantity<si::second> dt)
     {
         M_w = &w;
         M_accum = fixed_accum{dt};
@@ -54,7 +63,7 @@ public:
 
 private:
     fixed_accum M_accum;
-    world *M_w;
+    world_base *M_w;
 };
 
 } // namespace physkit

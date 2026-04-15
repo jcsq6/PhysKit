@@ -1,0 +1,9 @@
+#ifdef PHYSKIT_IN_MODULE_IMPL
+#define PHYSKIT_EXPORT export
+#define PHYSKIT_EXPORT_BEG export {
+#define PHYSKIT_EXPORT_END }
+#else
+#define PHYSKIT_EXPORT
+#define PHYSKIT_EXPORT_BEG
+#define PHYSKIT_EXPORT_END
+#endif

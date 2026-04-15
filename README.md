@@ -6,15 +6,25 @@ Depends on:
 - `mp-units`
 
 # Build
-With Conan, run:  
-```sh
-conan remote add conan-mpusz https://mpusz.jfrog.io/artifactory/api/conan/conan-oss
-```
-
 Ensure you have a compliant C++26 conan profile, and then run:
 ```sh
 conan build -pr <myprof|default> . -s build_type=<Release|Debug> --build=missing -u
 ```
+
+To build PhysKit as a C++ module, run:
+
+```sh
+conan build -pr <myprof|default> . -s build_type=<Release|Debug> --build=missing -u -o "&:physkit_modules=True"
+```
+
+### Conan Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `physkit_modules` | `True` | Build as C++ modules; consumers `import physkit;` |
+| `import_std` | `False` | Use `import std;` inside module units (experimental) |
+| `build_tests` | `True` | Include tests, demos, and graphical tests |
+| `dev` | `True` | Export `compile_commands.json` and enable header-set verification |
 
 ## Windows (MSYS2)
 
@@ -51,6 +61,8 @@ Adjust the compiler paths to match your MSYS2 installation.
 
 > **See the [Graphics & Demo Framework documentation](tests/README.md)** for a comprehensive guide covering the configuration API (JSON + CLI + builder), the `graphics_app` base class, camera controls, animation tracks, scene objects, and mesh helpers.
 
+> **See the [Coroutine Task Orchestration documentation](docs/coroutines.md)** for a guide on how to orchestrate complex simulation events using C++ coroutines, bypassing the need for tedious manual state management.
+
 ### Complete Example
 
 See [tests/graphics_demo/main.cpp](tests/graphics_demo/main.cpp) for a working demonstration of camera tracks in action, featuring a smooth camera path that visits multiple points of interest while maintaining focus on different targets.
@@ -69,4 +81,4 @@ This installs a pre-commit hook that auto-formats all source files before each c
 ## References
 See the following pages for dependency documentation:
 - [mp-units](https://mpusz.github.io/mp-units/latest/)
-- [Eigen](https://devdocs.io/eigen3/)
+- [Eigen](https://libeigen.gitlab.io/eigen/docs-5.0/)

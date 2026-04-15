@@ -2,13 +2,17 @@
 
 This directory contains a self-contained graphics and configuration framework for building PhysKit demos and visual tests. It is built on top of [Magnum](https://magnum.graphics/) (OpenGL, GLFW) and provides camera animation, JSON+CLI configuration, instanced rendering, and a ready-made application base class.
 
-**Headers:** [`tests/include/`](include/)
+**Sources:** [`tests/include/`](include/)
 
-| Header | Purpose |
-|--------|---------|
-| [`graphics.h`](include/graphics.h) | Application base class, scene objects, config loader, mesh helpers |
-| [`camera.h`](include/camera.h) | FPS-style camera, keyframe animation tracks |
-| [`convert.h`](include/convert.h) | Conversion utilities between PhysKit and Magnum types |
+| File | Kind | Purpose |
+|------|------|---------|
+| [`graphics.cpp`](include/graphics.cpp) | C++ module unit (`export module graphics`) | Application base class, scene objects, config loader, mesh helpers |
+| [`camera.cpp`](include/camera.cpp) | C++ module unit (`export module graphics.camera`) | FPS-style camera, keyframe animation tracks |
+| [`convert.cpp`](include/convert.cpp) | C++ module unit (`export module graphics.convert`) | Conversion utilities between PhysKit and Magnum types |
+| [`magnum.cpp`](include/magnum.cpp) | C++ module unit (`export module graphics.magnum`) | Magnum engine bootstrap and window management |
+| [`test.h`](include/test.h) | Header (`#include`) | Lightweight test runner, assertion macros, approximate comparisons |
+
+> **Module requirement:** `graphics.cpp`, `camera.cpp`, `convert.cpp`, and `magnum.cpp` are always compiled as C++ named module units — there is no header fallback. Any target that links against `phys_graphics` must be built with `PHYSKIT_MODULES=ON` (the Conan default).
 
 ---
 
@@ -41,6 +45,12 @@ This directory contains a self-contained graphics and configuration framework fo
 - [Scene Objects](#scene-objects)
 - [Mesh Helpers (`mesh_objs`)](#mesh-helpers-mesh_objs)
 - [Type Conversions (`convert.h`)](#type-conversions-converth)
+- [Testing Framework](#testing-framework)
+  - [Writing Tests](#writing-tests)
+  - [Assertion Macros](#assertion-macros)
+  - [Approximate Comparison](#approximate-comparison)
+  - [CMake Integration](#cmake-integration)
+  - [Graphical Tests (`--testing` mode)](#graphical-tests---testing-mode)
 
 ---
 
@@ -49,8 +59,8 @@ This directory contains a self-contained graphics and configuration framework fo
 The minimal demo is a subclass of `graphics_app` with an `update()` override:
 
 ```cpp
-#include <graphics.h>
-#include <mp-units/systems/si/unit_symbols.h>
+import graphics;
+import mp_units;
 
 using namespace graphics;
 using namespace physkit;
@@ -65,7 +75,7 @@ public:
         // Set up objects, camera, etc.
     }
 
-    void update(physkit::quantity<physkit::si::second> dt) override
+    void update(physkit::quantity<mp_units::si::second> dt) override
     {
         // Called every frame before drawing.
     }
@@ -119,7 +129,6 @@ g_config{arguments}
 | `drag` | `bool` | `.drag()` / `.drag_or()` | Mouse drag mode (see [Input Handling](#input-handling)) |
 | `vsync` | `bool` | `.vsync()` / `.vsync_or()` | Vertical sync |
 | `gravity` | `vec3<m/s²>` | `.gravity()` / `.gravity_or()` | World gravity vector |
-| `integrator` | `world_desc::integ_t` | `.integrator()` / `.integrator_or()` | Physics integrator type |
 | `solver_iterations` | `size_t` | `.solver_iterations()` / `.solver_iterations_or()` | Constraint solver iterations |
 | `time_step` | `quantity<second>` | `.time_step()` / `.time_step_or()` | Fixed physics time step |
 
@@ -140,7 +149,6 @@ Pass a JSON file with `--config` / `-c`. The file is deserialized with [Glaze](h
 {
     // World physics
     "gravity": [0.0, -9.81, 0.0],         // m/s², default [0, -9.81, 0]
-    "integrator": "semi_implicit_euler",   // "forward_euler" | "semi_implicit_euler" | "rk4"
     "solver_iterations": 10,               // unsigned integer
 
     // Camera & window (all optional)
@@ -248,7 +256,6 @@ The unconditional setters (`.fov()`, `.cam_pos()`, etc.) bypass this layering an
 | VSync | `true` |
 | Time step | 1/60 s |
 | Gravity | (0, −9.81, 0) m/s² |
-| Integrator | `semi_implicit_euler` |
 | Solver iterations | 10 |
 
 ---
@@ -278,7 +285,7 @@ public:
         // Initialization: add objects, configure camera, etc.
     }
 
-    void update(physkit::quantity<physkit::si::second> dt) override
+    void update(physkit::quantity<mp_units::si::second> dt) override
     {
         // Per-frame logic. Physics step happens automatically after this.
     }
@@ -495,7 +502,7 @@ auto [pos, rot] = track.at(0.5f * s);
 | Class | Inherits | Description |
 |-------|----------|-------------|
 | `gfx_obj` | Magnum `Object<MatrixTransformation3D>` | Base graphics object with standard transform methods |
-| `physics_obj` | `gfx_obj` | Linked to a `physkit::world::handle`; auto-syncs position/orientation each frame |
+| `physics_obj` | `gfx_obj` | Linked to a `physkit::world_base::handle`; auto-syncs position/orientation each frame |
 | `instanced_drawable` | `gfx_obj` + `Drawable3D` | Internal: objects sharing the same mesh are batched for instanced draw |
 | `colored_drawable` | `instanced_drawable` | Adds per-instance color; created automatically by `add_object()` |
 
@@ -548,16 +555,150 @@ Conversion utilities between PhysKit (`physkit::vec`, `physkit::quat`) and Magnu
 using namespace graphics;
 
 // PhysKit → Magnum
-Magnum::Vector3 v = to_magnum_vector<physkit::si::metre, float>(physkit_vec);
-Magnum::Quaternion q = to_magnum_quaternion<physkit::one, float>(physkit_quat);
+Magnum::Vector3 v = to_magnum_vector<mp_units::si::metre, float>(physkit_vec);
+Magnum::Quaternion q = to_magnum_quaternion<mp_units::one, float>(physkit_quat);
 
 // Magnum → PhysKit
-auto pv = to_physkit_vector<physkit::si::metre, float>(magnum_vec);
-auto pq = to_physkit_quaternion<physkit::one, float>(magnum_quat);
+auto pv = to_physkit_vector<mp_units::si::metre, float>(magnum_vec);
+auto pq = to_physkit_quaternion<mp_units::one, float>(magnum_quat);
 
 // PhysKit mesh → Magnum GL::Mesh
 Magnum::GL::Mesh m = to_magnum_mesh(phys_mesh);
 ```
+
+---
+
+## Testing Framework
+
+PhysKit includes a lightweight, header-only testing framework in [`test.h`](include/test.h). It provides a simple test runner with grouped test suites, approximate comparisons for quantities and geometric types, and clear PASS/FAIL output.
+`test.h` is **module-aware**: when `PHYSKIT_MODULES` is defined (the Conan default), it automatically uses `import physkit;` and `import mp_units;` instead of `#include` directives. Tests that only link against `phys_testing` therefore compile in both header and module modes.
+### Headers
+
+| Header | Purpose |
+|--------|---------|
+| [`test.h`](include/test.h) | Test runner, assertion macros, approximate comparison utilities |
+
+### Writing Tests
+
+Tests are plain `void` functions registered on a `testing::suite`. Group related tests under named sections:
+
+```cpp
+#include "test.h"
+
+using namespace testing;
+
+void test_something()
+{
+    CHECK(1 + 1 == 2);
+}
+
+void test_approx_value()
+{
+    auto v = vec3{1.0, 2.0, 3.0} * m;
+    CHECK_APPROX(v.x(), 1.0 * m);
+}
+
+int main()
+{
+    suite tests;
+
+    tests.group("My Group")
+        .test("something", test_something)
+        .test("approx value", test_approx_value);
+
+    return tests.run();
+}
+```
+
+If no `.group()` is called before `.test()`, tests are placed in a default `"Tests"` group.
+
+### Assertion Macros
+
+| Macro | Description |
+|-------|-------------|
+| `CHECK(expr)` | Asserts that `expr` is truthy. Throws `check_failure` on failure with file/line info. |
+| `CHECK_APPROX(a, b)` | Asserts that `a` and `b` are approximately equal (within `eps = 1e-9`). |
+| `FAIL(msg)` | Unconditionally fails with the given message. |
+
+All macros capture the source location and report it on failure.
+
+### Approximate Comparison
+
+`CHECK_APPROX` dispatches to overloaded `approx()` functions that support:
+
+| Type | Comparison |
+|------|------------|
+| `float` / `double` | `std::abs(a - b) < eps` |
+| `mp_units::Quantity` | Compares numerical values in the quantity's reference unit |
+| `unit_mat<Q, R, C>` | Norm of the difference matrix < `eps` |
+| `unit_quat<Q>` | Angular distance < `eps` |
+| `aabb` | Component-wise approximate comparison of `min` and `max` |
+| `bounding_sphere` | Approximate comparison of `center` and `radius` |
+| `ray::hit` | Approximate comparison of `pos`, `normal`, and `distance` |
+
+### Test Output
+
+The runner prints grouped results to stdout/stderr:
+
+```
+=== AABB Tests ===
+  PASS: from_points
+  PASS: size/center/extent
+  FAIL: volume - approx(box.volume(), 25.0 * m * m * m) (main.cpp:85)
+
+=== Mesh Tests ===
+  PASS: make
+  PASS: bounds
+  ...
+
+5 out of 6 tests passed!
+```
+
+The process exits with code `0` if all tests pass, `1` otherwise. This makes it compatible with CTest and CI pipelines.
+
+### CMake Integration
+
+Test executables link against `phys_testing` (for non-graphical tests) or `phys_graphics` (for graphical demos) and are registered with `add_test()`.
+
+`phys_testing` links only against the physkit library and exposes `test.h`. It works in both header and module build modes.
+
+`phys_graphics` compiles its sources as C++ named module units and therefore **requires** that the build was configured with `PHYSKIT_MODULES=ON` (the Conan default). Targets linking against it must not disable module support.
+
+```cmake
+# Non-graphical tests (test.h only — works in header and module modes)
+add_executable(mesh_tests main.cpp)
+target_link_libraries(mesh_tests PRIVATE phys_testing)
+add_test(NAME mesh_tests COMMAND mesh_tests)
+```
+
+Run all tests with:
+
+```sh
+cd build/Debug && ctest
+```
+
+### Graphical Tests (`--testing` mode)
+
+Graphical demos built with `graphics_app` can also be registered as CTest tests by passing the `--testing` flag. When `--testing` is set:
+
+1. The demo launches and renders normally, allowing visual inspection.
+2. When the application window is closed, a **platform-native dialog** pops up asking "Success?" with Yes/No buttons.
+3. The process exits with code `0` (Yes) or `1` (No), which CTest interprets as pass/fail.
+
+This enables manual visual verification of rendering correctness within an automated test harness.
+
+```cmake
+# Graphical test with --testing flag
+add_executable(bounce_demo bounce_demo.cpp)
+target_link_libraries(bounce_demo PRIVATE phys_graphics)
+add_test(NAME bounce_demo COMMAND bounce_demo --testing)
+```
+
+The dialog is implemented per-platform: `osascript` on macOS, `MessageBox` on Windows, and `zenity` on Linux.
+
+| Flag | Purpose |
+|------|---------|
+| `--testing` | Enables the exit-dialog prompt after the window closes |
 
 ---
 

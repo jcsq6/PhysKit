@@ -1,16 +1,23 @@
 #pragma once
-#include <Corrade/Containers/ArrayViewStl.h>
-#include <Magnum/GL/Buffer.h>
-#include <Magnum/GL/Mesh.h>
-#include <Magnum/Math/Vector.h>
-#include <Magnum/Math/Vector3.h>
-#include <Magnum/Shaders/PhongGL.h>
+
+#include "detail/macro.h"
+
+#ifndef GRAPHICS_IN_MODULE_IMPL
+
+#ifndef PHYSKIT_IMPORT_STD
 #include <cstddef>
+#endif
+
+#ifndef PHYSKIT_MODULES
 #include <mp-units/framework.h>
 #include <physkit/physkit.h>
-#include <utility>
-#include <vector>
+#endif
 
+#include "detail/magnum_headers.h"
+
+#endif
+
+GRAPHICS_EXPORT
 namespace graphics
 {
 namespace detail
@@ -32,7 +39,7 @@ template <mp_units::Reference auto ref, typename T, typename U, std::size_t Size
 constexpr physkit::vec<Size, ref, T> to_physkit_vector(const Magnum::Math::Vector<Size, U> &v)
 {
     return detail::expand<physkit::vec<Size, ref, T>>(
-        [&](auto i) { return physkit::value_cast<ref, T>(v[i] * ref); },
+        [&](auto i) { return mp_units::value_cast<ref, T>(v[i] * ref); },
         std::make_index_sequence<Size>{});
 }
 
@@ -45,11 +52,7 @@ constexpr Magnum::Math::Quaternion<T> to_magnum_quaternion(const physkit::unit_q
 
 template <mp_units::Reference auto ref, typename T, typename U>
 constexpr physkit::quat<ref, T> to_physkit_quaternion(const Magnum::Math::Quaternion<U> &q)
-{
-    return physkit::quat<physkit::one, T>(q.scalar(), q.vector().x(), q.vector().y(),
-                                          q.vector().z()) *
-           ref;
-}
+{ return physkit::quat<ref, T>(q.scalar(), q.vector().x(), q.vector().y(), q.vector().z()); }
 
 inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh)
 {
@@ -68,7 +71,7 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh)
 
     for (std::size_t i = 0; i < verts.size(); ++i)
     {
-        vertex_buf[i].position = to_magnum_vector<physkit::si::metre, Float>(verts[i]);
+        vertex_buf[i].position = to_magnum_vector<mp_units::si::metre, Float>(verts[i]);
         vertex_buf[i].normal = {};
     }
 
@@ -77,7 +80,7 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh)
 
     for (const auto &tri : tris)
     {
-        auto normal = to_magnum_vector<physkit::one, float>(tri.normal(phys_mesh));
+        auto normal = to_magnum_vector<mp_units::one, float>(tri.normal(phys_mesh));
         vertex_buf[tri[0]].normal += normal;
         vertex_buf[tri[1]].normal += normal;
         vertex_buf[tri[2]].normal += normal;

@@ -1,6 +1,23 @@
-#include "graphics.h"
+// Magnum header needed for MAGNUM_APPLICATION_MAIN macro and math types
+
+#ifdef PHYSKIT_GRAPHICS_MODULES
+#include <Magnum/Math/Angle.h>
+#include <Magnum/Platform/GlfwApplication.h>
 #include <cmath>
-#include <mp-units/systems/si/units.h>
+#endif
+
+#ifdef PHYSKIT_MODULES
+import physkit;
+import mp_units;
+#else
+#include <physkit/physkit.h>
+#endif
+
+#ifdef PHYSKIT_GRAPHICS_MODULES
+import graphics;
+#else
+#include <graphics/graphics.h>
+#endif
 
 using namespace graphics;
 using namespace physkit;
@@ -8,16 +25,16 @@ using namespace physkit;
 class app : public graphics::graphics_app
 {
 public:
-    explicit app(const Arguments &arguments)
+    explicit app(const Platform::Application::Arguments &arguments)
         : graphics_app{g_config(arguments, false)
                            .window_size({1280, 720})
                            .title("Solar System")
                            .cam_pos(fvec3{0.0f, 30.0f, -50.0f} * si::metre)
-                           .cam_dir(fvec3{0.0f, -0.6f, 1.0f} * physkit::one)
+                           .cam_dir(fvec3{0.0f, -0.6f, 1.0f} * mp_units::one)
                            .drag(true)}
     // NOLINT
     {
-        using namespace si::unit_symbols;
+        using namespace mp_units::si::unit_symbols;
 
         auto sphere = mesh_objs::sphere();
         auto cyl = mesh_objs::cylinder(1, 48, 0.5f, false);
@@ -95,9 +112,9 @@ public:
                 .with_extrap(camera_track::reverse));
     }
 
-    void update(physkit::quantity<physkit::si::second> dt) override
+    void update(mp_units::quantity<mp_units::si::second> dt) override
     {
-        using namespace si::unit_symbols;
+        using namespace mp_units::si::unit_symbols;
         M_elapsed += dt;
         const float t = static_cast<double>(M_elapsed.numerical_value_in(s)); // NOLINT
 
@@ -208,7 +225,7 @@ public:
     }
 
 private:
-    physkit::quantity<physkit::si::second> M_elapsed{};
+    mp_units::quantity<mp_units::si::second> M_elapsed{};
     gfx_obj *M_sun{};
     gfx_obj *M_mercury{};
     gfx_obj *M_venus{};

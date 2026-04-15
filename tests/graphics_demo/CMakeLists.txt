@@ -8,3 +8,8 @@ add_executable(track_demo
     track_demo.cpp
 )
 target_link_libraries(track_demo PRIVATE phys_graphics)
+
+add_executable(constraint_demo
+    constraint_demo.cpp
+)
+target_link_libraries(constraint_demo PRIVATE phys_graphics)
