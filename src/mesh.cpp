@@ -565,14 +565,11 @@ mat3<kg * pow<2>(m)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 mesh::instance::inertia_tensor(quantity<kg / pow<3>(m)> density) const
 {
-    // TODO: rotate local inertia tensor into world frame and apply parallel axis theorem
-    // throw std::runtime_error("mesh::instance::inertia_tensor not yet implemented");
-
     // call the inertia_tensor function to get the mesh local COM
     auto i_local = M_mesh->inertia_tensor(density);
     auto mass = density * M_mesh->volume();
 
-    // locate the local inertia tensor
+    // locate the local inertia tensor - rotate the world frame
     auto rotate = M_orientation.to_rotation_matrix();
     auto it_world = rotate * i_local * rotate.transpose();
 
