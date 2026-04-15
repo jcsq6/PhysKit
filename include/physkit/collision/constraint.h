@@ -2,7 +2,6 @@
 #include "../core/object.h"
 #include "../detail/util.h"
 #include "physkit/collision/collision_phases.h"
-#include "physkit/core/integrator.h"
 #include "physkit/detail/arena.h"
 
 // TODO: Extended Position Based Dynamics (XPBD) constraints.
@@ -1021,10 +1020,8 @@ using constraint_arenas =
     decltype(make_tuple_helper({}, std::make_index_sequence<constraint_count>{}));
 } // namespace detail
 
-template <std::derived_from<integrator> Integrator> class constraint_solver;
-
 // TODO: Islands with multithreading, potentially disjoint set union for island management.
-template <> class constraint_solver<semi_implicit_euler>
+class constraint_solver
 {
 public:
     constraint_solver(std::size_t iterations, quantity<si::metre / si::second / si::second> gravity,

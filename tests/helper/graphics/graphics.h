@@ -344,16 +344,6 @@ public:
         if (!self.M_gravity) self.M_gravity = gravity;
         return std::forward<decltype(self)>(self);
     }
-    // auto &&integrator(this auto &&self, physkit::world_desc::integ_t type)
-    // {
-    //     self.M_integrator = type;
-    //     return std::forward<decltype(self)>(self);
-    // }
-    // auto &&integrator_or(this auto &&self, physkit::world_desc::integ_t type)
-    // {
-    //     if (!self.M_integrator) self.M_integrator = type;
-    //     return std::forward<decltype(self)>(self);
-    // }
     auto &&solver_iterations(this auto &&self, std::size_t iterations)
     {
         self.M_solver_iterations = iterations;
@@ -417,7 +407,6 @@ public:
     {
         auto desc = physkit::world_desc::make();
         if (M_gravity) desc.with_gravity(*M_gravity);
-        // if (M_integrator) desc.with_integrator(*M_integrator);
         if (M_solver_iterations) desc.with_solver_iterations(*M_solver_iterations);
         return desc;
     }
@@ -441,7 +430,6 @@ private:
     std::optional<bool> M_vsync = default_vsync;
     std::optional<physkit::vec3<mp_units::si::metre / mp_units::si::second / mp_units::si::second>>
         M_gravity;
-    // std::optional<physkit::world_desc::integ_t> M_integrator;
     std::optional<std::size_t> M_solver_iterations;
     std::optional<physkit::quantity<mp_units::si::second>> M_time_step;
     std::optional<std::string> M_record_output;
@@ -795,8 +783,7 @@ public:
     {
         using namespace Math::Literals::ColorLiterals;
 
-        M_world =
-            std::make_unique<physkit::world<physkit::semi_implicit_euler>>(config.world_desc());
+        M_world = std::make_unique<physkit::world>(config.world_desc());
 
         M_shader = Shaders::PhongGL{Shaders::PhongGL::Configuration{}.setFlags(
             Shaders::PhongGL::Flag::VertexColor | Shaders::PhongGL::Flag::InstancedTransformation)};

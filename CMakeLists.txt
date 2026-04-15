@@ -59,11 +59,11 @@ set(PHYSKIT_HEADERS
 	core/accum.h
 	core/awaitables.h
 	core/co.h
-	core/integrator.h
 	core/object.h
 	core/particle.h
 	core/world.h
 	detail/arena.h
+	detail/integrate.h
 )
 
 list(TRANSFORM PHYSKIT_HEADERS PREPEND "include/physkit/")

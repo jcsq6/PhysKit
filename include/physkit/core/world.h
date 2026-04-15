@@ -14,7 +14,6 @@ import std;
 #include "../collision/constraint.h"
 #include "../detail/arena.h"
 #include "co.h"
-#include "integrator.h"
 #include "object.h"
 
 PHYSKIT_EXPORT
@@ -191,8 +190,9 @@ public:
     }
     world_base(const world_base &) = delete;
     world_base &operator=(const world_base &) = delete;
-    world_base(world_base &&) = default;
-    world_base &operator=(world_base &&) = default;
+    // TODO: figure out move semantics
+    world_base(world_base &&) = delete;
+    world_base &operator=(world_base &&) = delete;
 
     using handle = detail::object_handle;
 
@@ -226,11 +226,7 @@ public:
     [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
 
     task_handle add_task(task<> t) { return M_task_handler.add_task(std::move(t), {}); }
-    bool cancel_task(task_handle handle)
-    {
-        M_task_handler.cancel_task(handle.id(), {});
-        return true;
-    }
+    bool cancel_task(task_handle handle) { return M_task_handler.cancel_task(handle.id(), {}); }
 
     [[nodiscard]] bool task_active(task_handle handle) const
     { return M_task_handler.task_active(handle.id()); }
@@ -380,7 +376,7 @@ private:
 
 using object_handle = world_base::handle;
 
-template <std::derived_from<integrator> Integrator> class world : public world_base
+class world : public world_base
 {
 public:
     explicit world(const world_desc &desc)
@@ -402,7 +398,7 @@ public:
     { return M_constraints.remove_constraint(h); }
 
 private:
-    impulse::constraint_solver<Integrator> M_constraints;
+    impulse::constraint_solver M_constraints;
 
     detail::constraint_handle_variant
     execute_add_constraint(const detail::constraint_desc_variant &desc) override

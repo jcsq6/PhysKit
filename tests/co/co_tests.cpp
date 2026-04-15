@@ -25,7 +25,7 @@ const auto box_mesh = mesh::box(vec3{1, 1, 1} * m);
 
 void wait()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto t = []() -> task<>
     {
@@ -46,7 +46,7 @@ void wait()
 
 void wait_for_zero_duration()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -67,7 +67,7 @@ void wait_for_zero_duration()
 
 void wait_for_negative_duration()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -88,7 +88,7 @@ void wait_for_negative_duration()
 
 void wait_until_past_time()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -111,7 +111,7 @@ void wait_until_past_time()
 
 void wait_for_multiple_sequential()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -141,7 +141,7 @@ void wait_for_multiple_sequential()
 
 void next_physics_tick_test()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -162,7 +162,7 @@ void next_physics_tick_test()
 
 void multiple_next_frames()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static int frame_count = 0;
     frame_count = 0;
@@ -184,7 +184,7 @@ void multiple_next_frames()
 
 void multiple_timer_ordering()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static std::vector<int> order;
     order.clear();
@@ -230,7 +230,7 @@ static task<int> make_value(int val)
 
 void subtask()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto t = []() -> task<>
     {
@@ -245,7 +245,7 @@ void subtask()
 
 void nested_subtask()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto t = []() -> task<>
     {
@@ -264,7 +264,7 @@ void nested_subtask()
 
 void subtask_void()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool inner_ran = false;
     inner_ran = false;
@@ -298,7 +298,7 @@ static task<int> failing_subtask()
 
 void exception_propagation()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool caught = false;
     caught = false;
@@ -333,7 +333,7 @@ static task<std::string> deeply_nested_value()
 
 void deep_subtask_chain()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -357,7 +357,7 @@ void deep_subtask_chain()
 
 void collision()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
     auto a = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{1, 0, 0} * m / s)
                                 .with_pos(vec3{-1, 0, 0} * m)
@@ -382,7 +382,7 @@ void collision()
 
 void collision_with_specific_object()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
     auto a = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{1, 0, 0} * m / s)
                                 .with_pos(vec3{-1, 0, 0} * m)
@@ -431,7 +431,7 @@ void collision_with_specific_object()
 
 void collision_stale_handle()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     // Create then destroy to get a stale (generation-mismatched) handle
     auto stale =
@@ -457,7 +457,7 @@ void collision_stale_handle()
 
 void separation_stale_handle()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto stale =
         w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
@@ -486,7 +486,7 @@ void separation_stale_handle()
 
 void destroyed_awaitable()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto obj = w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
 
@@ -515,7 +515,7 @@ void destroyed_awaitable()
 
 void destroyed_stale_handle()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto stale =
         w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
@@ -544,7 +544,7 @@ void destroyed_stale_handle()
 
 void wait_for_all_temporal()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -568,7 +568,7 @@ void wait_for_all_temporal()
 
 void wait_for_all_with_subtasks()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -591,7 +591,7 @@ static task<> void_wait_task() { co_await wait_for(0.3 * s); }
 
 void wait_for_all_void_and_value()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -612,7 +612,7 @@ void wait_for_all_void_and_value()
 
 void wait_for_all_exception()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool caught = false;
     caught = false;
@@ -646,7 +646,7 @@ void wait_for_all_exception()
 
 void wait_for_any_temporal()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -676,7 +676,7 @@ static task<int> slow_value()
 
 void wait_for_any_with_subtasks()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -698,7 +698,7 @@ void wait_for_any_with_subtasks()
 
 void wait_for_any_all_fail()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto t = []() -> task<>
     {
@@ -714,7 +714,7 @@ void wait_for_any_all_fail()
 
 void wait_for_any_collision_or_timeout()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     // Objects far apart — they won't collide within the timeout
     auto a =
@@ -743,7 +743,7 @@ void wait_for_any_collision_or_timeout()
 
 void create_rigid_command()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -767,7 +767,7 @@ void create_rigid_command()
 
 void destroy_rigid_command()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto obj = w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
 
@@ -793,7 +793,7 @@ void destroy_rigid_command()
 
 void get_rigid_stale()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto stale =
         w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
@@ -818,7 +818,7 @@ void get_rigid_stale()
 
 void create_and_destroy_in_coroutine()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -843,7 +843,7 @@ void create_and_destroy_in_coroutine()
 
 void add_task_command_test()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool spawned_ran = false;
     spawned_ran = false;
@@ -869,7 +869,7 @@ void add_task_command_test()
 
 void add_task_no_wait_test()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool spawned_ran = false;
     spawned_ran = false;
@@ -903,7 +903,7 @@ void add_task_no_wait_test()
 
 void concurrent_independent_tasks()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static int count = 0;
     count = 0;
@@ -924,7 +924,7 @@ void concurrent_independent_tasks()
 
 void task_completes_immediately()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -950,7 +950,7 @@ void task_completes_immediately()
 
 void wait_for_any_mixed_with_physics_tick()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -971,7 +971,7 @@ void wait_for_any_mixed_with_physics_tick()
 
 void wait_for_all_with_next_frame()
 {
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     static bool completed = false;
     completed = false;
@@ -995,7 +995,7 @@ void destroyed_triggers_during_collision()
 {
     // Create two colliding objects, wait for collision on one while also
     // watching for destruction on the other
-    world<semi_implicit_euler> w(no_gravity());
+    world w(no_gravity());
 
     auto a = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{1, 0, 0} * m / s)

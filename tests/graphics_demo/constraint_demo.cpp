@@ -38,7 +38,7 @@ public:
         auto anchor_mesh = mesh::box(vec3<si::metre>{0.5 * m, 0.5 * m, 0.5 * m});
         auto long_box = mesh::box(vec3<si::metre>{.5 * m, 2 * m, .5 * m});
 
-        auto &w = dynamic_cast<physkit::world<physkit::semi_implicit_euler> &>(world());
+        auto &w = dynamic_cast<physkit::world &>(world());
 
         auto floor =
             w.create_rigid(object_desc::stat()

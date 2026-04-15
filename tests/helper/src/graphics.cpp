@@ -60,8 +60,6 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
     struct world_config
     {
         std::array<double, 3> gravity = {0.0, -9.81, 0.0};
-        // physkit::world_desc::integ_t integrator =
-        // physkit::world_desc::semi_implicit_euler;
         std::size_t solver_iterations = 10;
         std::vector<obj> objects{};
         std::optional<std::array<double, 3>> look_at;
@@ -85,7 +83,6 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
 
     self.M_gravity =
         physkit::vec3{config.gravity[0], config.gravity[1], config.gravity[2]} * m / s / s;
-    // self.M_integrator = config.integrator;
     self.M_solver_iterations = config.solver_iterations;
 
     std::map<std::string, std::shared_ptr<physkit::mesh>> mesh_map;
@@ -183,10 +180,6 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
     }
 
     std::println("  Gravity: {}", *self.M_gravity);
-    // std::println("  Integrator: {}",
-    //              glz::reflect<physkit::world_desc::integ_t>::keys[static_cast<int>( //
-    //              NOLINT
-    //                  config.integrator)]);
     std::println("  Solver iterations: {}", config.solver_iterations);
     std::println("  Objects: {}", config.objects.size());
     for (std::size_t i = 0; i < self.M_objects.size(); ++i)

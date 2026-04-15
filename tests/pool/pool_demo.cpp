@@ -30,7 +30,7 @@ using namespace graphics;
 class pool_app : public graphics_app
 {
     static inline const auto gravity = vec3{0.0, -9.81, 0.0} * m / s / s;
-    using typed_world = physkit::world<physkit::semi_implicit_euler>;
+    using typed_world = physkit::world;
 
 public:
     explicit pool_app(const Platform::Application::Arguments &arguments)

@@ -1,5 +1,6 @@
 #ifndef PHYSKIT_IN_MODULE_IMPL
 #include "physkit/core/world.h"
+#include "physkit/detail/integrate.h"
 #endif
 
 namespace physkit
@@ -15,9 +16,8 @@ task_handler &awaiter::handler() const
 has_waiter_field *task_handler::get_waiter_fields(handle_id_t object_id)
 { return M_world->get_waiter_fields(object_id, {}); }
 } // namespace detail
-template class world<semi_implicit_euler>;
 
-template <> void world<semi_implicit_euler>::step_impl(const quantity<si::second> dt)
+void world::step_impl(const quantity<si::second> dt)
 {
     for (auto &slot : rigids().slots)
     {
