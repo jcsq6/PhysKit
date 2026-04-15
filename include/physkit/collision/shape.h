@@ -48,7 +48,9 @@ public:
     [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
-    { return 2 * M_half_extents.x() * 2 * M_half_extents.y() * 2 * M_half_extents.z(); }
+    {
+        return 2 * M_half_extents.x() * 2 * M_half_extents.y() * 2 * M_half_extents.z();
+    }
 
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] vec3<si::metre> mass_center() const
@@ -124,7 +126,9 @@ public:
     [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
-    { return (4.0 / 3.0) * std::numbers::pi * mp_units::pow<3>(M_radius); }
+    {
+        return (4.0 / 3.0) * std::numbers::pi * mp_units::pow<3>(M_radius);
+    }
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] vec3<si::metre> mass_center() const
     {
@@ -174,7 +178,9 @@ public:
     }
     /// @brief Closest point on the sphere surface in local space. O(1) time.
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const
-    { return point.normalized() * M_radius; }
+    {
+        return point.normalized() * M_radius;
+    }
     /// @brief Point containment test in local space. O(1) time.
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const
     {
@@ -184,7 +190,9 @@ public:
 
     /// @brief GJK support function in local space.
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
-    { return direction.normalized() * M_radius; }
+    {
+        return direction.normalized() * M_radius;
+    }
 
     /// @brief - Add in support to return obb objects -> much more tedious, more research later.
 
@@ -505,7 +513,9 @@ public:
     shape() : M_type(type::shape_box) { construct_box(vec3{0.5f, 0.5f, 0.5f} * si::metre); }
 
     shape(std::shared_ptr<const physkit::mesh> m) : M_type(type::shape_mesh)
-    { construct_mesh(std::move(m)); }
+    {
+        construct_mesh(std::move(m));
+    }
 
     shape(const physkit::sphere &s) : M_type(type::shape_sphere) { construct_sphere(s); }
 
@@ -694,13 +704,19 @@ private:
     }
 
     template <typename... Args> void construct_mesh(Args &&...args)
-    { std::construct_at(&M_storage.msh, std::forward<Args>(args)...); }
+    {
+        std::construct_at(&M_storage.msh, std::forward<Args>(args)...);
+    }
 
     template <typename... Args> void construct_sphere(Args &&...args)
-    { std::construct_at(&M_storage.sph, std::forward<Args>(args)...); }
+    {
+        std::construct_at(&M_storage.sph, std::forward<Args>(args)...);
+    }
 
     template <typename... Args> void construct_box(Args &&...args)
-    { std::construct_at(&M_storage.bx, std::forward<Args>(args)...); }
+    {
+        std::construct_at(&M_storage.bx, std::forward<Args>(args)...);
+    }
 
     template <typename... Args> void construct_cone(Args &&...args)
     { std::construct_at(&M_storage.cn, std::forward<Args>(args)...); }

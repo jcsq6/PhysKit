@@ -79,7 +79,9 @@ GRAPHICS_EXPORT namespace graphics
 
         physkit::object &obj() { return **M_world->get_rigid(M_handle); }
         [[nodiscard]] const physkit::object &obj() const
-        { return **std::as_const(*M_world).get_rigid(M_handle); }
+        {
+            return **std::as_const(*M_world).get_rigid(M_handle);
+        }
 
         void sync()
         {
@@ -141,7 +143,9 @@ GRAPHICS_EXPORT namespace graphics
         explicit instanced_drawable(std::derived_from<gfx_obj_base> auto &parent,
                                     instanced_drawables &group)
             : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}
-        { group.add_object(*this); }
+        {
+            group.add_object(*this);
+        }
 
         instanced_drawable(const instanced_drawable &) = delete;
         instanced_drawable &operator=(const instanced_drawable &) = delete;
@@ -349,7 +353,9 @@ GRAPHICS_EXPORT namespace graphics
         }
 
         [[nodiscard]] auto window_size() const
-        { return M_window_size.value_or(default_window_size); }
+        {
+            return M_window_size.value_or(default_window_size);
+        }
         [[nodiscard]] auto fov() const { return M_fov.value_or(default_fov); }
         [[nodiscard]] auto cam_pos() const { return M_cam_pos.value_or(default_cam_pos); }
         [[nodiscard]] auto cam_dir() const
@@ -517,13 +523,14 @@ GRAPHICS_EXPORT namespace graphics
         auto &physics_objects() const { return M_physics_objs; }
 
         graphics_app(const g_config &config)
-            : Magnum::Platform::Application{
-                  config.args(),
-                  Configuration{}
-                      .setTitle(
-                          Containers::StringView{config.title().data(), config.title().size()})
-                      .setSize(config.window_size())
-                      .setWindowFlags(Platform::Application::Configuration::WindowFlag::Focused)},
+            : Magnum::Platform::
+                  Application{config.args(),
+                              Configuration{}
+                                  .setTitle(Containers::StringView{config.title().data(),
+                                                                   config.title().size()})
+                                  .setSize(config.window_size())
+                                  .setWindowFlags(
+                                      Platform::Application::Configuration::WindowFlag::Focused)},
               M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                     config.window_size()),
               M_drag(true), M_grab_focus(!config.drag()), M_testing(config.testing())
@@ -621,10 +628,14 @@ GRAPHICS_EXPORT namespace graphics
         }
 
         physkit::quantity<mp_units::si::second> dt() const
-        { return M_timeline.previousFrameDuration() * mp_units::si::second; }
+        {
+            return M_timeline.previousFrameDuration() * mp_units::si::second;
+        }
 
         physkit::quantity<mp_units::si::second> current_time() const
-        { return M_timeline.previousFrameTime() * mp_units::si::second; }
+        {
+            return M_timeline.previousFrameTime() * mp_units::si::second;
+        }
 
     private:
         std::shared_ptr<GL::Mesh> internal_shape_map_emplace(const physkit::shape &phys_shape)
@@ -782,7 +793,9 @@ GRAPHICS_EXPORT namespace graphics
     {
     // radius 1
     inline auto cube()
-    { return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
+    {
+        return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid()));
+    }
 
     // radius 1
     inline auto sphere(unsigned int subdivisions = 3)
@@ -806,6 +819,8 @@ GRAPHICS_EXPORT namespace graphics
     }
 
     inline auto plane()
-    { return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
+    {
+        return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid()));
+    }
     }; // namespace mesh_objs
 } // namespace graphics
