@@ -206,12 +206,12 @@ public:
     cone &operator=(cone &&) = default;
     ~cone() = default;
 
-    cone(const quantity<si::metre> radius, const quantity<si::metre> height) : M_radius{radius}, M_height{radius}
+    cone(const quantity<si::metre> radius, const quantity<si::metre> height) : M_radius{radius}, M_height{height}
     {
         M_aabb = aabb::from_points({vec3<si::metre>{M_radius, M_height, M_radius},
                                     vec3<si::metre>{-M_radius, 0.0*si::metre, -M_radius}});
 
-        M_bsphere = bounding_sphere(vec3<si::metre>{0*si::metre, M_height/2, 0*si::metre}, sqrt(M_height*M_radius)/2);
+        M_bsphere = bounding_sphere(vec3<si::metre>{0*si::metre, M_height/2, 0*si::metre}, sqrt(pow<2>(M_radius)+pow<2>(M_height/2)));
     }
 
     [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius; }
@@ -243,7 +243,7 @@ public:
     ray_intersect(const ray &r, quantity<si::metre> max_distance =
                                     std::numeric_limits<quantity<si::metre>>::infinity()) const
     {
-        //TODO
+		 printf("ray\n");
         using namespace mp_units::si::unit_symbols;
         std::optional<ray::hit> best;
 
@@ -252,18 +252,28 @@ public:
         best = std::nullopt;
 
         //intersection with base
-        auto dist = -origin.y() / direction.y();
-        if (dist >= 0*si::metre)
+        auto dist = max_distance;
+        if (direction.y() != 0)
         {
-            auto point = origin + dist * direction;
-            if (pow<2>(point.x()) + pow<2>(point.z()) <= M_radius*M_radius)
+            dist = -origin.y() / direction.y();
+            if (dist >= 0*si::metre)
             {
-                best = ray::hit{
-                    .pos = point,
-                    .normal = vec3<one>{0, -1, 0},
-                    .distance = dist
-                };
+                auto point = origin + dist * direction;
+                if (pow<2>(point.x()) + pow<2>(point.z()) <= M_radius*M_radius)
+                {
+                    best = ray::hit{
+                        .pos = point,
+                        .normal = vec3<one>{0, -1, 0},
+                        .distance = dist
+                    };
+                }
             }
+        }
+
+        if (origin.y() == 0*si::metre && origin.x()*origin.z() <= M_radius*M_radius)
+        {
+            dist = 0*si::metre;
+            best = ray::hit{.pos = origin, .normal = vec3<one>{0,-1,0}, .distance = 0*si::metre};
         }
 
         //intersection with cone surface
@@ -283,19 +293,15 @@ public:
         double det = b*b -4*a*c;
         if (det >= 0)
         {
-            auto dist1 = (-b+det)/(2*a) * si::metre;
-            auto dist2 = (-b-det)/(2*a) * si::metre;
-            if (dist < dist1)
-                dist = dist1;
-            if (dist < dist2)
-                dist = dist2;
+            auto dist1 = (-b+sqrt(det))/(2*a) * si::metre;
+            auto dist2 = (-b-sqrt(det))/(2*a) * si::metre;
+            dist = dist1 < dist2 ? dist1 : dist2;
 
-            if (best == std::nullopt || best.value().distance < dist)
+            if (dist >= 0*si::metre && (best == std::nullopt || best.value().distance > dist))
             {
                 auto p = origin + dist*direction;
                 auto circle_point = vec3<si::metre>{p.x(), 0.0*si::metre, p.z()};
 
-                //TODO i hope this is right
                 vec3<one> norm = (vec3{M_height*circle_point.x(), M_radius*M_radius, M_height*circle_point.z()}).normalized();
                 if (circle_point.x() == 0*si::metre && circle_point.z() == 0*si::metre)
                     norm = vec3<one>{0.0, 1.0, 0.0};
@@ -308,7 +314,7 @@ public:
                 };
             }
         }
-        if (best.value().distance > max_distance)
+        if (best.has_value() &&best.value().distance > max_distance)
             return std::nullopt;
         return best;
     }
@@ -323,17 +329,34 @@ public:
         auto r = M_radius.numerical_value_in(si::metre);
         auto h = M_height.numerical_value_in(si::metre);
 
-        auto circle_point = vec3<one> {x,0.0,z};
-        if (x*z >= r*r)
-            circle_point = r * (vec3<one>{x,0.0,z}).normalized();
+		  if (x*x+z*z > r*r)
+		  {
+			  auto temp = (vec3<one>{x, 0.0, z}).normalized();
+			  x = temp.x().numerical_value_in(one);
+			  z = temp.z().numerical_value_in(one);
+			  y = temp.y().numerical_value_in(one);
+				
+		  }
+        auto circle_point = vec3<one>{x, 0.0, z};
 
-        auto edge_point = r * circle_point.normalized();
-        if (edge_point.norm() == 0.0)
-            edge_point = vec3<one>{r, 0.0, 0.0};
+		  if (circle_point.norm() == 0.0) {
+			  x = r;
+			  y = 0.0;
+			  z = 0.0;
+		  }
+		  else {
+			  auto temp = r * circle_point.normalized();
+			  x = temp.x().numerical_value_in(one);
+			  y = temp.y().numerical_value_in(one);
+			  z = temp.z().numerical_value_in(one);
+		  }
+		  auto edge_point = vec3<one>{x, y, z};
 
         auto tip_point = vec3<one>{0.0, h, 0.0};
-        auto line = tip_point - edge_point;
-        auto surface_point = edge_point - (tip_point-edge_point)*line.dot(p - edge_point);
+
+        auto v = tip_point - edge_point;
+		  auto u = p - edge_point;
+        auto surface_point = edge_point + v*v.dot(u)/v.norm();
 
         auto best = (p - tip_point).norm();
         int which_best = 0;
@@ -348,7 +371,7 @@ public:
             best = (p-edge_point).norm();
             which_best = 2;
         }
-        if ((p-surface_point).norm() < best)
+        if ((surface_point.y() <= h && surface_point.y() >= 0.0) && (p-surface_point).norm() < best)
         {
             best = (p-surface_point).norm();
             which_best = 3;
@@ -369,14 +392,13 @@ public:
         using namespace mp_units;
         //calculate point distance from y axis
         //calculate radius at that point
-        if (point.y() < 0.0*si::metre) return false;
+        if (point.y() < 0.0*si::metre || point.y() > M_height) return false;
         return pow<2>(point.x())+pow<2>(point.z()) <= pow<2>(M_radius * (1.0 - point.y()/M_height));
     }
 
     /// @brief GJK support function in local space.
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
     {
-        //TODO
         //places to check: edge of base, tip, point on cone surface along direction
         auto x = direction.x();
         auto y = direction.y();
@@ -396,9 +418,10 @@ public:
         if (edge_point.norm() == 0.0)
             edge_point = vec3<one>{r, 0.0, 0.0};
 
-        vec3<one> line = tip_point - edge_point;
-        vec3<one> surface_point = edge_point - (line.dot(direction - edge_point)*
-            (tip_point - edge_point));
+		  quantity<one> temp = -1.0;
+		  if (y != 0)
+			  temp = h/(1+(sqrt(x*x+z*z)/(y*r)));
+		  auto surface_point = vec3<one>{0.0,temp,0.0} + (1-y/h)*edge_point;
 
         auto best = direction.dot(tip_point);
         int which_best = 0;
@@ -414,7 +437,7 @@ public:
             best = direction.dot(circle_point);
             which_best = 2;
         }
-        if (direction.dot(surface_point) > best)
+        if ((surface_point.y() <= h && surface_point.y() >= 0.0) && direction.dot(surface_point) > best)
         {
             best = direction.dot(surface_point);
             which_best = 3;
