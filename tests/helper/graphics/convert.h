@@ -24,7 +24,9 @@ namespace detail
 {
 template <typename Ret, std::size_t... Indices>
 constexpr auto expand(auto &&nth, std::index_sequence<Indices...> /*helper*/)
-{ return Ret{nth(Indices)...}; }
+{
+    return Ret{nth(Indices)...};
+}
 } // namespace detail
 
 template <mp_units::Reference auto ref, typename T, int Size, mp_units::Quantity Q>
@@ -52,7 +54,9 @@ constexpr Magnum::Math::Quaternion<T> to_magnum_quaternion(const physkit::unit_q
 
 template <mp_units::Reference auto ref, typename T, typename U>
 constexpr physkit::quat<ref, T> to_physkit_quaternion(const Magnum::Math::Quaternion<U> &q)
-{ return physkit::quat<ref, T>(q.scalar(), q.vector().x(), q.vector().y(), q.vector().z()); }
+{
+    return physkit::quat<ref, T>(q.scalar(), q.vector().x(), q.vector().y(), q.vector().z());
+}
 
 inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh)
 {

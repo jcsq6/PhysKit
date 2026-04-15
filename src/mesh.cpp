@@ -153,29 +153,131 @@ quantity<pow<3>(m)> mesh::volume() const
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 vec3<m> mesh::mass_center() const
 {
-    // volume-weighted centroid via divergence theorem
-    auto volume = 0.0 * m * m * m;
-    auto contribution = vec3<pow<4>(m)>::zero();
+    auto total_vol = 0.0 * m * m * m;
+    vec3<pow<4>(m)> weighted_center(0.0 * pow<4>(m), 0.0 * pow<4>(m), 0.0 * pow<4>(m));
+
     for (const auto &tri : M_triangles)
     {
         const auto &v0 = M_vertices[tri[0]];
         const auto &v1 = M_vertices[tri[1]];
         const auto &v2 = M_vertices[tri[2]];
-        auto vol6 = v0.dot(v1.cross(v2)); // 6 * tretra vol
-        volume += vol6;
-        // tetra centroid = (0 + v0 + v1 + v2) / 4.0;
-        contribution += (vol6) * (v0 + v1 + v2);
+
+        auto tetra_vol = v0.dot(v1.cross(v2)) / 6.0;
+        total_vol += tetra_vol;
+
+        auto centroid = (v0 + v1 + v2) / 4.0;
+        weighted_center += tetra_vol * centroid;
     }
-    // no need to divide by 6 since it can be factored out to ((1/6)*...) / ((1/6)*...)
-    return contribution / 4.0 / volume;
+
+    if (total_vol == 0.0 * m * m * m) { return vec3<m>(0.0 * m, 0.0 * m, 0.0 * m); }
+
+    return weighted_center / total_vol;
 }
 
 mat3<kg * pow<2>(m)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-mesh::inertia_tensor(quantity<kg / pow<3>(m)> /*density*/) const
+mesh::inertia_tensor(quantity<kg / pow<3>(m)> density) const
 {
-    // TODO: implement inertia tensor via canonical tetrahedron integrals
-    throw std::runtime_error("mesh::inertia_tensor not yet implemented");
+    auto ixx = 0.0 * kg * m * m;
+    auto iyy = 0.0 * kg * m * m;
+    auto izz = 0.0 * kg * m * m;
+    auto ixy = 0.0 * kg * m * m;
+    auto ixz = 0.0 * kg * m * m;
+    auto iyz = 0.0 * kg * m * m;
+
+    auto signed_mass = 0.0 * kg;
+    vec3<kg * m> first_mom{0.0 * m * kg, 0.0 * m * kg, 0.0 * m * kg}; // defines the center of mass
+    for (const auto &tri : M_triangles)
+    {
+        const auto &a = M_vertices[tri[0]];
+        const auto &b = M_vertices[tri[1]];
+        const auto &c = M_vertices[tri[2]];
+
+        auto det = a.dot(b.cross(c));
+        auto vol = det / 6.0;
+        auto m_t = density * (det / 6.0);
+
+        // accumulates mass and first moment (Center of mass)
+        signed_mass += m_t;
+        first_mom += m_t * (a + b + c) / 4.0;
+
+        // accumulate inertia about the origin
+        // tetrahedron accounts for verticies 0, a, b, c
+        auto ay = a.y();
+        auto az = a.z();
+        auto by = b.y();
+        auto bz = b.z();
+        auto cy = c.y();
+        auto cz = c.z();
+
+        ixx += m_t / 10.0 *
+               (ay * ay + by * by + cy * cy + ay * by + ay * cy + by * cy + az * az + bz * bz +
+                cz * cz + az * bz + az * cz + bz * cz);
+
+        auto ax = a.x();
+        auto bx = b.x();
+        auto cx = c.x();
+        iyy += m_t / 10.0 *
+               (ax * ax + bx * bx + cx * cx + ax * bx + ax * cx + bx * cx + az * az + bz * bz +
+                cz * cz + az * bz + az * cz + bz * cz);
+
+        izz += m_t / 10.0 *
+               (ax * ax + bx * bx + cx * cx + ax * bx + ax * cx + bx * cx + ay * ay + by * by +
+                cy * cy + ay * by + ay * cy + by * cy);
+
+        // diagonal second moments
+        ixy -= m_t / 20.0 *
+               (2.0 * ax * ay + 2.0 * bx * by + 2.0 * cx * cy + ax * by + ay * bx + ax * cy +
+                ay * cx + bx * cy + by * cx);
+
+        ixz -= m_t / 20.0 *
+               (2.0 * ax * az + 2.0 * bx * bz + 2.0 * cx * cz + ax * bz + az * bx + ax * cz +
+                az * cx + bx * cz + bz * cx);
+
+        iyz -= m_t / 20.0 *
+               (2.0 * ay * az + 2.0 * by * bz + 2.0 * cy * cz + ay * bz + az * by + ay * cz +
+                az * cy + by * cz + bz * cy);
+    }
+
+    // check if the calculation performed a negative volume and flip the sign
+    if (signed_mass < 0.0 * kg)
+    {
+        ixx = -ixx;
+        iyy = -iyy;
+        izz = -izz;
+        ixy = -ixy;
+        ixz = -ixz;
+        iyz = -iyz;
+        first_mom = -first_mom;
+        signed_mass = -signed_mass;
+    }
+
+    // calculate the center of mass
+    vec3<m> com =
+        (signed_mass > 0.0 * kg) ? (first_mom / signed_mass) : vec3<m>{0.0 * m, 0.0 * m, 0.0 * m};
+
+    // apply the parallel axis theorem to shift inertia from origin to center of mass properly
+    auto com_sq = com.dot(com);
+    ixx -= signed_mass * (com_sq - com.x() * com.x());
+    iyy -= signed_mass * (com_sq - com.y() * com.y());
+    izz -= signed_mass * (com_sq - com.z() * com.z());
+
+    ixy -= signed_mass * (-com.x() * com.y());
+    ixz -= signed_mass * (-com.x() * com.z());
+    iyz -= signed_mass * (-com.y() * com.z());
+
+    mat3<kg * pow<2>(m)> it = mat3<kg * pow<2>(m)>::zero();
+    it.set(0, 0, ixx);
+    it.set(0, 1, ixy);
+    it.set(0, 2, ixz);
+    it.set(1, 0, ixy);
+    it.set(1, 1, iyy);
+    it.set(1, 2, iyz);
+    it.set(2, 0, ixz);
+    it.set(2, 1, iyz);
+    it.set(2, 2, izz);
+
+    return it;
 }
 
 // BVH-accelerated ray intersection
@@ -336,8 +438,9 @@ std::vector<std::uint32_t> mesh::overlap_sphere(const bounding_sphere &sphere) c
 
     auto r_sq = sphere.radius * sphere.radius;
 
-    std::vector<std::uint32_t> overlapping;       // TODO: Optimize allocation
-    overlapping.reserve(M_triangles.size() / 10); // heuristic
+    thread_local std::vector<std::uint32_t> buffer;
+    buffer.clear();
+    buffer.reserve(M_triangles.size() / 10); // heuristic
 
     M_bvh.traverse([&](const aabb &bounds) { return sphere.intersects(bounds); },
                    [&](const aabb & /*bound*/, std::uint32_t start, std::uint32_t count)
@@ -346,9 +449,9 @@ std::vector<std::uint32_t> mesh::overlap_sphere(const bounding_sphere &sphere) c
                        for (std::uint32_t i = start; i < end; ++i)
                            if (auto closest = M_triangles[i].closest_point(sphere.center, *this);
                                (closest - sphere.center).squared_norm() < r_sq)
-                               overlapping.push_back(i);
+                               buffer.push_back(i);
                    });
-    return overlapping;
+    return buffer;
 }
 
 vec3<m> mesh::support(const vec3<one> &direction) const
@@ -375,8 +478,6 @@ bool mesh::is_convex() const
 {
     // tolerance
     constexpr auto epsilon = 1e-10 * m;
-    // TODO: implement convexity test (check all edges, verify all vertices on same side of each
-    // face)
     assert(!M_triangles.empty() && "Empty mesh.");
     for (auto tri : M_triangles)
     {
@@ -464,8 +565,23 @@ mat3<kg * pow<2>(m)>
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 mesh::instance::inertia_tensor(quantity<kg / pow<3>(m)> density) const
 {
-    // TODO: rotate local inertia tensor into world frame and apply parallel axis theorem
-    throw std::runtime_error("mesh::instance::inertia_tensor not yet implemented");
+    // call the inertia_tensor function to get the mesh local COM
+    auto i_local = M_mesh->inertia_tensor(density);
+    auto mass = density * M_mesh->volume();
+
+    // locate the local inertia tensor - rotate the world frame
+    auto rotate = M_orientation.to_rotation_matrix();
+    auto it_world = rotate * i_local * rotate.transpose();
+
+    auto com_local = M_mesh->mass_center();
+    auto com_world = M_orientation * com_local + M_position;
+    auto r = com_world; // is the vector from world origin to center of mass
+
+    // take the parallel axis theorem
+    auto r_sq = com_world.dot(com_world);
+    auto parallel_axis = mass * (r_sq * mat3<>::identity() - com_world * com_world.transpose());
+
+    return it_world + parallel_axis;
 }
 
 } // namespace physkit
