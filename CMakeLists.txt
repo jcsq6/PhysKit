@@ -57,11 +57,13 @@ set(PHYSKIT_HEADERS
 	collision/constraint.h
 	collision/mesh.h
 	core/accum.h
-	core/integrator.h
+	core/awaitables.h
+	core/co.h
 	core/object.h
 	core/particle.h
 	core/world.h
 	detail/arena.h
+	detail/integrate.h
 )
 
 list(TRANSFORM PHYSKIT_HEADERS PREPEND "include/physkit/")

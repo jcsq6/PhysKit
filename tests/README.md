@@ -129,7 +129,6 @@ g_config{arguments}
 | `drag` | `bool` | `.drag()` / `.drag_or()` | Mouse drag mode (see [Input Handling](#input-handling)) |
 | `vsync` | `bool` | `.vsync()` / `.vsync_or()` | Vertical sync |
 | `gravity` | `vec3<m/s²>` | `.gravity()` / `.gravity_or()` | World gravity vector |
-| `integrator` | `world_desc::integ_t` | `.integrator()` / `.integrator_or()` | Physics integrator type |
 | `solver_iterations` | `size_t` | `.solver_iterations()` / `.solver_iterations_or()` | Constraint solver iterations |
 | `time_step` | `quantity<second>` | `.time_step()` / `.time_step_or()` | Fixed physics time step |
 
@@ -150,7 +149,6 @@ Pass a JSON file with `--config` / `-c`. The file is deserialized with [Glaze](h
 {
     // World physics
     "gravity": [0.0, -9.81, 0.0],         // m/s², default [0, -9.81, 0]
-    "integrator": "semi_implicit_euler",   // "forward_euler" | "semi_implicit_euler" | "rk4"
     "solver_iterations": 10,               // unsigned integer
 
     // Camera & window (all optional)
@@ -258,7 +256,6 @@ The unconditional setters (`.fov()`, `.cam_pos()`, etc.) bypass this layering an
 | VSync | `true` |
 | Time step | 1/60 s |
 | Gravity | (0, −9.81, 0) m/s² |
-| Integrator | `semi_implicit_euler` |
 | Solver iterations | 10 |
 
 ---

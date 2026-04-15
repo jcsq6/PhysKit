@@ -1,0 +1,773 @@
+#pragma once
+#ifdef PHYSKIT_IN_MODULE_IMPL
+#ifdef PHYSKIT_IMPORT_STD
+import std;
+#endif
+#else
+#include <cassert>
+
+#include <algorithm>
+#include <coroutine>
+#include <expected>
+#include <vector>
+
+#include <absl/container/flat_hash_map.h>
+
+#include <mp-units/framework.h>
+#include <mp-units/systems/si/units.h>
+#endif
+
+#include "../collision/collision_phases.h"
+#include "../detail/arena.h"
+#include "../detail/macros.h"
+#include "../detail/swappable_queue.h"
+
+PHYSKIT_EXPORT
+namespace physkit
+{
+
+class world_base;
+
+template <typename T = void> class task;
+
+struct error
+{
+    enum code : std::uint8_t
+    {
+        stale_handle,
+        object_destroyed,
+        exception_thrown,
+        unknown,
+    };
+    code value;
+    std::exception_ptr exception;
+
+    static error from_exception(std::exception_ptr e);
+
+    [[nodiscard]] constexpr static std::string_view code_string(code value) noexcept
+    {
+        switch (value)
+        {
+        case stale_handle:
+            return "Stale handle";
+        case object_destroyed:
+            return "Object destroyed";
+        case exception_thrown:
+            return "Exception thrown in task";
+        case unknown:
+            return "Unknown error";
+        default:
+            return "Invalid error code";
+        }
+    }
+
+    [[nodiscard]] std::string message() const
+    {
+        if (exception)
+        {
+            try
+            {
+                std::rethrow_exception(exception);
+            }
+            catch (const std::exception &e)
+            {
+                return std::format("({}, {})", code_string(value), e.what());
+            }
+            catch (...)
+            {
+                return std::format("({}, unknown exception thrown)", code_string(value));
+            }
+        }
+        return std::format("({})", code_string(value));
+    }
+};
+
+struct internal_error : std::runtime_error
+{
+    // NOLINTNEXTLINE
+    internal_error(error::code c) : std::runtime_error(error::code_string(c).data()), value(c) {}
+
+    error::code value;
+};
+
+inline error error::from_exception(std::exception_ptr e)
+{
+    try
+    {
+        std::rethrow_exception(std::move(e));
+    }
+    catch (const internal_error &err)
+    {
+        return {.value = err.value};
+    }
+    catch (...)
+    {
+        return error{.value = exception_thrown, .exception = std::current_exception()};
+    }
+}
+
+namespace detail
+{
+using task_id = arena<task<>>::handle::id_type;
+
+struct task_promise_base;
+template <typename T> class task_promise;
+template <typename T> class task_awaiter;
+class task_handler;
+
+struct no_expect_t
+{
+};
+
+template <typename T>
+concept no_expect_awaiter = requires {
+    typename T::no_expect;
+    requires std::same_as<typename T::no_expect, no_expect_t>;
+};
+
+class awaiter
+{
+public:
+    awaiter(task_promise_base &promise) : M_promise(promise) {}
+
+    auto await_resume(this auto &&self) noexcept -> std::expected<decltype(self.on_resume()), error>
+        requires(!no_expect_awaiter<std::remove_cvref_t<decltype(self)>>)
+    {
+        try
+        {
+            self.promise().check_rethrow();
+            if constexpr (std::is_void_v<decltype(self.on_resume())>)
+            {
+                self.on_resume();
+                return {};
+            }
+            else
+                return self.on_resume();
+        }
+        catch (...)
+        {
+            return std::unexpected(error::from_exception(std::current_exception()));
+        }
+    }
+
+    decltype(auto) await_resume(this auto &&self)
+        requires(no_expect_awaiter<std::remove_cvref_t<decltype(self)>>)
+    {
+        self.promise().check_rethrow();
+        return self.on_resume();
+    }
+
+protected:
+    [[nodiscard]] task_promise_base &promise() const { return M_promise; }
+    [[nodiscard]] task_handler &handler() const;
+    [[nodiscard]] world_base &world() const;
+
+    task_id add_task(task<> t);
+    task_id add_task_eager(task<> t);
+    void cancel_task(task_id id);
+
+    [[nodiscard]] bool has_world() const;
+
+private:
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
+    task_promise_base &M_promise;
+};
+
+template <typename Awaitable> using awaitable_awaiter_t = Awaitable::awaiter_type;
+template <typename Awaiter>
+concept awaiter_t = requires(Awaiter aw, std::coroutine_handle<task_promise_base> handle) {
+    { aw.await_ready() } -> std::convertible_to<bool>;
+    { aw.await_suspend(handle) };
+    { aw.await_resume() };
+} && (!std::derived_from<Awaiter, detail::awaiter> || requires(Awaiter aw) {
+                        { aw.on_resume() };
+                    });
+
+template <typename Awaitable>
+concept awaitable = requires(task_promise_base &p, Awaitable &&aw) {
+    requires awaiter_t<awaitable_awaiter_t<Awaitable>>;
+    awaitable_awaiter_t<Awaitable>(p, std::forward<Awaitable>(aw));
+};
+
+struct task_promise_base
+{
+    struct final_awaiter
+    {
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
+        task_promise_base &promise;
+
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+        [[nodiscard]] bool await_ready() const noexcept { return false; }
+        [[nodiscard]] std::coroutine_handle<>
+        await_suspend(std::coroutine_handle<> handle) const noexcept
+        {
+            if (promise.continuation)
+            {
+                *promise.root_leaf_ptr = promise.continuation;
+                return promise.continuation;
+            }
+            return std::noop_coroutine();
+        }
+        void await_resume() noexcept {}
+    };
+
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    std::suspend_always initial_suspend() noexcept { return {}; }
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    final_awaiter final_suspend() noexcept { return {*this}; }
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    void unhandled_exception() { exception = std::current_exception(); }
+
+    template <awaitable Awaitable>
+    detail::awaitable_awaiter_t<Awaitable> await_transform(Awaitable &&request)
+    { return {*this, std::forward<Awaitable>(request)}; }
+
+    auto await_transform(auto &&other) = delete;
+
+    void check_rethrow()
+    {
+        if (exception) std::rethrow_exception(std::exchange(exception, nullptr));
+    }
+
+    void set_error(auto &&e) { exception = std::make_exception_ptr(std::forward<decltype(e)>(e)); }
+
+    world_base *world{};
+    task_id id = detail::arena<task_id>::handle::null;
+
+    std::coroutine_handle<> root_leaf;
+    std::coroutine_handle<> *root_leaf_ptr = &root_leaf;
+    std::coroutine_handle<> continuation;
+    std::exception_ptr exception;
+};
+
+inline bool awaiter::has_world() const { return M_promise.world != nullptr; }
+inline world_base &awaiter::world() const { return *M_promise.world; }
+
+template <typename T> struct task_promise : public task_promise_base
+{
+    task<T> get_return_object();
+    void return_value(T value) { result.emplace(std::move(value)); }
+    T get_result() { return std::move(*result); }
+    std::optional<T> result;
+};
+
+template <> struct task_promise<void> : public task_promise_base
+{
+    task<void> get_return_object();
+    void return_void() noexcept {}
+    void get_result() const {}
+};
+
+} // namespace detail
+
+template <typename T> class task
+{
+public:
+    using promise_type = detail::task_promise<T>;
+    using awaiter_type = detail::task_awaiter<T>;
+
+    explicit task(std::coroutine_handle<promise_type> h) : M_handle(h)
+    {
+        if (M_handle) M_handle.promise().root_leaf = M_handle;
+    }
+    task(const task &) = delete;
+    task(task &&other) noexcept : M_handle(std::exchange(other.M_handle, nullptr)) {}
+    task &operator=(const task &) = delete;
+    task &operator=(task &&other) noexcept
+    {
+        if (this != &other)
+        {
+            if (M_handle) M_handle.destroy();
+            M_handle = std::exchange(other.M_handle, nullptr);
+        }
+        return *this;
+    }
+    ~task()
+    {
+        if (M_handle)
+        {
+            M_handle.destroy();
+            M_handle = nullptr;
+        }
+    }
+
+    void set_world(world_base &w, detail::passkey<detail::task_handler> /*key*/) const
+    { M_handle.promise().world = &w; }
+    void set_id(detail::handle_id_t id, detail::passkey<detail::task_handler> /*key*/) const
+    { M_handle.promise().id = id; }
+    void set_error(auto &&e, detail::passkey<detail::task_handler> /*key*/)
+    { M_handle.promise().set_error(std::forward<decltype(e)>(e)); }
+
+    [[nodiscard]] bool done() const { return !M_handle || M_handle.done(); }
+
+    bool resume(detail::passkey<detail::task_handler> /*key*/)
+    {
+        if (M_handle)
+        {
+            auto leaf = *M_handle.promise().root_leaf_ptr;
+            if (leaf && !leaf.done()) leaf.resume();
+
+            if (M_handle.done()) return true;
+        }
+
+        return false;
+    }
+
+    [[nodiscard]] auto handle(detail::passkey<detail::task_handler> /*key*/) const
+    { return M_handle; }
+
+private:
+    [[nodiscard]] detail::task_promise_base &promise_base() const { return M_handle.promise(); }
+    T get_result() const { return M_handle.promise().get_result(); }
+
+    std::coroutine_handle<promise_type> M_handle;
+
+    template <typename U> friend struct detail::task_awaiter;
+};
+
+namespace detail
+{
+
+template <typename T> struct task_awaiter
+{
+    task_awaiter(detail::task_promise_base & /*unused*/, task<T> t) : t(std::move(t)) {}
+
+    task<T> t;
+
+    [[nodiscard]] bool await_ready() const noexcept { return t.done(); }
+
+    template <typename Promise>
+    std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> caller) noexcept
+    {
+        auto &child_promise = t.promise_base();
+        auto &parent_promise = caller.promise();
+
+        child_promise.world = parent_promise.world;
+        child_promise.id = parent_promise.id;
+
+        child_promise.root_leaf_ptr = parent_promise.root_leaf_ptr;
+        child_promise.continuation = caller;
+
+        *child_promise.root_leaf_ptr = t.M_handle;
+
+        return t.M_handle;
+    }
+
+    auto await_resume() const -> std::expected<T, error>
+    {
+        try
+        {
+            t.promise_base().check_rethrow();
+            if constexpr (std::is_void_v<T>)
+            {
+                t.get_result();
+                return {};
+            }
+            else
+                return t.get_result();
+        }
+        catch (...)
+        {
+            return std::unexpected(error::from_exception(std::current_exception()));
+        }
+    }
+};
+
+template <typename T> task<T> task_promise<T>::get_return_object()
+{ return task<T>{std::coroutine_handle<task_promise<T>>::from_promise(*this)}; }
+
+inline task<void> task_promise<void>::get_return_object()
+{ return task<void>{std::coroutine_handle<task_promise<void>>::from_promise(*this)}; }
+
+struct has_waiter_field
+{
+    std::uint8_t collision_enter : 1 = 0;
+    std::uint8_t collision_exit : 1 = 0;
+    std::uint8_t destruction : 1 = 0;
+};
+
+class task_handler
+{
+public:
+    using task_handle = arena<task<>>::handle;
+
+    task_handler(world_base &world) : M_world(&world) {}
+
+    void schedule_task_at(const task_id id, const mp_units::quantity<mp_units::si::second> when)
+    {
+        M_timer_heap.emplace_back(when, id);
+        std::ranges::push_heap(M_timer_heap,
+                               [](const auto &a, const auto &b) { return a.first > b.first; });
+    }
+
+    void schedule_task_after(const task_id id, const mp_units::quantity<mp_units::si::second> delay)
+    { schedule_task_at(id, M_current_time + delay); }
+
+    // Queue task for execution in beginning of the frame, before physics
+    void queue_pre_task(const task_id id) { M_pre_queue.push(id); }
+
+    // Queue task for execution after physics are calculated
+    void queue_post_task(const task_id id) { M_post_queue.push(id); }
+
+    // Queue task for execution after physics are calculated and after post_tasks are run
+    void queue_post_physics_tick(const task_id id) { M_post_physics_queue.push(id); }
+
+    // Queue for cleanup tasks run at the very end of the frame
+    void queue_cleanup_task(const task_id id) { M_cleanup_queue.push(id); }
+
+    // Queue for tasks that should be run immediately after the current phase
+    void queue_immediate_task(const task_id id) { M_immediate_queue.push(id); }
+
+    [[nodiscard]] auto time() const { return M_current_time; }
+
+    void increment(const mp_units::quantity<mp_units::si::second> dt, passkey<world_base> /*key*/)
+    { M_current_time += dt; }
+
+    task_handle add_task(task<> t, passkey<world_base, detail::awaiter> /*key*/)
+    {
+        auto handle = M_tasks.add(std::move(t));
+        auto id = handle.id();
+
+        auto *allocated_task = M_tasks.get(handle);
+        allocated_task->set_id(id, {});
+        allocated_task->set_world(*M_world, {});
+
+        M_pre_queue.push(id);
+        return handle;
+    }
+
+    // Add and immediately start a task (runs to its first suspension point)
+    task_handle add_task_eager(task<> t, passkey<world_base, detail::awaiter> /*key*/)
+    {
+        auto handle = M_tasks.add(std::move(t));
+        auto id = handle.id();
+
+        auto *allocated_task = M_tasks.get(handle);
+        allocated_task->set_id(id, {});
+        allocated_task->set_world(*M_world, {});
+
+        if (allocated_task->resume({})) M_tasks.remove(handle);
+
+        return handle;
+    }
+
+    bool cancel_task(const task_id id, passkey<world_base, detail::awaiter, world_base> /*key*/)
+    {
+        auto handle = detail::arena<task<>>::handle::from_id(id);
+        return M_tasks.remove(handle).has_value();
+    }
+
+    [[nodiscard]] bool task_active(const task_id id) const
+    {
+        auto handle = detail::arena<task<>>::handle::from_id(id);
+        return M_tasks.get(handle) != nullptr;
+    }
+
+    void dispatch_pre(passkey<world_base> /*key*/)
+    {
+        for (auto id : M_pre_queue.iter()) resume_task(id);
+        while (auto t = next_task()) resume_task(*t);
+
+        drain(M_immediate_queue);
+    }
+
+    void dispatch_post(passkey<world_base> /*key*/)
+    {
+        drain(M_post_queue);
+        drain(M_immediate_queue);
+        for (auto id : M_post_physics_queue.iter()) resume_task(id);
+        drain(M_immediate_queue);
+    }
+
+    void dispatch_cleanup(std::regular_invocable<> auto &&flush_commands,
+                          passkey<world_base> /*key*/)
+        requires(std::same_as<bool, std::invoke_result_t<decltype(flush_commands)>>)
+    {
+        bool done = false;
+        while (!done)
+        {
+            done = !drain(M_cleanup_queue);
+            done = !drain(M_immediate_queue) && done;
+            done = !flush_commands() && done;
+        }
+    }
+
+    void on_collision(const narrow_phase::manifold_info &man_info, handle_id_t obj_a,
+                      handle_id_t obj_b, passkey<world_base> /*key*/)
+    {
+        auto on_obj = [&](handle_id_t object_id, handle_id_t other_id)
+        {
+            if (get_waiter_fields(object_id)->collision_enter == 0) return;
+
+            auto it = M_object_waiters.find(object_id);
+            if (it == M_object_waiters.end()) return;
+            std::erase_if(it->second.coll_enter,
+                          [&](const auto &w)
+                          {
+                              if (w.with != other_id && w.with != null_id) return false;
+
+                              if (w.result_storage) *w.result_storage = man_info;
+                              if (w.with != null_id) remove_dependency(w.with, w.task);
+                              queue_post_task(w.task);
+                              return true;
+                          });
+            it->second.template set_field<object_waiter::type::collision_enter>(
+                *get_waiter_fields(object_id));
+            if (it->second.empty()) M_object_waiters.erase(it);
+        };
+
+        on_obj(obj_a, obj_b);
+        on_obj(obj_b, obj_a);
+    }
+
+    void on_collision_exit(handle_id_t obj_a, handle_id_t obj_b, passkey<world_base> /*key*/)
+    {
+        auto on_obj = [&](handle_id_t object_id, handle_id_t other_id)
+        {
+            if (get_waiter_fields(object_id)->collision_exit == 0) return;
+
+            auto it = M_object_waiters.find(object_id);
+            if (it == M_object_waiters.end()) return;
+            std::erase_if(it->second.coll_exit,
+                          [&](const auto &w)
+                          {
+                              if (w.with != other_id && w.with != null_id) return false;
+
+                              if (w.a) *w.a = obj_a;
+                              if (w.b) *w.b = obj_b;
+
+                              if (w.with != null_id) remove_dependency(w.with, w.task);
+
+                              queue_post_task(w.task);
+                              return true;
+                          });
+
+            it->second.template set_field<object_waiter::type::collision_exit>(
+                *get_waiter_fields(object_id));
+            if (it->second.empty()) M_object_waiters.erase(it);
+        };
+
+        on_obj(obj_a, obj_b);
+        on_obj(obj_b, obj_a);
+    }
+
+    void on_destruction(handle_id_t obj, passkey<world_base> /*key*/)
+    {
+        if (auto it = M_object_waiters.find(obj); it != M_object_waiters.end())
+        {
+            for (auto [tid] : it->second.destructions) queue_cleanup_task(tid);
+            for (auto [tid, with, a, b] : it->second.coll_exit)
+            {
+                if (with != null_id) remove_dependency(with, tid);
+                if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+                {
+                    task->set_error(error::object_destroyed, {});
+                    queue_cleanup_task(tid);
+                }
+            }
+            for (auto [tid, with, result_storage] : it->second.coll_enter)
+            {
+                if (with != null_id) remove_dependency(with, tid);
+                if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+                {
+                    task->set_error(error::object_destroyed, {});
+                    queue_cleanup_task(tid);
+                }
+            }
+            M_object_waiters.erase(it);
+        }
+
+        if (auto it = M_object_deps.find(obj); it != M_object_deps.end())
+        {
+            auto tmp = std::move(it->second);
+            for (auto [tid, source_obj] : tmp)
+            {
+                remove_collision_waiter(source_obj, tid);
+                remove_collision_exit_waiter(source_obj, tid);
+                if (auto *task = M_tasks.get(task_handle::from_id(tid)))
+                {
+                    task->set_error(error::object_destroyed, {});
+                    queue_cleanup_task(tid);
+                }
+            }
+            M_object_deps.erase(it);
+        }
+    }
+
+    void add_collision_waiter(handle_id_t object_id, handle_id_t with, handle_id_t task_id,
+                              narrow_phase::manifold_info *result_storage)
+    {
+        auto &waiter = M_object_waiters[object_id];
+
+        waiter.coll_enter.emplace_back(task_id, with, result_storage);
+        waiter.set_field<object_waiter::type::collision_enter>(*get_waiter_fields(object_id));
+        if (with != null_id) M_object_deps[with].emplace_back(task_id, object_id);
+    }
+
+    void add_collision_exit_waiter(handle_id_t object_id, handle_id_t with, handle_id_t task_id,
+                                   handle_id_t *a, handle_id_t *b)
+    {
+        auto &waiter = M_object_waiters[object_id];
+        waiter.coll_exit.emplace_back(task_id, with, a, b);
+        waiter.set_field<object_waiter::type::collision_exit>(*get_waiter_fields(object_id));
+        if (with != null_id) M_object_deps[with].emplace_back(task_id, object_id);
+    }
+
+    void add_destruction_waiter(handle_id_t object_id, handle_id_t task_id)
+    {
+        auto &waiter = M_object_waiters[object_id];
+        waiter.destructions.emplace_back(task_id);
+        waiter.set_field<object_waiter::type::destruction>(*get_waiter_fields(object_id));
+    }
+
+    void remove_collision_waiter(handle_id_t object_id, handle_id_t task_id)
+    { remove_waiter<object_waiter::type::collision_enter>(object_id, task_id); }
+
+    void remove_collision_exit_waiter(handle_id_t object_id, handle_id_t task_id)
+    { remove_waiter<object_waiter::type::collision_exit>(object_id, task_id); }
+
+    void remove_destruction_waiter(handle_id_t object_id, handle_id_t task_id)
+    { remove_waiter<object_waiter::type::destruction>(object_id, task_id); }
+
+private:
+    struct object_waiter
+    {
+        enum class type : std::uint8_t
+        {
+            collision_enter,
+            collision_exit,
+            destruction
+        };
+
+        struct collision_enter_res
+        {
+            task_id task;
+            handle_id_t with;
+            narrow_phase::manifold_info *result_storage;
+        };
+        struct collision_exit_res
+        {
+            task_id task;
+            handle_id_t with;
+            handle_id_t *a;
+            handle_id_t *b;
+        };
+        struct destruction_res
+        {
+            task_id task;
+        };
+        std::vector<collision_enter_res> coll_enter;
+        std::vector<collision_exit_res> coll_exit;
+        std::vector<destruction_res> destructions;
+
+        template <type T> auto &get_waiter()
+        {
+            if constexpr (T == type::collision_enter)
+                return coll_enter;
+            else if constexpr (T == type::collision_exit)
+                return coll_exit;
+            else
+                return destructions;
+        }
+
+        template <type T> void set_field(has_waiter_field &fields)
+        {
+            if constexpr (T == type::collision_enter)
+                fields.collision_enter = !coll_enter.empty();
+            else if constexpr (T == type::collision_exit)
+                fields.collision_exit = !coll_exit.empty();
+            else
+                fields.destruction = !destructions.empty();
+        }
+
+        [[nodiscard]] bool empty() const
+        { return coll_enter.empty() && coll_exit.empty() && destructions.empty(); }
+    };
+
+    struct dependency
+    {
+        task_id task;
+        handle_id_t source_object;
+    };
+
+    absl::flat_hash_map<handle_id_t, object_waiter> M_object_waiters;
+    absl::flat_hash_map<handle_id_t, std::vector<dependency>> M_object_deps;
+
+    arena<task<>> M_tasks;
+    swappable_queue<task_id> M_pre_queue;
+    swappable_queue<task_id> M_post_queue;
+    swappable_queue<task_id> M_post_physics_queue;
+    swappable_queue<task_id> M_cleanup_queue;
+    swappable_queue<task_id> M_immediate_queue;
+
+    std::vector<std::pair<mp_units::quantity<mp_units::si::second>, handle_id_t>>
+        M_timer_heap; // TODO: memory management
+    mp_units::quantity<mp_units::si::second> M_current_time{0.0 * mp_units::si::second};
+
+    world_base *M_world;
+
+    has_waiter_field *get_waiter_fields(handle_id_t object_id);
+
+    bool drain(swappable_queue<task_id> &queue)
+    {
+        return queue.drain([this](auto id) { resume_task(id); });
+    }
+
+    template <object_waiter::type T> void remove_waiter(handle_id_t object_id, handle_id_t task_id)
+    {
+        auto it = M_object_waiters.find(object_id);
+        if (it == M_object_waiters.end()) return;
+        auto &waiters = it->second.template get_waiter<T>();
+        // Should be close to constant time
+        std::erase_if(waiters,
+                      [task_id, this](const auto &w)
+                      {
+                          if (w.task == task_id)
+                          {
+                              if constexpr (T == object_waiter::type::collision_enter ||
+                                            T == object_waiter::type::collision_exit)
+                                  if (w.with != null_id) remove_dependency(w.with, task_id);
+                              return true;
+                          }
+                          return false;
+                      });
+
+        if (auto *fields = get_waiter_fields(object_id)) it->second.template set_field<T>(*fields);
+        if (it->second.empty()) M_object_waiters.erase(it);
+    }
+
+    void remove_dependency(handle_id_t object_id, handle_id_t task_id)
+    {
+        if (auto it = M_object_deps.find(object_id); it != M_object_deps.end())
+        {
+            std::erase_if(it->second, [task_id](const auto &d) { return d.task == task_id; });
+            if (it->second.empty()) M_object_deps.erase(it);
+        }
+    }
+
+    void resume_task(handle_id_t id)
+    {
+        auto handle = detail::arena<task<>>::handle::from_id(id);
+        if (auto *t = M_tasks.get(handle))
+            if (t->resume({})) M_tasks.remove(handle);
+    }
+
+    std::optional<handle_id_t> next_task()
+    {
+        if (M_timer_heap.empty() || M_timer_heap.front().first > M_current_time)
+            return std::nullopt;
+        auto t = M_timer_heap.front();
+        std::ranges::pop_heap(M_timer_heap,
+                              [](const auto &a, const auto &b) { return a.first > b.first; });
+        M_timer_heap.pop_back();
+        return t.second;
+    }
+};
+
+inline task_id awaiter::add_task(task<> t) { return handler().add_task(std::move(t), {}).id(); }
+inline task_id awaiter::add_task_eager(task<> t)
+{ return handler().add_task_eager(std::move(t), {}).id(); }
+inline void awaiter::cancel_task(task_id id) { handler().cancel_task(id, {}); }
+
+} // namespace detail
+} // namespace physkit

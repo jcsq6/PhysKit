@@ -6,6 +6,7 @@ import std;
 #endif
 #else
 #include "macros.h"
+#include "util.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -17,35 +18,46 @@ import std;
 PHYSKIT_EXPORT
 namespace physkit::detail
 {
+using handle_id_t = std::uint64_t;
+constexpr std::uint32_t null_id = std::numeric_limits<std::uint32_t>::max();
+
 template <typename T> struct arena
 {
     struct slot
     {
-        T value;
-        std::uint16_t gen;
-        bool available;
+        std::optional<T> value;
+        std::uint32_t gen;
+
+        [[nodiscard]] bool available() const { return !value.has_value(); }
     };
 
     class handle
     {
-        struct key
-        {
-        };
-
     public:
-        handle(key /*unused*/, std::uint32_t idx, std::uint16_t gen) noexcept
+        using id_type = handle_id_t;
+
+        static constexpr std::uint32_t null = null_id;
+
+        constexpr handle(std::uint32_t idx, std::uint32_t gen, passkey<arena> /*unnamed*/) noexcept
             : M_idx(idx), M_gen(gen)
         {
         }
 
-        [[nodiscard]] auto index() const { return M_idx; }
-        [[nodiscard]] auto generation() const { return M_gen; }
+        static constexpr handle from_id(id_type id) noexcept { return std::bit_cast<handle>(id); }
+
+        [[nodiscard]] constexpr id_type id() const { return std::bit_cast<id_type>(*this); }
+
+        [[nodiscard]] constexpr bool is_null_handle() const { return M_idx == null; }
+
+        [[nodiscard]] constexpr auto index() const { return M_idx; }
+        [[nodiscard]] constexpr auto generation() const { return M_gen; }
+
+        bool operator==(const handle &other) const
+        { return M_idx == other.M_idx && M_gen == other.M_gen; }
 
     private:
         std::uint32_t M_idx;
-        std::uint16_t M_gen;
-
-        friend arena;
+        std::uint32_t M_gen;
     };
 
     std::vector<slot> slots;
@@ -57,48 +69,55 @@ template <typename T> struct arena
     {
         if (free.empty())
         {
-            slots.push_back(
-                {.value = std::forward<decltype(value)>(value), .gen = 0, .available = false});
-            return handle{{}, static_cast<std::uint32_t>(slots.size() - 1), 0};
+            slots.push_back({.value = std::move(value), .gen = 0});
+            return handle{static_cast<std::uint32_t>(slots.size() - 1), 0, {}};
         }
 
         auto idx = free.top();
         free.pop();
-        slots[idx].value = std::forward<decltype(value)>(value);
-        slots[idx].available = false;
-        return handle{{}, idx, slots[idx].gen};
+        slots[idx].value.emplace(std::move(value));
+        return handle{idx, slots[idx].gen, {}};
     }
 
     auto next_handle() const
     {
-        if (free.empty()) return handle{{}, static_cast<std::uint32_t>(slots.size()), 0};
+        if (free.empty()) return handle{static_cast<std::uint32_t>(slots.size()), 0, {}};
         auto idx = free.top();
-        return handle{{}, idx, slots[idx].gen};
+        return handle{idx, slots[idx].gen, {}};
     }
 
     std::optional<T> remove(handle h)
     {
         assert(h.index() < slots.size());
         auto &slot = slots[h.index()];
-        if (slot.gen != h.generation() || slot.available) return std::nullopt;
-        slot.available = true;
+        if (slot.gen != h.generation() || slot.available()) return std::nullopt;
         slot.gen++;
         free.push(h.index());
-        return std::move(slot.value);
+        auto val = std::move(*slot.value);
+        slot.value.reset();
+        return val;
     }
 
     auto get(this auto &&self, handle h)
     {
         assert(h.index() < self.slots.size());
         auto &slot = self.slots[h.index()];
-        if (slot.gen != h.generation() || slot.available) return decltype(&slot.value)(nullptr);
-        return &slot.value;
+        if (slot.gen != h.generation() || slot.available())
+            return decltype(&(*slot.value))(nullptr);
+        return &(*slot.value);
     }
 
     auto &get_slot(this auto &&self, std::uint32_t idx)
     {
         assert(idx < self.slots.size());
         return self.slots[idx];
+    }
+
+    handle get_slot_handle(this auto &&self, std::uint32_t idx)
+    {
+        assert(idx < self.slots.size());
+        auto &slot = self.slots[idx];
+        return handle{idx, slot.gen, {}};
     }
 };
 } // namespace physkit::detail

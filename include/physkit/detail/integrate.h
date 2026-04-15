@@ -1,18 +1,15 @@
 #pragma once
 
 #ifdef PHYSKIT_IN_MODULE_IMPL
-
 #ifdef PHYSKIT_IMPORT_STD
 import std;
 #endif
-
 #else
-#include <cassert>
 #include <mp-units/framework.h>
 #include <mp-units/systems/si/units.h>
 #endif
 
-#include "object.h"
+#include "../core/object.h"
 
 PHYSKIT_EXPORT
 namespace physkit
@@ -34,20 +31,8 @@ inline auto exp(const vec3<si::radian / si::second> &ang_vel, quantity<si::secon
 }
 } // namespace detail
 
-class integrator
+struct semi_implicit_euler
 {
-public:
-    integrator() = default;
-    integrator(const integrator &) = default;
-    integrator &operator=(const integrator &) = default;
-    integrator(integrator &&) = default;
-    integrator &operator=(integrator &&) = default;
-    ~integrator() = default;
-};
-
-class semi_implicit_euler : public integrator
-{
-public:
     static void integrate_vel(object &obj, quantity<si::second> dt)
     {
         obj.vel() += obj.acc() * dt;
@@ -57,17 +42,7 @@ public:
     static void integrate_pos(object &obj, quantity<si::second> dt)
     {
         obj.pos() += obj.vel() * dt;
-        obj.orientation() = detail::exp(obj.ang_vel(), dt) * obj.orientation();
-    }
-};
-
-class rk4 : public integrator
-{
-public:
-    static void integrate_vel(object &obj, quantity<si::second> dt)
-    {
-        // TODO: implement RK4 integration
-        assert(false && "rk4::integrate_vel not yet implemented");
+        obj.orientation(detail::exp(obj.ang_vel(), dt) * obj.orientation());
     }
 };
 

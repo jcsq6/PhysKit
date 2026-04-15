@@ -21,7 +21,11 @@ public:
         : M_pos(pos), M_vel(vel), M_mass(mass), M_inv_mass(1.0 / mass), M_orientation(orientation),
           M_ang_vel(ang_vel), M_inertia_tensor_local(inertia),
           M_inv_inertia_tensor_local(inertia.inverse())
-    { update_derived_state(); }
+    {
+        if (M_inv_mass == 0.0 / si::kilogram)
+            M_inv_inertia_tensor_local = mat3<one / (si::kilogram * si::metre * si::metre)>::zero();
+        update_derived_state();
+    }
 
     [[nodiscard]] const auto &pos() const { return M_pos; }
     [[nodiscard]] auto &pos() { return M_pos; }
@@ -33,7 +37,6 @@ public:
     [[nodiscard]] auto &ang_vel() { return M_ang_vel; }
 
     [[nodiscard]] const auto &orientation() const { return M_orientation; }
-    [[nodiscard]] auto &orientation() { return M_orientation; }
     void orientation(const quat<one> &orient)
     {
         M_orientation = orient;

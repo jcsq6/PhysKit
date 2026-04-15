@@ -11,6 +11,7 @@
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Shader.h>
+#include <Magnum/Image.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Angle.h>
 #include <Magnum/Math/Color.h>
@@ -20,6 +21,7 @@
 #include <Magnum/Math/Vector.h>
 #include <Magnum/Math/Vector3.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/PixelFormat.h>
 #include <Magnum/Platform/GlfwApplication.h>
 #include <Magnum/Primitives/Cone.h>
 #include <Magnum/Primitives/Cube.h>

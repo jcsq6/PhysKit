@@ -8,8 +8,6 @@ import std;
 
 #else
 #include <Eigen/Dense>
-#include <Eigen/src/Core/IO.h>
-#include <Eigen/src/Core/Matrix.h>
 #endif
 
 #include "lin_alg.h"

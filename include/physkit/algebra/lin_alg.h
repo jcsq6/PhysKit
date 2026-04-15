@@ -102,13 +102,23 @@ public:
     constexpr unit_mat(Eigen::Index dim) : M_data(dim) {}
     constexpr unit_mat(Eigen::Index rows, Eigen::Index cols) : M_data(rows, cols) {}
 
-    constexpr unit_mat(Q scalar) : M_data(scalar.numerical_value_in(ref)) {}
-    constexpr unit_mat(Q x, Q y) : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref)) {}
+    constexpr unit_mat(Q scalar)
+        requires(_rows == 1 && _cols == 1)
+        : M_data(scalar.numerical_value_in(ref))
+    {
+    }
+    constexpr unit_mat(Q x, Q y)
+        requires((_rows == 2 && _cols == 1) || (_rows == 1 && _cols == 2))
+        : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref))
+    {
+    }
     constexpr unit_mat(Q x, Q y, Q z)
+        requires((_rows == 3 && _cols == 1) || (_rows == 1 && _cols == 3))
         : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref))
     {
     }
     constexpr unit_mat(Q x, Q y, Q z, Q w)
+        requires((_rows == 4 && _cols == 1) || (_rows == 1 && _cols == 4))
         : M_data(x.numerical_value_in(ref), y.numerical_value_in(ref), z.numerical_value_in(ref),
                  w.numerical_value_in(ref))
     {
@@ -200,18 +210,19 @@ public:
     auto trace() const { return base().trace() * ref; }
 
     template <Quantity OtherQ> auto dot(const unit_mat<OtherQ, _rows, _cols> &other) const
-    { return base().dot(other.base()) * ref * OtherQ::reference; }
+    { return base().dot(other.base().template cast<rep_type>()) * ref * OtherQ::reference; }
 
     template <Quantity OtherQ> auto cross(const unit_mat<OtherQ, _rows, _cols> &other) const
     {
         using res_t = unit_mat<quantity<ref * OtherQ::reference, rep_type>, _rows, _cols>;
-        return res_t{base().cross(other.base()), typename res_t::key{}};
+        return res_t{base().cross(other.base().template cast<rep_type>()), typename res_t::key{}};
     }
 
     template <Quantity OtherQ> auto cwise_product(const unit_mat<OtherQ, _rows, _cols> &other) const
     {
         using res_t = unit_mat<quantity<ref * OtherQ::reference, rep_type>, _rows, _cols>;
-        return res_t{base().cwiseProduct(other.base()), typename res_t::key{}};
+        return res_t{base().cwiseProduct(other.base().template cast<rep_type>()),
+                     typename res_t::key{}};
     }
 
     auto squared_norm() const { return base().squaredNorm() * ref * ref; }
@@ -260,37 +271,41 @@ public:
     {
         constexpr auto scalar_ref = std::remove_cvref_t<decltype(scalar)>::reference;
         using res_t = unit_mat<quantity<ref * scalar_ref, rep_type>, _rows, _cols>;
-        return res_t{base() * scalar.numerical_value_in(scalar_ref), typename res_t::key{}};
+        return res_t{base() * static_cast<rep_type>(scalar.numerical_value_in(scalar_ref)),
+                     typename res_t::key{}};
     }
 
     constexpr auto operator/(Quantity auto scalar) const
     {
         constexpr auto scalar_ref = std::remove_cvref_t<decltype(scalar)>::reference;
         using res_t = unit_mat<quantity<ref / scalar_ref, rep_type>, _rows, _cols>;
-        return res_t{base() / scalar.numerical_value_in(scalar_ref), typename res_t::key{}};
+        return res_t{base() / static_cast<rep_type>(scalar.numerical_value_in(scalar_ref)),
+                     typename res_t::key{}};
     }
 
-    constexpr auto operator*(auto scalar) const
-        requires(std::is_arithmetic_v<decltype(scalar)>)
+    constexpr auto operator*(std::convertible_to<rep_type> auto scalar) const
     {
         using res_t = unit_mat<decltype(Q{} * scalar), _rows, _cols>;
-        return res_t(base() * scalar, typename res_t::key{});
+        using res_rep = typename res_t::rep_type;
+        return res_t(base().template cast<res_rep>() * static_cast<res_rep>(scalar),
+                     typename res_t::key{});
     }
 
-    constexpr auto operator/(auto scalar) const
-        requires(std::is_arithmetic_v<decltype(scalar)>)
+    constexpr auto operator/(std::convertible_to<rep_type> auto scalar) const
     {
         using res_t = unit_mat<decltype(Q{} / scalar), _rows, _cols>;
-        return res_t(base() / scalar, typename res_t::key{});
+        using res_rep = typename res_t::rep_type;
+        return res_t(base().template cast<res_rep>() / static_cast<res_rep>(scalar),
+                     typename res_t::key{});
     }
 
-    template <Reference R> constexpr auto operator*(R) const
+    template <Reference R> constexpr auto operator*(R /*ref*/) const
     {
         using res_t = unit_mat<decltype(Q{} * (rep_type{1} * R{})), _rows, _cols>;
         return res_t{base(), typename res_t::key{}};
     }
 
-    template <Reference R> constexpr auto operator/(R) const
+    template <Reference R> constexpr auto operator/(R /*ref*/) const
     {
         using res_t = unit_mat<decltype(Q{} / (rep_type{1} * R{})), _rows, _cols>;
         return res_t{base(), typename res_t::key{}};
@@ -316,13 +331,13 @@ public:
 
     constexpr auto &operator*=(quantity<one> scalar)
     {
-        base() *= scalar.numerical_value_in(one);
+        base() *= static_cast<rep_type>(scalar.numerical_value_in(one));
         return *this;
     }
 
     constexpr auto &operator/=(quantity<one> scalar)
     {
-        base() /= scalar.numerical_value_in(one);
+        base() /= static_cast<rep_type>(scalar.numerical_value_in(one));
         return *this;
     }
 
@@ -564,17 +579,21 @@ public:
     static unit_quat from_two_vectors(const unit_mat<VecQ1, 3, 1> &a,
                                       const unit_mat<VecQ2, 3, 1> &b)
         requires(ref == one)
-    { return unit_quat{eigen_type::FromTwoVectors(a.base(), b.base()), key{}}; }
+    {
+        return unit_quat{eigen_type::FromTwoVectors(a.base().template cast<rep_type>(),
+                                                    b.base().template cast<rep_type>()),
+                         key{}};
+    }
 
     /// Multiply by a unit/reference: `quat<one>{...} * m` → `quat<m>{...}`
-    template <Reference R> constexpr auto operator*(R) const
+    template <Reference R> constexpr auto operator*(R /*ref*/) const
     {
         using res_t = unit_quat<decltype(Q{} * (rep_type{1} * R{}))>;
         return res_t{base(), typename res_t::key{}};
     }
 
     /// Divide by a unit/reference: `quat<m>{...} / m` → `quat<one>{...}`
-    template <Reference R> constexpr auto operator/(R) const
+    template <Reference R> constexpr auto operator/(R /*ref*/) const
     {
         using res_t = unit_quat<decltype(Q{} / (rep_type{1} * R{}))>;
         return res_t{base(), typename res_t::key{}};

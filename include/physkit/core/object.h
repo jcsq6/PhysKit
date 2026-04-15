@@ -117,13 +117,12 @@ public:
           M_type(desc.type()), M_mesh(std::move(desc).mesh()), M_restitution(desc.restitution()),
           M_friction(desc.friction())
     {
+        // TODO: use simple shape as default
+        if (!M_mesh) throw std::invalid_argument("Object must have a mesh");
     }
 
-    [[nodiscard]] const struct mesh &mesh() const
-    {
-        assert(M_mesh != nullptr);
-        return *M_mesh;
-    }
+    [[nodiscard]] const struct mesh &mesh() const { return *M_mesh; }
+    [[nodiscard]] const std::shared_ptr<const struct mesh> &mesh_ptr() const { return M_mesh; }
 
     [[nodiscard]] body_type type() const { return M_type; }
     [[nodiscard]] bool is_dynamic() const { return M_type == body_type::dynam; }

@@ -213,6 +213,14 @@ GRAPHICS_EXPORT namespace graphics
         /// @throws std::runtime_error if fewer than two keyframes with position data are provided.
         explicit camera_track(const std::span<const kf> pts) { deduce(pts); }
 
+        /// @brief Construct a track with a single initial keyframe for dynamic building.
+        /// @param initial The starting keyframe. Append further keyframes with append().
+        explicit camera_track(kf initial)
+        {
+            M_raw_kfs.push_back(std::move(initial));
+            mark_dirty();
+        }
+
         auto &&with_interp(this auto &&self, interpolation_t interp)
         {
             self.M_interpolation = interp;
@@ -226,6 +234,47 @@ GRAPHICS_EXPORT namespace graphics
             self.mark_dirty();
             return std::forward<decltype(self)>(self);
         }
+
+        /// @brief Append a keyframe to the track dynamically.
+        /// @param keyframe The keyframe to add. Its transition() value specifies
+        ///                 the duration to reach this keyframe from the previous one.
+        /// @note When the track has been compiled and sampled, the current camera
+        ///       position is pinned as the new start point. This prevents any
+        ///       discontinuity caused by spline tangent recomputation.
+        void append(kf keyframe)
+        {
+            auto reach_time = keyframe.transition();
+            keyframe.transition(0.0f * mp_units::si::second);
+
+            if (!M_raw_kfs.empty() && !M_dirty && M_kfs.size() >= 2)
+            {
+                // Pin the current camera state as the new start point
+                auto internal_time = M_last_query_time - M_time_offset;
+                auto t_sec = std::clamp(internal_time.numerical_value_in(mp_units::si::second),
+                                        0.0f, M_duration.numerical_value_in(mp_units::si::second));
+
+                auto pin = kf::make_pos(
+                    to_physkit_vector<mp_units::si::metre, float>(M_pos_track.at(t_sec)));
+                if (!M_freelook)
+                    pin.orient(
+                        to_physkit_quaternion<mp_units::one, float>(M_orient_track.at(t_sec)));
+                pin.transition(reach_time);
+
+                M_raw_kfs.clear();
+                M_raw_kfs.push_back(std::move(pin));
+                M_time_offset = M_last_query_time;
+            }
+            else if (!M_raw_kfs.empty()) { M_raw_kfs.back().transition(reach_time); }
+
+            M_raw_kfs.push_back(std::move(keyframe));
+            M_duration = std::ranges::fold_left(M_raw_kfs, 0.0f * mp_units::si::second,
+                                                [](second_t acc, const kf &p)
+                                                { return acc + p.transition(); });
+            mark_dirty();
+        }
+
+        /// @brief Check whether the track has any keyframes.
+        [[nodiscard]] bool empty() const { return M_raw_kfs.empty(); }
 
         camera_track(camera_track &&) = default;
         camera_track &operator=(camera_track &&) = default;
@@ -246,6 +295,24 @@ GRAPHICS_EXPORT namespace graphics
         [[nodiscard]] pose at(mp_units::quantity<mp_units::si::second, float> time)
         {
             clean();
+            M_last_query_time = time;
+            time = time - M_time_offset;
+
+            if (M_kfs.size() < 2)
+            {
+                auto pos = to_physkit_vector<mp_units::si::metre, float>(Vector3{0.0f});
+                auto rot =
+                    to_physkit_quaternion<mp_units::one, float>(Quaternion{Math::IdentityInit});
+                if (!M_kfs.empty())
+                {
+                    const auto &keyframe = M_kfs.front().second;
+                    if (keyframe.point()) pos = *keyframe.point();
+                    if (keyframe.orient())
+                        rot = to_physkit_quaternion<mp_units::one, float>(
+                            resolve_orient_at_time(keyframe, 0.0f, M_pos_track));
+                }
+                return {.pos = pos, .rot = rot};
+            }
 
             if (time - M_start_time > M_end_time)
             {
@@ -277,7 +344,12 @@ GRAPHICS_EXPORT namespace graphics
         /// @param time The time at which to check.
         /// @return Boolean representing if the camera is released.
         [[nodiscard]] bool released(const mp_units::quantity<mp_units::si::second, float> time)
-        { return (time > M_end_time && M_extrapolation == release); }
+        {
+            clean();
+            M_last_query_time = time;
+            return M_kfs.size() >= 2 && (time - M_time_offset) > M_end_time &&
+                   M_extrapolation == release;
+        }
 
         /// @brief Get the total duration of the camera track.
         /// @return The sum of all transition durations in the track.
@@ -289,6 +361,7 @@ GRAPHICS_EXPORT namespace graphics
 
     private:
         using second_t = mp_units::quantity<mp_units::si::second, float>;
+        std::vector<kf> M_raw_kfs;
         std::vector<std::pair<second_t, kf>> M_kfs;
         second_t M_duration = -1.f * mp_units::si::second;
         second_t M_start_time = -1.f * mp_units::si::second;
@@ -300,28 +373,47 @@ GRAPHICS_EXPORT namespace graphics
 
         bool M_dirty{true};
         bool M_freelook{false};
+        second_t M_last_query_time{0.0f * mp_units::si::second};
+        second_t M_time_offset{0.0f * mp_units::si::second};
 
         void deduce(const std::span<const kf> pts)
         {
-            M_kfs.clear();
-            M_kfs.reserve(pts.size() + 1);
+            if (std::ranges::count_if(pts, [](const kf &p) { return p.point().has_value(); }) < 2)
+                throw std::runtime_error(
+                    "camera_track requires at least two keyframes with position data");
+            M_raw_kfs.assign(pts.begin(), pts.end());
             M_duration = std::ranges::fold_left(pts, 0.0f * mp_units::si::second,
+                                                [](second_t acc, const kf &p)
+                                                { return acc + p.transition(); });
+            mark_dirty();
+        }
+
+        void rebuild()
+        {
+            M_kfs.clear();
+            M_freelook = false;
+            if (M_raw_kfs.empty()) return;
+
+            M_kfs.reserve(M_raw_kfs.size() + 1);
+            M_duration = std::ranges::fold_left(M_raw_kfs, 0.0f * mp_units::si::second,
                                                 [this](second_t acc, const kf &p)
                                                 {
                                                     M_kfs.emplace_back(acc, p);
                                                     return acc + p.transition();
                                                 });
-            if (std::ranges::count_if(pts, [](const kf &p) { return p.point().has_value(); }) < 2)
-                throw std::runtime_error(
-                    "camera_track requires at least two keyframes with position data");
 
-            // secret key frame to implement looping behavior, the at function limits time to hide
-            // it only add if its time is strictly after the last user keyframe to avoid duplicate
-            if (M_duration > M_kfs.back().first) M_kfs.emplace_back(M_duration, M_kfs.at(0).second);
+            auto pos_count =
+                std::ranges::count_if(M_raw_kfs, [](const kf &p) { return p.point().has_value(); });
+
+            if (pos_count >= 2)
+            {
+                // secret key frame to implement looping behavior
+                if (M_duration > M_kfs.back().first)
+                    M_kfs.emplace_back(M_duration, M_kfs.at(0).second);
+            }
             M_start_time = 0.0f * mp_units::si::second;
-            M_end_time = M_kfs.at(pts.size() - 1).first;
-
-            mark_dirty();
+            M_end_time =
+                (M_raw_kfs.size() >= 2) ? M_kfs.at(M_raw_kfs.size() - 1).first : M_duration;
         }
 
         void compile_pos()
@@ -478,6 +570,7 @@ GRAPHICS_EXPORT namespace graphics
         {
             if (M_dirty)
             {
+                rebuild();
                 compile_pos();
                 compile_orient();
                 M_dirty = false;
@@ -533,10 +626,10 @@ GRAPHICS_EXPORT namespace graphics
     class camera
     {
     public:
-        constexpr static float near = 0.01f;
-        constexpr static float far = 1000.0f;
+        constexpr static float near_var = 0.01f;
+        constexpr static float far_var = 1000.0f;
 
-        constexpr static auto up = Vector3::yAxis();
+        constexpr static auto up_axis = Vector3::yAxis();
 
         template <class Transform>
         explicit camera(SceneGraph::Scene<Transform> &scene,
@@ -555,7 +648,7 @@ GRAPHICS_EXPORT namespace graphics
             M_cam->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
                 .setProjectionMatrix(Matrix4::perspectiveProjection(
                     Rad(M_fov.numerical_value_in(mp_units::si::radian)),
-                    Vector2(viewport_size).aspectRatio(), near, far))
+                    Vector2(viewport_size).aspectRatio(), near_var, far_var))
                 .setViewport(viewport_size);
 
             set_view(dir);
@@ -567,7 +660,7 @@ GRAPHICS_EXPORT namespace graphics
             if (Math::isInf(dir).any() || dir.isZero()) return;
 
             Vector3 f = dir.normalized();
-            Vector3 r = Math::cross(f, up);
+            Vector3 r = Math::cross(f, up_axis);
             if (r.isZero())
             {
                 const Vector3 alt_up = Math::abs(Math::dot(f, Vector3::zAxis())) > 0.99f
@@ -589,7 +682,7 @@ GRAPHICS_EXPORT namespace graphics
             M_cam
                 ->setProjectionMatrix(Matrix4::perspectiveProjection(
                     Rad(M_fov.numerical_value_in(mp_units::si::radian)),
-                    Vector2(viewport_size).aspectRatio(), near, far))
+                    Vector2(viewport_size).aspectRatio(), near_var, far_var))
                 .setViewport(viewport_size);
         }
 
@@ -600,6 +693,9 @@ GRAPHICS_EXPORT namespace graphics
         }
 
         auto pos() const { return to_physkit_vector<mp_units::si::metre, float>(M_pos); }
+        auto forward() const { return to_physkit_vector<mp_units::one, float>(forward_axis()); }
+        auto right() const { return to_physkit_vector<mp_units::one, float>(right_axis()); }
+        auto up() const { return to_physkit_vector<mp_units::one, float>(camera::up_axis); }
 
         void move(const physkit::vec3<mp_units::si::metre, float> &delta)
         {
@@ -613,7 +709,7 @@ GRAPHICS_EXPORT namespace graphics
             Vector3 delta{0.0f};
             if (forward != 0) delta += forward_axis() * forward;
             if (right != 0) delta += right_axis() * right;
-            if (up != 0) delta += camera::up * up;
+            if (up != 0) delta += camera::up_axis * up;
             if (delta == Vector3{0.0f}) return;
             move((to_physkit_vector<mp_units::one, float>(delta.normalized())) * (M_speed * dt));
         }
@@ -625,7 +721,7 @@ GRAPHICS_EXPORT namespace graphics
             float pitch = d_pitch.numerical_value_in(mp_units::si::radian);
             if (yaw == 0.0f && pitch == 0.0f) return;
 
-            M_rot = Quaternion::rotation(Rad(yaw), up) * M_rot;
+            M_rot = Quaternion::rotation(Rad(yaw), camera::up_axis) * M_rot;
 
             constexpr auto max_pitch = std::numbers::pi_v<float> / 2 * .98f;
             const Vector3 fwd = forward_axis();
@@ -676,6 +772,9 @@ GRAPHICS_EXPORT namespace graphics
             mark_dirty();
         }
 
+        /// @brief Access the current move track for dynamic keyframe appending.
+        camera_track &move_track() { return M_track; }
+
         SceneGraph::Camera3D &cam() { return *M_cam; }
 
         [[nodiscard]] Matrix4 view_matrix() const { return transformation().toMatrix(); }
@@ -698,7 +797,7 @@ GRAPHICS_EXPORT namespace graphics
                 M_dirty = false;
             };
 
-            if ((M_track.duration() > 0.0f * mp_units::si::second) && !M_track.released(t))
+            if (!M_track.empty() && !M_track.released(t))
             {
                 auto [pos, rot] = M_track.at(t);
                 M_pos = to_magnum_vector<mp_units::si::metre, float>(pos);
@@ -740,8 +839,6 @@ GRAPHICS_EXPORT namespace graphics
 
         [[nodiscard]] Vector3 right_axis() const noexcept
         { return M_rot.transformVector(Vector3::xAxis()); }
-        [[nodiscard]] Vector3 up_axis() const noexcept
-        { return M_rot.transformVector(Vector3::yAxis()); }
         [[nodiscard]] Vector3 forward_axis() const noexcept
         { return M_rot.transformVector(-Vector3::zAxis()); }
 
