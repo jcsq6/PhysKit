@@ -24,9 +24,7 @@ namespace detail
 {
 template <typename Ret, std::size_t... Indices>
 constexpr auto expand(auto &&nth, std::index_sequence<Indices...> /*helper*/)
-{
-    return Ret{nth(Indices)...};
-}
+{ return Ret{nth(Indices)...}; }
 } // namespace detail
 
 template <mp_units::Reference auto ref, typename T, int Size, mp_units::Quantity Q>
@@ -54,9 +52,7 @@ constexpr Magnum::Math::Quaternion<T> to_magnum_quaternion(const physkit::unit_q
 
 template <mp_units::Reference auto ref, typename T, typename U>
 constexpr physkit::quat<ref, T> to_physkit_quaternion(const Magnum::Math::Quaternion<U> &q)
-{
-    return physkit::quat<ref, T>(q.scalar(), q.vector().x(), q.vector().y(), q.vector().z());
-}
+{ return physkit::quat<ref, T>(q.scalar(), q.vector().x(), q.vector().y(), q.vector().z()); }
 
 inline Magnum::GL::Mesh to_magnum_mesh(const physkit::mesh &phys_mesh)
 {
@@ -139,19 +135,19 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::sphere &phys_sphere,
 inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cone &phys_cone, unsigned int rings = 3,
                                        unsigned int segments = 24)
 {
-	//THERE seems to be no bottom to the cone...
-    //rings, segments, half length
+    // THERE seems to be no bottom to the cone...
+    // rings, segments, half length
     using namespace Magnum;
     using namespace Math::Literals;
     float radius = phys_cone.radius().numerical_value_in(physkit::si::metre);
     float height = phys_cone.height().numerical_value_in(physkit::si::metre);
-    auto data = Primitives::coneSolid(rings, segments, 0.5f*height/radius, Primitives::ConeFlag::CapEnd);
+    auto data = Primitives::coneSolid(rings, segments, 0.5f * height / radius,
+                                      Primitives::ConeFlag::CapEnd);
 
     for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
         i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
     for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
-        i = Matrix4::translation({0,height*0.5f,0}).transformPoint(i);
-
+        i = Matrix4::translation({0, height * 0.5f, 0}).transformPoint(i);
 
     return MeshTools::compile(data);
 }

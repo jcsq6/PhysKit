@@ -116,7 +116,8 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                     else if constexpr (std::same_as<T, sphere_type>)
                         shape_map[shape_name] = physkit::sphere{shape_desc.radius * m};
                     else if constexpr (std::same_as<T, cone_type>)
-                        shape_map[shape_name] = physkit::cone{shape_desc.radius * m, shape_desc.height * m};
+                        shape_map[shape_name] =
+                            physkit::cone{shape_desc.radius * m, shape_desc.height * m};
                 });
         }
 
@@ -227,7 +228,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                                  shape_desc.radius * m);
                 else if constexpr (std::same_as<T, cone_type>)
                     std::println("      Shape: cone (radius: {}, height: {})",
-                                 shape_desc.radius * m, shape_desc.height *m);
+                                 shape_desc.radius * m, shape_desc.height * m);
             });
     }
     std::cout.flush();

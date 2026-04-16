@@ -644,10 +644,10 @@ void test_sphere_support_diagonal()
     CHECK_APPROX(sp2, vec3{1.0, 0.0, 0.0} * m);
 }
 
-//cone tests generated with Claude Sonnet 4.6
-// ===========================================================================
-// Cone — Construction & Properties
-// ===========================================================================
+// cone tests generated with Claude Sonnet 4.6
+//  ===========================================================================
+//  Cone — Construction & Properties
+//  ===========================================================================
 
 void test_cone_construction()
 {
@@ -665,11 +665,11 @@ void test_cone_bounds()
     // AABB: min = (-r, 0, -r), max = (r, h, r)
     cone c(1.0 * m, 2.0 * m);
     CHECK_APPROX(c.bounds().min, vec3{-1.0, 0.0, -1.0} * m);
-    CHECK_APPROX(c.bounds().max, vec3{ 1.0, 2.0,  1.0} * m);
+    CHECK_APPROX(c.bounds().max, vec3{1.0, 2.0, 1.0} * m);
 
     cone c2(2.0 * m, 4.0 * m);
     CHECK_APPROX(c2.bounds().min, vec3{-2.0, 0.0, -2.0} * m);
-    CHECK_APPROX(c2.bounds().max, vec3{ 2.0, 4.0,  2.0} * m);
+    CHECK_APPROX(c2.bounds().max, vec3{2.0, 4.0, 2.0} * m);
 }
 
 void test_cone_bsphere()
@@ -720,7 +720,7 @@ void test_cone_inertia_tensor()
     cone c(1.0 * m, 3.0 * m);
     auto I = c.inertia_tensor(density);
     CHECK_APPROX(I[0, 0], 1.05 * std::numbers::pi * kg * m * m);
-    CHECK_APPROX(I[1, 1], 0.3  * std::numbers::pi * kg * m * m);
+    CHECK_APPROX(I[1, 1], 0.3 * std::numbers::pi * kg * m * m);
     CHECK_APPROX(I[2, 2], 1.05 * std::numbers::pi * kg * m * m);
     // Off-diagonal elements must be zero (diagonal tensor)
     CHECK_APPROX(I[0, 1], 0.0 * kg * m * m);
@@ -733,7 +733,7 @@ void test_cone_inertia_tensor()
     cone c2(2.0 * m, 6.0 * m);
     auto I2 = c2.inertia_tensor(density);
     CHECK_APPROX(I2[0, 0], 33.6 * std::numbers::pi * kg * m * m);
-    CHECK_APPROX(I2[1, 1],  9.6 * std::numbers::pi * kg * m * m);
+    CHECK_APPROX(I2[1, 1], 9.6 * std::numbers::pi * kg * m * m);
     CHECK_APPROX(I2[2, 2], 33.6 * std::numbers::pi * kg * m * m);
 }
 
@@ -750,17 +750,17 @@ void test_cone_contains_interior()
     CHECK(c.contains(vec3{0.0, 0.0, 0.0} * m));
 
     // Axis interior points
-    CHECK(c.contains(vec3{0.0, 0.5, 0.0} * m));   // well inside on axis
-    CHECK(c.contains(vec3{0.0, 1.0, 0.0} * m));   // mid-height on axis
-    CHECK(c.contains(vec3{0.0, 1.99, 0.0} * m));  // near tip on axis
+    CHECK(c.contains(vec3{0.0, 0.5, 0.0} * m));  // well inside on axis
+    CHECK(c.contains(vec3{0.0, 1.0, 0.0} * m));  // mid-height on axis
+    CHECK(c.contains(vec3{0.0, 1.99, 0.0} * m)); // near tip on axis
 
     // At y=1 (half-height) the radius of the cone is r*(1 - 1/2) = 0.5
-    CHECK( c.contains(vec3{0.4,  1.0, 0.0} * m)); // inside the half-height slice
-    CHECK(!c.contains(vec3{0.6,  1.0, 0.0} * m)); // outside the half-height slice
+    CHECK(c.contains(vec3{0.4, 1.0, 0.0} * m));  // inside the half-height slice
+    CHECK(!c.contains(vec3{0.6, 1.0, 0.0} * m)); // outside the half-height slice
 
     // At y=0 (base) the allowed radius is exactly r=1
-    CHECK( c.contains(vec3{0.99, 0.0, 0.0} * m));
-    CHECK( c.contains(vec3{1.0,  0.0, 0.0} * m)); // on boundary
+    CHECK(c.contains(vec3{0.99, 0.0, 0.0} * m));
+    CHECK(c.contains(vec3{1.0, 0.0, 0.0} * m)); // on boundary
     CHECK(!c.contains(vec3{1.01, 0.0, 0.0} * m));
 }
 
@@ -770,12 +770,12 @@ void test_cone_contains_exterior()
     cone c(1.0 * m, 2.0 * m);
 
     // Below the base
-    CHECK(!c.contains(vec3{ 0.0, -0.01, 0.0} * m));
-    CHECK(!c.contains(vec3{ 0.5, -1.0,  0.0} * m));
+    CHECK(!c.contains(vec3{0.0, -0.01, 0.0} * m));
+    CHECK(!c.contains(vec3{0.5, -1.0, 0.0} * m));
 
     // Above the tip
     CHECK(!c.contains(vec3{0.0, 2.01, 0.0} * m));
-    CHECK(!c.contains(vec3{0.0, 3.0,  0.0} * m));
+    CHECK(!c.contains(vec3{0.0, 3.0, 0.0} * m));
 
     // Radially outside at various heights
     CHECK(!c.contains(vec3{1.1, 0.0, 0.0} * m));
@@ -791,9 +791,9 @@ void test_cone_contains_tip()
     cone c(1.0 * m, 2.0 * m);
 
     // The tip itself: (0, h, 0) — radius at h is r*(1-1)=0, so only the exact tip point
-    CHECK( c.contains(vec3{0.0,  2.0,  0.0} * m));
-    CHECK(!c.contains(vec3{0.01, 2.0,  0.0} * m));
-    CHECK(!c.contains(vec3{0.0,  2.0,  0.01} * m));
+    CHECK(c.contains(vec3{0.0, 2.0, 0.0} * m));
+    CHECK(!c.contains(vec3{0.01, 2.0, 0.0} * m));
+    CHECK(!c.contains(vec3{0.0, 2.0, 0.01} * m));
 }
 
 // ===========================================================================
@@ -808,16 +808,16 @@ void test_cone_ray_base()
 
     auto hit = c.ray_intersect({vec3{0.0, 1.0, 0.0} * m, {0, -1, 0}});
     CHECK(hit.has_value());
-    CHECK_APPROX(hit->pos,      vec3{0.0, 0.0, 0.0} * m);
-    CHECK_APPROX(hit->normal,   vec3<one>{0, -1, 0});
+    CHECK_APPROX(hit->pos, vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(hit->normal, vec3<one>{0, -1, 0});
     CHECK_APPROX(hit->distance, 1.0 * m);
 
     // A ray from below pointing up should hit the base from beneath.
     auto hit2 = c.ray_intersect({vec3{0.0, -3.0, 0.0} * m, {0, 1, 0}});
     CHECK(hit2.has_value());
-    CHECK_APPROX(hit2->pos.y(),    0.0 * m);
+    CHECK_APPROX(hit2->pos.y(), 0.0 * m);
     CHECK_APPROX(hit2->normal, vec3<one>{0, -1, 0});
-    CHECK_APPROX(hit2->distance,   3.0 * m);
+    CHECK_APPROX(hit2->distance, 3.0 * m);
 
     // A ray that hits the base off-center (still inside the circle)
     auto hit3 = c.ray_intersect({vec3{0.5, -5.0, 0.0} * m, {0, 1, 0}});
@@ -830,8 +830,7 @@ void test_cone_ray_base()
     auto miss = c.ray_intersect({vec3{1.5, 5.0, 0.0} * m, {0, -1, 0}});
     // This may still hit the lateral surface; if only the base is considered it must miss.
     // (The test accepts a surface hit but verifies the base hit_pos.y() == 0 only if hit.)
-    if (miss.has_value())
-        CHECK(miss->pos.y() > 0.0 * m); // must be a lateral surface hit, not base
+    if (miss.has_value()) CHECK(miss->pos.y() > 0.0 * m); // must be a lateral surface hit, not base
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -844,8 +843,8 @@ void test_cone_ray_lateral_surface()
     // Approach from +x at y=1 (mid-height); expect a hit on the lateral surface.
     auto hit = c.ray_intersect({vec3{5.0, 1.0, 0.0} * m, {-1, 0, 0}});
     CHECK(hit.has_value());
-    CHECK_APPROX(hit->pos.y(), 1.0 * m);  // same height
-    CHECK_APPROX(hit->pos.z(), 0.0 * m);  // on xz symmetry plane
+    CHECK_APPROX(hit->pos.y(), 1.0 * m); // same height
+    CHECK_APPROX(hit->pos.z(), 0.0 * m); // on xz symmetry plane
     // The hit point must satisfy the cone equation: x == r*(1 - y/h) == 0.5
     CHECK_APPROX(hit->pos.x(), 0.5 * m);
 }
@@ -908,8 +907,8 @@ void test_cone_ray_intersect_nearest_root()
     auto hit = c.ray_intersect({vec3{5.0, 2.0, 0.0} * m, {-1, 0, 0}});
     CHECK(hit.has_value());
     // The reported distance must be the SMALLER of the two roots (entry point).
-    CHECK_APPROX(hit->pos.x(),    0.5 * m, 0.05 * m);
-    CHECK_APPROX(hit->distance,   4.5 * m, 0.05 * m);
+    CHECK_APPROX(hit->pos.x(), 0.5 * m, 0.05 * m);
+    CHECK_APPROX(hit->distance, 4.5 * m, 0.05 * m);
 }
 
 // ===========================================================================
@@ -1016,9 +1015,9 @@ void test_cone_support_downward()
     auto s = c.support({0, -1, 0});
     CHECK_APPROX(s.y(), 0.0 * m);
     // Should be at the rim (distance from y-axis == radius)
-    auto xz_dist = std::sqrt(
-        s.x().numerical_value_in(si::metre) * s.x().numerical_value_in(si::metre) +
-        s.z().numerical_value_in(si::metre) * s.z().numerical_value_in(si::metre));
+    auto xz_dist =
+        std::sqrt(s.x().numerical_value_in(si::metre) * s.x().numerical_value_in(si::metre) +
+                  s.z().numerical_value_in(si::metre) * s.z().numerical_value_in(si::metre));
     CHECK_APPROX(xz_dist * m, 1.0 * m);
 }
 
@@ -1036,8 +1035,8 @@ void test_cone_support_lateral()
     // Symmetric for -x
     auto s2 = c.support({-1, 0, 0});
     CHECK_APPROX(s2.x(), -1.0 * m);
-    CHECK_APPROX(s2.y(),  0.0 * m);
-    CHECK_APPROX(s2.z(),  0.0 * m);
+    CHECK_APPROX(s2.y(), 0.0 * m);
+    CHECK_APPROX(s2.z(), 0.0 * m);
 }
 
 void test_cone_support_diagonal()
@@ -1057,9 +1056,177 @@ void test_cone_support_diagonal()
     // tip dot d ≈ 0.1/|d|; base-edge at (r,0,0) dot d ≈ 1/|d|  → base wins
     auto dir2 = vec3<one>{1.0, 0.1, 0.0}.normalized();
     auto s2 = c.support(dir2);
-	 printf("s2: %f, %f, %f\n", s2.x().numerical_value_in(si::metre), s2.y().numerical_value_in(si::metre), s2.z().numerical_value_in(si::metre));
-    CHECK_APPROX(s2.y(), 0.0 * m);  // base level
-    CHECK_APPROX(s2.x(), 1.0 * m);  // at the radius
+    CHECK_APPROX(s2.y(), 0.0 * m); // base level
+    CHECK_APPROX(s2.x(), 1.0 * m); // at the radius
+}
+
+// ===========================================================================
+// Cone — Additional Edge Cases
+// ===========================================================================
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_cone_ray_above_tip()
+{
+    // Rays in the region above the tip should miss the cone entirely,
+    // not hit the "virtual" infinite cone surface beyond the apex.
+    cone c(1.0 * m, 2.0 * m);
+
+    // Horizontal ray above the tip
+    CHECK(!c.ray_intersect({vec3{-5.0, 3.0, 0.0} * m, {1, 0, 0}}).has_value());
+
+    // Horizontal ray just above the tip
+    CHECK(!c.ray_intersect({vec3{-5.0, 2.1, 0.0} * m, {1, 0, 0}}).has_value());
+
+    // Diagonal ray crossing through the virtual cone above the tip
+    auto dir = vec3{1.0, -0.1, 0.0}.normalized();
+    auto hit = c.ray_intersect({vec3{-5.0, 4.0, 0.0} * m, dir});
+    // Either miss entirely, or if it hits, it must be within the actual cone
+    if (hit.has_value())
+    {
+        CHECK(hit->pos.y() >= 0.0 * m);
+        CHECK(hit->pos.y() <= 2.0 * m);
+    }
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_cone_ray_from_inside()
+{
+    cone c(1.0 * m, 2.0 * m);
+
+    // From the axis at mid-height, pointing toward +x: hits the lateral surface.
+    // At y=1, the cone radius is 0.5.
+    auto hit = c.ray_intersect({vec3{0.0, 1.0, 0.0} * m, {1, 0, 0}});
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos.x(), 0.5 * m, 0.01 * m);
+    CHECK_APPROX(hit->pos.y(), 1.0 * m);
+    CHECK_APPROX(hit->distance, 0.5 * m, 0.01 * m);
+
+    // From inside, pointing up along the axis: should hit the tip.
+    auto hit2 = c.ray_intersect({vec3{0.0, 0.5, 0.0} * m, {0, 1, 0}});
+    CHECK(hit2.has_value());
+    CHECK_APPROX(hit2->pos, vec3{0.0, 2.0, 0.0} * m);
+    CHECK_APPROX(hit2->distance, 1.5 * m);
+
+    // From inside, pointing down: should hit the base.
+    auto hit3 = c.ray_intersect({vec3{0.0, 0.5, 0.0} * m, {0, -1, 0}});
+    CHECK(hit3.has_value());
+    CHECK_APPROX(hit3->pos, vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(hit3->distance, 0.5 * m);
+}
+
+void test_cone_ray_along_axis_from_above()
+{
+    cone c(1.0 * m, 2.0 * m);
+
+    // Shoot straight down along the axis: should hit the tip first.
+    auto hit = c.ray_intersect({vec3{0.0, 10.0, 0.0} * m, {0, -1, 0}});
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos, vec3{0.0, 2.0, 0.0} * m);
+    CHECK_APPROX(hit->distance, 8.0 * m);
+    CHECK_APPROX(hit->normal, vec3<one>{0, 1, 0}); // tip normal points up
+}
+
+void test_cone_ray_lateral_normal()
+{
+    // Verify that normals on the lateral surface are geometrically correct.
+    // At a point (x, y, z) on the cone surface, the outward normal is
+    // proportional to (x, (r²/h²)(h-y), z).
+    cone c(1.0 * m, 2.0 * m);
+
+    // Horizontal ray hitting the cone at mid-height (y=1, cone radius=0.5)
+    auto hit = c.ray_intersect({vec3{5.0, 1.0, 0.0} * m, {-1, 0, 0}});
+    CHECK(hit.has_value());
+    CHECK_APPROX(hit->pos.x(), 0.5 * m, 0.01 * m);
+    // Normal at (0.5, 1, 0): ∝ (0.5, 1*1*(2-1)/(2*2), 0) = (0.5, 0.25, 0)
+    auto expected_normal = vec3{0.5, 0.25, 0.0}.normalized();
+    CHECK_APPROX(hit->normal, expected_normal);
+
+    // At the base edge (y=0, x=1): normal ∝ (1, r²*h/h², 0) = (1, 0.5, 0)
+    auto hit2 = c.ray_intersect({vec3{5.0, 0.0, 0.0} * m, {-1, 0, 0}});
+    CHECK(hit2.has_value());
+    auto expected_normal2 = vec3{1.0, 0.5, 0.0}.normalized();
+    CHECK_APPROX(hit2->normal, expected_normal2);
+}
+
+void test_cone_closest_point_slant_wins()
+{
+    // A point where the closest surface point is on the slant, not the base.
+    cone c(1.0 * m, 2.0 * m);
+
+    // Point (2, 1, 0): base-closest is (1, 0, 0) at dist sqrt(2) ≈ 1.414
+    // Slant projection gives (0.8, 0.4, 0) at dist sqrt(1.8) ≈ 1.342
+    auto cp = c.closest_point(vec3{2.0, 1.0, 0.0} * m);
+    CHECK_APPROX(cp, vec3{0.8, 0.4, 0.0} * m);
+
+    // Verify the result is on the cone surface
+    CHECK(c.contains(cp));
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void test_cone_closest_point_below_base()
+{
+    // Point below the base, offset from the axis
+    cone c(2.0 * m, 3.0 * m);
+
+    // Inside the base circle projection: closest is the projection onto the disk
+    auto cp = c.closest_point(vec3{0.5, -1.0, 0.3} * m);
+    CHECK_APPROX(cp, vec3{0.5, 0.0, 0.3} * m);
+
+    // Outside the base circle: closest is on the rim
+    auto cp2 = c.closest_point(vec3{3.0, -1.0, 0.0} * m);
+    CHECK_APPROX(cp2, vec3{2.0, 0.0, 0.0} * m);
+}
+
+void test_cone_closest_point_wide_cone()
+{
+    // Wide cone (r >> h) to exercise the r≠1 code path.
+    // With the old bug, circle_point would be at unit length instead of at the rim.
+    cone c(5.0 * m, 1.0 * m);
+
+    // Point outside the base circle, below the base
+    auto cp = c.closest_point(vec3{10.0, -1.0, 0.0} * m);
+    CHECK_APPROX(cp, vec3{5.0, 0.0, 0.0} * m);
+
+    // Point above the cone, near the axis: closest is the tip
+    auto cp2 = c.closest_point(vec3{0.0, 5.0, 0.0} * m);
+    CHECK_APPROX(cp2, vec3{0.0, 1.0, 0.0} * m);
+}
+
+void test_cone_support_boundary()
+{
+    // Direction exactly along the cone's slant angle.
+    // Slant from (r, 0) to (0, h) has direction (-r, h).
+    // Outward normal is (h, r) (rotated 90° from the slant).
+    // For r=1, h=2: normal direction ∝ (2, 1).
+    // h*dy vs r*dxz: 2*(1/sqrt5) vs 1*(2/sqrt5) → 2/sqrt5 = 2/sqrt5. Tie → tip.
+    cone c(1.0 * m, 2.0 * m);
+
+    auto dir = vec3{2.0, 1.0, 0.0}.normalized();
+    auto s = c.support(dir);
+    CHECK_APPROX(s, vec3{0.0, 2.0, 0.0} * m); // tie goes to tip
+
+    // Direction slightly below the boundary: base rim wins
+    auto dir2 = vec3{2.1, 1.0, 0.0}.normalized();
+    auto s2 = c.support(dir2);
+    CHECK_APPROX(s2.y(), 0.0 * m);
+    CHECK_APPROX(s2.x(), 1.0 * m, 0.01 * m);
+}
+
+void test_cone_support_3d_direction()
+{
+    // Support in a 3D direction (not axis-aligned or in-plane).
+    cone c(1.0 * m, 2.0 * m);
+
+    // Direction (1, 0, 1) normalized: dxz = 1, dy = 0.
+    // h*0 = 0 < r*1 = 1 → base rim.
+    // Rim point at angle 45°: (r/sqrt2, 0, r/sqrt2)
+    auto inv_sqrt2 = 1.0 / std::sqrt(2.0);
+    auto s = c.support(vec3{1.0, 0.0, 1.0});
+    CHECK_APPROX(s, vec3{inv_sqrt2, 0.0, inv_sqrt2} * m);
+
+    // Direction (0, 0, -1): base rim at (0, 0, -r)
+    auto s2 = c.support(vec3<one>{0, 0, -1});
+    CHECK_APPROX(s2, vec3{0.0, 0.0, -1.0} * m);
 }
 
 // ===========================================================================
@@ -1085,7 +1252,7 @@ void test_cone_asymmetric_contains()
     // Wide, flat cone: r=4, h=1
     cone c(4.0 * m, 1.0 * m);
     // At y=0.5 (mid-height) the radius is 4*(1-0.5) = 2.0
-    CHECK( c.contains(vec3{1.9, 0.5, 0.0} * m));
+    CHECK(c.contains(vec3{1.9, 0.5, 0.0} * m));
     CHECK(!c.contains(vec3{2.1, 0.5, 0.0} * m));
 }
 
@@ -1415,43 +1582,54 @@ int main()
         .test("diagonal", test_sphere_support_diagonal);
 
     tests.group("Cone Properties")
-    .test("construction",    test_cone_construction)
-    .test("bounds",          test_cone_bounds)
-    .test("bsphere",         test_cone_bsphere)
-    .test("volume",          test_cone_volume)
-    .test("mass_center",     test_cone_mass_center)
-    .test("inertia_tensor",  test_cone_inertia_tensor);
+        .test("construction", test_cone_construction)
+        .test("bounds", test_cone_bounds)
+        .test("bsphere", test_cone_bsphere)
+        .test("volume", test_cone_volume)
+        .test("mass_center", test_cone_mass_center)
+        .test("inertia_tensor", test_cone_inertia_tensor);
 
     tests.group("Cone Contains")
-        .test("interior",    test_cone_contains_interior)
-        .test("exterior",    test_cone_contains_exterior)
-        .test("tip",         test_cone_contains_tip);
+        .test("interior", test_cone_contains_interior)
+        .test("exterior", test_cone_contains_exterior)
+        .test("tip", test_cone_contains_tip);
 
     tests.group("Cone Ray Intersect")
-        .test("base",             test_cone_ray_base)
-        .test("lateral surface",  test_cone_ray_lateral_surface)
-        .test("tip",              test_cone_ray_tip)
-        .test("miss",             test_cone_ray_miss)
-        .test("max_distance",     test_cone_ray_max_distance)
-        .test("nearest root",     test_cone_ray_intersect_nearest_root);
+        .test("base", test_cone_ray_base)
+        .test("lateral surface", test_cone_ray_lateral_surface)
+        .test("tip", test_cone_ray_tip)
+        .test("miss", test_cone_ray_miss)
+        .test("max_distance", test_cone_ray_max_distance)
+        .test("nearest root", test_cone_ray_intersect_nearest_root);
 
     tests.group("Cone Closest Point")
-        .test("tip",        test_cone_closest_point_tip)
-        .test("base",       test_cone_closest_point_base)
-        .test("lateral",    test_cone_closest_point_lateral)
-        .test("inside",     test_cone_closest_point_inside)
-        .test("base edge",  test_cone_closest_point_base_edge);
+        .test("tip", test_cone_closest_point_tip)
+        .test("base", test_cone_closest_point_base)
+        .test("lateral", test_cone_closest_point_lateral)
+        .test("inside", test_cone_closest_point_inside)
+        .test("base edge", test_cone_closest_point_base_edge);
 
     tests.group("Cone Support")
-        .test("upward",    test_cone_support_upward)
-        .test("downward",  test_cone_support_downward)
-        .test("lateral",   test_cone_support_lateral)
-        .test("diagonal",  test_cone_support_diagonal);
+        .test("upward", test_cone_support_upward)
+        .test("downward", test_cone_support_downward)
+        .test("lateral", test_cone_support_lateral)
+        .test("diagonal", test_cone_support_diagonal);
+
+    tests.group("Cone Edge Cases")
+        .test("ray above tip", test_cone_ray_above_tip)
+        .test("ray from inside", test_cone_ray_from_inside)
+        .test("ray along axis", test_cone_ray_along_axis_from_above)
+        .test("ray lateral normal", test_cone_ray_lateral_normal)
+        .test("closest slant wins", test_cone_closest_point_slant_wins)
+        .test("closest below base", test_cone_closest_point_below_base)
+        .test("closest wide cone", test_cone_closest_point_wide_cone)
+        .test("support boundary", test_cone_support_boundary)
+        .test("support 3D direction", test_cone_support_3d_direction);
 
     tests.group("Cone Asymmetric")
-        .test("volume",      test_cone_asymmetric_volume)
+        .test("volume", test_cone_asymmetric_volume)
         .test("mass_center", test_cone_asymmetric_mass_center)
-        .test("contains",    test_cone_asymmetric_contains);
+        .test("contains", test_cone_asymmetric_contains);
 
     tests.group("Shape Wrapper")
         .test("default construction", test_shape_default)
