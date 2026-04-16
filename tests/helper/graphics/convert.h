@@ -151,4 +151,22 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cone &phys_cone, unsigned 
 
     return MeshTools::compile(data);
 }
+
+inline Magnum::GL::Mesh to_magnum_mesh(const physkit::shape &phys_shape)
+{
+    switch (phys_shape.type())
+    {
+    case physkit::shape::type::shape_mesh:
+        return to_magnum_mesh(phys_shape.mesh());
+    case physkit::shape::type::shape_box:
+        return to_magnum_mesh(phys_shape.box());
+    case physkit::shape::type::shape_sphere:
+        return to_magnum_mesh(phys_shape.sphere());
+    case physkit::shape::type::shape_cone:
+        return to_magnum_mesh(phys_shape.cone());
+    default:
+        std::unreachable();
+    }
+
+}
 } // namespace graphics
