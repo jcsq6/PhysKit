@@ -444,7 +444,10 @@ GRAPHICS_EXPORT namespace graphics
         {
             if (auto it = M_phys_shape_map.find(&phys_shape); it != M_phys_shape_map.end())
                 return it->second;
-            return internal_shape_map_emplace(phys_shape);
+            //
+            return M_phys_shape_map
+                .emplace(&phys_shape, std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape)))
+                .first->second;
         }
 
         /// @brief Add a physics object to the scene with the specified color. This method will
@@ -459,7 +462,9 @@ GRAPHICS_EXPORT namespace graphics
             auto &obj = phys_obj->obj();
             std::shared_ptr<GL::Mesh> mesh;
             if (auto it = M_phys_shape_map.find(&obj.shape()); it == M_phys_shape_map.end())
-                mesh = internal_shape_map_emplace(obj.shape());
+                mesh = M_phys_shape_map
+                    .emplace(&obj.shape(), std::make_shared<GL::Mesh>(to_magnum_mesh(obj.shape())))
+                    .first->second;
             else
                 mesh = it->second;
 
@@ -627,36 +632,6 @@ GRAPHICS_EXPORT namespace graphics
         { return M_timeline.previousFrameTime() * mp_units::si::second; }
 
     private:
-        std::shared_ptr<GL::Mesh> internal_shape_map_emplace(const physkit::shape &phys_shape)
-        {
-            switch (phys_shape.type())
-            {
-            case physkit::shape::type::shape_mesh:
-                return M_phys_shape_map
-                    .emplace(&phys_shape,
-                             std::make_shared<GL::Mesh>(to_magnum_mesh(*phys_shape.mesh())))
-                    .first->second;
-                break;
-            case physkit::shape::type::shape_sphere:
-                return M_phys_shape_map
-                    .emplace(&phys_shape,
-                             std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape.sphere(), 3)))
-                    .first->second;
-                break;
-            case physkit::shape::type::shape_box:
-                return M_phys_shape_map
-                    .emplace(&phys_shape,
-                             std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape.box())))
-                    .first->second;
-            case physkit::shape::type::shape_cone:
-                return M_phys_shape_map
-                    .emplace(&phys_shape,
-                             std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape.cone())))
-                    .first->second;
-            default:
-                std::unreachable();
-            }
-        }
         void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color3 color)
         {
             instanced_drawables *instances{};

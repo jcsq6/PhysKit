@@ -157,7 +157,7 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::shape &phys_shape)
     switch (phys_shape.type())
     {
     case physkit::shape::type::shape_mesh:
-        return to_magnum_mesh(phys_shape.mesh());
+        return to_magnum_mesh(*phys_shape.mesh());
     case physkit::shape::type::shape_box:
         return to_magnum_mesh(phys_shape.box());
     case physkit::shape::type::shape_sphere:
