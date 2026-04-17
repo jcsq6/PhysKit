@@ -378,6 +378,71 @@ private:
     quantity<si::metre> M_height;
 };
 
+//pyramid points positioned at +-base_half, 0, +-base_half
+class pyramid
+{
+public:
+    pyramid(const pyramid &) = default;
+    pyramid &operator=(const pyramid &) = default;
+    pyramid(pyramid &&) = default;
+    pyramid &operator=(pyramid &&) = default;
+    ~pyramid() = default;
+
+    pyramid(const quantity<si::metre> &base_half, const quantity<si::metre> &height) : M_base_half{base_half}, M_height{height}
+    {
+        M_aabb = aabb::from_points();
+
+        M_bsphere = bounding_sphere();
+    }
+
+    [[nodiscard]] const quantity<si::metre> &base_half() const { return M_base_half; }
+    [[nodiscard]] const quantity<si::metre> &height() const {return M_height; }
+    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
+    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
+
+    [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
+    { return pow<3>(M_base_half*2)/6; }
+
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    [[nodiscard]] vec3<si::metre> mass_center() const
+    {
+        using namespace mp_units::si::unit_symbols;
+        return {0.0 * m, 0.25 * M_height, 0.0 * m};
+    }
+    [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
+    inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
+    {
+        using namespace mp_units::si::unit_symbols;
+        auto mass = density * volume();
+        auto ixz = density*(8.0*pow<4>(M_base_half)*M_height+pow<2>(M_base_half)*pow<3>(M_height))/30.0;
+        auto iy = (1.0/20.0)*mass*pow<2>(2*M_base_half);
+
+        return vec3{ixz, iy, ixz}.as_diagonal() * kg * m * m;
+    }
+
+    /// @brief Ray intersection in local (model) space. O(log N) time.
+    [[nodiscard]] std::optional<ray::hit>
+    ray_intersect(const ray &r, quantity<si::metre> max_distance =
+                                    std::numeric_limits<quantity<si::metre>>::infinity()) const;
+    /// @brief Closest point on the box surface in local space. O(N) time.
+    [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
+    /// @brief Point containment test in local space. O(N) time.
+    [[nodiscard]] bool contains(const vec3<si::metre> &point) const
+    {
+    }
+
+    /// @brief GJK support function in local space.
+    [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const;
+
+    /// @brief - Add in support to return obb objects -> much more tedious, more research later.
+
+private:
+    quantity <si::metre> M_base_half;
+    quantity <si::metre> M_height;
+    aabb M_aabb;
+    bounding_sphere M_bsphere;
+};
+
 class shape
 {
 public:
