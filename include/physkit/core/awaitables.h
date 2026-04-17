@@ -390,12 +390,15 @@ struct wait_for_all
             (std::size_t{0} + ... +
              (detail::no_expect_awaiter<detail::awaitable_awaiter_t<Awaitables>> ? 1 : 0));
 
-        [[nodiscard]] consteval std::size_t no_expect_index(std::size_t i) const
+        [[nodiscard]] static consteval std::size_t no_expect_index(std::size_t i)
         {
+            // TODO: replace with template for when compiler support arrives
+            constexpr std::array<bool, sizeof...(Awaitables)> matches{
+                detail::no_expect_awaiter<detail::awaitable_awaiter_t<Awaitables>>...};
             std::size_t count = 0;
             for (std::size_t idx = 0; idx < sizeof...(Awaitables); ++idx)
             {
-                if (detail::no_expect_awaiter<detail::awaitable_awaiter_t<Awaitables...[idx]>>)
+                if (matches[idx])
                 {
                     if (count == i) return idx;
                     ++count;
