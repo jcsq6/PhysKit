@@ -39,6 +39,13 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         float radius;
     };
 
+    struct cylinder_type // NOLINT(cppcoreguidelines-pro-type-member-init)
+    {
+        std::string name; // must be "cylinder"
+        float radius;
+        float height;
+    };
+
     struct cone_type // NOLINT(cppcoreguidelines-pro-type-member-init)
     {
         std::string name; // must be "cone"

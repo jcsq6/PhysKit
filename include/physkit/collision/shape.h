@@ -194,6 +194,299 @@ private:
     quantity<si::metre> M_radius;
 };
 
+class cylinder // center at origin, height of height, radius of radius
+{
+public:
+    /// @brief A view of a cylinder placed in world space.
+    /// Provides world-space collision queries by transforming into local space and back.
+
+    cylinder(const cylinder &) = default;
+    cylinder &operator=(const cylinder &) = default;
+    cylinder(cylinder &&) = default;
+    cylinder &operator=(cylinder &&) = default;
+    ~cylinder() = default;
+
+    cylinder(const quantity<si::metre> radius, const quantity<si::metre> height)
+        : M_radius{radius}, M_height{height}
+    {
+        M_aabb = aabb::from_points({vec3<si::metre>{M_radius, M_height / 2.0f, M_radius},
+                                    vec3<si::metre>{M_radius, -M_height / 2.0f, M_radius}});
+
+        M_bsphere = bounding_sphere(vec3<si::metre>{0 * si::metre, 0 * si::metre, 0 * si::metre},
+                                    sqrt(pow<2>(M_radius) + pow<2>(M_height / 2)));
+    }
+
+    [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius; }
+    [[nodiscard]] const quantity<si::metre> &height() const { return M_height; }
+    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
+    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
+
+    [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
+    { return (M_height * pow<2>(M_radius)) * std::numbers::pi; } // pi*r^2*h
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    [[nodiscard]] vec3<si::metre> mass_center() const
+    { return vec3<si::metre>::zero(); }
+    [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
+    inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
+    {
+        // rotation about y is m*r^2/2
+        // rotation about other axis is m*(3.0*r^2 + h^2)/12
+        using namespace mp_units::si::unit_symbols;
+        auto iy = 0.5 * density * volume() * pow<2>(M_radius);
+        auto ixz = density * volume() * (3.0 * pow<2>(M_radius) + pow<2>(M_height)) / 12.0;
+
+        return vec3{ixz, iy, ixz}.as_diagonal();
+    }
+
+    /// @brief Ray intersection in local (model) space. O(1) time.
+    [[nodiscard]] std::optional<ray::hit>
+    ray_intersect(const ray &r, quantity<si::metre> max_distance =
+                                    std::numeric_limits<quantity<si::metre>>::infinity()) const
+    {
+        std::optional<ray::hit> best;
+
+        const auto &o = r.origin();
+        const auto &d = r.direction();
+        const auto &[ox,oy,oz] = o;
+        const auto &[dx,dy,dz] = d;
+        //const auto [x1,y1,z1] = r.origin() + r.direction() * max_distance;
+        const auto half_h = M_height * 0.5;
+
+
+        auto a = dx*dx + dz*dz; // m2
+        auto b = 2 * (ox*dx + oz*dz); // m2
+        auto c = ox*ox + oz*oz - M_radius*M_radius; // m2
+
+        if (a != 0.0 * one)
+        {
+            auto det = b*b - 4 * a * c; // m4
+
+            if (det >= 0.0 * si::metre * si::metre)
+            {
+                auto sqrt_det = sqrt(det); // m2
+
+                auto t1 = (-b - sqrt_det) / (2 * a); // m
+                auto t2 = (-b + sqrt_det) / (2 * a); // m
+
+                if (t1 > t2) std::swap(t1, t2);
+
+                for (auto t : {t1, t2}) // t -> m
+                {
+                    if (t < (0.0 * si::metre) || t > max_distance)
+                        continue;
+
+                    if (best && best->distance <= t)
+                        break;
+
+                    auto p = o + t * d; // point of possible intersection. m
+
+                    if (p.y() < -half_h || p.y() > half_h) // out of bounds.
+                        continue;
+
+                    vec3<one> norm;
+
+                    if (p.x() == (0.0 * si::metre) &&
+                        p.z() == (0.0 * si::metre))
+                    {
+                        norm = vec3<one>{0, 1, 0};
+                    }
+                    else
+                    {
+                        norm = vec3{p.x(), 0.0 * si::metre, p.z()}.normalized();
+                    }
+
+                    best = ray::hit{
+                        .pos = p,
+                        .normal = norm,
+                        .distance = t
+                    };
+
+                    break;
+                }
+            }
+        }
+
+
+        // caps
+        if (dy != 0.0 * one)
+        {
+            // bottom cap y = -h/2
+            {
+                auto t = (-half_h - oy) / dy;
+
+                if (t >= (0.0 * si::metre) && t <= max_distance)
+                {
+                    auto p = o + t * d;
+
+                    if (p.x()*p.x() + p.z()*p.z() <= M_radius*M_radius)
+                    {
+                        if (!best || t < best->distance)
+                        {
+                            best = ray::hit{
+                                .pos = p,
+                                .normal = vec3<one>{0, -1, 0},
+                                .distance = t
+                            };
+                        }
+                    }
+                }
+            }
+
+            // top cap y = +h/2
+            {
+                auto t = (half_h - oy) / dy;
+
+                if (t >= (0.0 * si::metre) && t <= max_distance)
+                {
+                    auto p = o + t * d;
+
+                    if (p.x()*p.x() + p.z()*p.z() <= M_radius*M_radius)
+                    {
+                        if (!best || t < best->distance)
+                        {
+                            best = ray::hit{
+                                .pos = p,
+                                .normal = vec3<one>{0, 1, 0},
+                                .distance = t
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        return best;
+
+            // if (ymax < -half_h || ymin > half_h) return std::nullopt;
+            // else {
+            //     if (dy!=0) {
+            //         if (ymax >= half_h && ymin <= half_h) {
+            //             // maybe touches top cap
+                        
+            //             auto t = (half_h - y0) / dy;
+            //             if (t <= max_distance) {
+                            
+            //             }
+            //         }
+            //     }
+            // }
+
+            // //auto dmax = std::max(d0,d1);
+            // auto dmin = std::min(d0,d1);
+            // if (dmin > M_radius * M_radius) return std::nullopt;
+
+            // using namespace mp_units::si::unit_symbols;
+            // std::optional<ray::hit> best;
+
+        // auto o = r.origin();
+        // auto dir = r.direction();
+
+        // // Base plane intersection (y = 0)
+        // if (dir.y() != 0)
+        //     if (auto dist = -o.y() / dir.y(); dist >= 0 * m && dist <= max_distance)
+        //         if (auto point = o + dist * dir;
+        //             pow<2>(point.x()) + pow<2>(point.z()) <= pow<2>(M_radius))
+        //             best = ray::hit{.pos = point, .normal = vec3<one>{0, -1, 0}, .distance = dist};
+
+        // // Lateral surface intersection: $x^2 + z^2 = (r/h)^2(h - y)^2$
+        // auto rad = M_radius;
+        // auto h = M_height;
+
+        // auto a = dir.x() * dir.x() + dir.z() * dir.z() - dir.y() * dir.y() * rad * rad / (h * h);
+        // auto b = 2 * o.x() * dir.x() + 2 * o.z() * dir.z() -
+        //          2 * rad * rad * o.y() * dir.y() / (h * h) + 2 * dir.y() * rad * rad / h;
+        // auto c = o.x() * o.x() + o.z() * o.z() - o.y() * o.y() * rad * rad / (h * h) +
+        //          2 * o.y() * rad * rad / h - rad * rad;
+
+        // auto det = b * b - 4 * a * c;
+        // if (det >= 0 * m * m)
+        // {
+        //     auto sqrt_det = sqrt(det);
+        //     auto t1 = (-b - sqrt_det) / (2 * a);
+        //     auto t2 = (-b + sqrt_det) / (2 * a);
+        //     if (t1 > t2) std::swap(t1, t2);
+
+        //     for (auto t : {t1, t2})
+        //     {
+        //         auto dist = t;
+        //         if (dist < 0 * m || dist > max_distance) continue;
+        //         if (best.has_value() && best->distance <= dist) break;
+
+        //         auto p = o + dist * dir;
+        //         // Reject hits outside the finite cylinder
+        //         if (p.y() < 0 * m || p.y() > M_height) continue;
+
+        //         // Outward normal: $\nabla(x^2+z^2-(r/h)^2(h-y)^2) \propto (x, (r^2/h^2)(h-y), z)$
+
+        //         vec3<one> norm;
+        //         if (p.x() == 0.0 * m && p.z() == 0.0 * m)
+        //             norm = vec3<one>{0.0, 1.0, 0.0};
+        //         else
+        //             norm = vec3{p.x(), rad * rad * (h - p.y()) / (h * h), p.z()}.normalized();
+
+        //         best = ray::hit{.pos = p, .normal = norm, .distance = dist};
+        //         break;
+        //     }
+        // }
+
+        // return best;
+    }
+    /// @brief Closest point on the cylinder surface in local space. O(1) time.
+    [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const
+    {
+        auto [x,y,z] = point;
+        const auto d2 = x*x + z*z;
+        //const auto r2 = M_radius * M_radius;
+        if (d2 > M_radius * M_radius) {
+            auto s = M_radius / sqrt(d2); // projector to point on cylinder
+            x *= s;
+            z *= s;
+        }
+        const auto half_height = M_height * 0.5; // no fp error because this just decrements the exponent.
+        y = std::clamp(y,-half_height,half_height);
+
+        return vec3{x, y, z};
+    }
+    /// @brief Point containment test in local space. O(1) time.
+    [[nodiscard]] bool contains(const vec3<si::metre> &point) const
+    {
+        auto [x,y,z] = point;
+        return (abs(y) <= M_height * 0.5) && (x*x+z*z <= M_radius * M_radius);
+    }
+
+    /// @brief GJK support function in local space.
+    [[nodiscard]] vec3<si::metre> support(const vec3<one> &dir) const
+    {
+
+        const auto half_h = M_height / 2;
+
+        // top or bottom cap
+        const auto y = (dir.y() >= 0.0) ? half_h : -half_h; // m
+
+        // project to xz
+        const auto dxz = sqrt(dir.x() * dir.x() + dir.z() * dir.z()); // one
+
+        if (dxz == 0.0) // direction is vertical
+        {
+            return vec3{0.0 * si::metre, y, 0.0 * si::metre};
+        }
+
+        // support point on rim.
+        const auto sx = M_radius * dir.x() / dxz; // m
+        const auto sz = M_radius * dir.z() / dxz; // m
+
+        return vec3{sx, y, sz};
+    }
+
+    /// TODO: Add in support to return obb objects -> much more tedious, more research later.
+
+private:
+    aabb M_aabb;
+    bounding_sphere M_bsphere;
+    quantity<si::metre> M_radius;
+    quantity<si::metre> M_height;
+};
+
 class cone // base at origin, height of height, radius of radius
 {
 public:
@@ -385,7 +678,7 @@ public:
     {
         shape_sphere = 0,
         shape_box,
-        // shape_cylinder,
+        shape_cylinder,
         shape_cone,
         // shape_convex_hull,
         shape_mesh
@@ -427,6 +720,8 @@ public:
 
     shape(const physkit::box &b) : M_type(type::shape_box) { construct_box(b); }
 
+    shape(const physkit::cylinder &cy) : M_type(type::shape_cylinder) { construct_cylinder(cy); }
+
     shape(const physkit::cone &c) : M_type(type::shape_cone) { construct_cone(c); }
 
     [[nodiscard]] const std::shared_ptr<const physkit::mesh> &mesh() const
@@ -443,6 +738,11 @@ public:
     {
         assert(M_type == type::shape_box);
         return M_storage.bx;
+    }
+    [[nodiscard]] const physkit::cylinder &cylinder() const
+    {
+        assert(M_type == type::shape_cylinder);
+        return M_storage.cyl;
     }
     [[nodiscard]] const physkit::cone &cone() const
     {
@@ -471,6 +771,8 @@ private:
             return std::forward<F>(f)(M_storage.bx);
         case type::shape_mesh:
             return std::forward<F>(f)(*M_storage.msh);
+        case type::shape_cylinder:
+            return std::forward<F>(f)(M_storage.cyl);
         case type::shape_cone:
             return std::forward<F>(f)(M_storage.cn);
         default:
@@ -547,6 +849,7 @@ public:
             return M_storage.msh->is_convex();
         case type::shape_sphere:
         case type::shape_box:
+        case type::shape_cylinder:
         case type::shape_cone:
             return true;
         }
@@ -579,6 +882,7 @@ private:
         std::shared_ptr<const physkit::mesh> msh;
         physkit::sphere sph;
         physkit::box bx;
+        physkit::cylinder cyl;
         physkit::cone cn;
         storage_t() {}
         storage_t(const storage_t &other) = delete;
@@ -603,6 +907,9 @@ private:
         case type::shape_box:
             M_storage.bx.~box();
             break;
+        case type::shape_cylinder:
+            M_storage.cyl.~cylinder();
+            break;
         case type::shape_cone:
             M_storage.cn.~cone();
             break;
@@ -617,6 +924,9 @@ private:
 
     template <typename... Args> void construct_box(Args &&...args)
     { std::construct_at(&M_storage.bx, std::forward<Args>(args)...); }
+    
+    template <typename... Args> void construct_cylinder(Args &&...args)
+    { std::construct_at(&M_storage.cyl, std::forward<Args>(args)...); }
 
     template <typename... Args> void construct_cone(Args &&...args)
     { std::construct_at(&M_storage.cn, std::forward<Args>(args)...); }
@@ -633,6 +943,9 @@ private:
             break;
         case type::shape_box:
             construct_box(other.M_storage.bx);
+            break;
+        case type::shape_cylinder:
+            construct_cylinder(other.M_storage.cyl);
             break;
         case type::shape_cone:
             construct_cone(other.M_storage.cn);
@@ -655,6 +968,9 @@ private:
             break;
         case type::shape_box:
             construct_box(std::move(other.M_storage.bx));
+            break;
+        case type::shape_cylinder:
+            construct_cylinder(std::move(other.M_storage.cyl));
             break;
         case type::shape_cone:
             construct_cone(std::move(other.M_storage.cn));
