@@ -111,8 +111,9 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::box &phys_box)
     using namespace Magnum;
     Vector3 half_extents = to_magnum_vector<physkit::si::metre, float>(phys_box.half_extents());
     auto data = MeshTools::copy(Primitives::cubeSolid());
-    for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
-        i = Matrix4::scaling(half_extents).transformPoint(i);
+    auto transform = Matrix4::scaling(half_extents);
+    data = MeshTools::transform3D(data, transform);
+
 
     return MeshTools::compile(data);
 }
@@ -123,11 +124,8 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::sphere &phys_sphere,
     using namespace Magnum;
     float radius = phys_sphere.radius().numerical_value_in(physkit::si::metre);
     auto data = Primitives::icosphereSolid(subdivisions);
-    if (radius != 1.0)
-    {
-        for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
-            i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
-    }
+    auto transform = Matrix4::scaling({radius, radius, radius});
+    data = MeshTools::transform3D(data, transform);
 
     return MeshTools::compile(data);
 }
@@ -159,8 +157,6 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cylinder &phys_cylinder, u
 inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cone &phys_cone, unsigned int rings = 3,
                                        unsigned int segments = 24)
 {
-    // THERE seems to be no bottom to the cone...
-    // rings, segments, half length
     using namespace Magnum;
     using namespace Math::Literals;
     float radius = phys_cone.radius().numerical_value_in(physkit::si::metre);
@@ -168,11 +164,23 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cone &phys_cone, unsigned 
     auto data = Primitives::coneSolid(rings, segments, 0.5f * height / radius,
                                       Primitives::ConeFlag::CapEnd);
 
-    for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
-        i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
-    for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
-        i = Matrix4::translation({0, height * 0.5f, 0}).transformPoint(i);
+    auto transform = Matrix4::scaling({radius,radius,radius})*
+        Matrix4::translation({0,height*0.5f, 0})*Matrix4::rotationY(Deg(45));
+    data = MeshTools::transform3D(data, transform);
 
+    return MeshTools::compile(data);
+}
+
+inline Magnum::GL::Mesh to_magnum_mesh(const physkit::pyramid &phys_pyramid)
+{
+    using namespace Magnum;
+    using namespace Math::Literals;
+    float b = std::numbers::sqrt2*phys_pyramid.base_half().numerical_value_in(physkit::si::metre);
+    float h = phys_pyramid.height().numerical_value_in(physkit::si::metre);
+    auto data = Primitives::coneSolid(1,4, 0.5f*h/b, Primitives::ConeFlag::CapEnd);
+
+    auto transform = Matrix4::scaling({b,b,b})*Matrix4::translation({0,h*0.5f, 0})*Matrix4::rotationY(Deg(45));
+    data = MeshTools::transform3D(data, transform);
     return MeshTools::compile(data);
 }
 
@@ -188,6 +196,8 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::shape &phys_shape)
         return to_magnum_mesh(phys_shape.sphere());
     case physkit::shape::type::shape_cone:
         return to_magnum_mesh(phys_shape.cone());
+    case physkit::shape::type::shape_pyramid:
+        return to_magnum_mesh(phys_shape.pyramid());
     default:
         std::unreachable();
     }

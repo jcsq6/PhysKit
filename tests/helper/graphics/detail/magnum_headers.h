@@ -22,6 +22,7 @@
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/MeshTools/Concatenate.h>
 #include <Magnum/MeshTools/Copy.h>
+#include <Magnum/MeshTools/Transform.h>
 #include <Magnum/Platform/GlfwApplication.h>
 #include <Magnum/Primitives/Circle.h>
 #include <Magnum/Primitives/Cone.h>

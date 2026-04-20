@@ -1256,6 +1256,192 @@ void test_cone_asymmetric_contains()
     CHECK(!c.contains(vec3{2.1, 0.5, 0.0} * m));
 }
 
+//  ===========================================================================
+//  Pyramid — Construction & Properties
+//  ===========================================================================
+void test_pyramid_construction()
+{
+    pyramid p(1.0 * m, 2.0 * m);
+    CHECK_APPROX(p.base_half(), 1.0 * m);
+    CHECK_APPROX(p.height(), 2.0 * m);
+
+    pyramid asym(3.0 * m, 5.0 * m);
+    CHECK_APPROX(asym.base_half(), 3.0 * m);
+    CHECK_APPROX(asym.height(), 5.0 * m);
+}
+void test_pyramid_bounds()
+{
+    pyramid p(1.0 * m, 1.0 * m);
+    CHECK_APPROX(p.bounds().min, vec3{-1.0, 0.0, -1.0}*m);
+    CHECK_APPROX(p.bounds().max, vec3{1.0,1.0,1.0}*m);
+
+    pyramid asym(3.0 * m, 2.0 * m);
+    CHECK_APPROX(asym.bounds().min, vec3{-3.0,0.0,-3.0}*m);
+    CHECK_APPROX(asym.bounds().max, vec3{3.0,2.0,3.0}*m);
+}
+void test_pyramid_bsphere()
+{
+    pyramid p(1.0 * m, 1.0 * m);
+    CHECK_APPROX(p.bsphere().center, vec3{0,0.5,0}*m);
+    CHECK_APPROX(p.bsphere().radius, sqrt(8.25)*m);
+
+    pyramid asym(3.0*m, 2.0*m);
+    CHECK_APPROX(asym.bsphere().center, vec3{0,1,0}*m);
+    CHECK_APPROX(asym.bsphere().radius, sqrt(73)*m);
+}
+void test_pyramid_volume()
+{
+    pyramid p(1.0 * m, 1.0 * m);
+    CHECK_APPROX(p.volume(), (4.0/3.0)*pow<3>(m));
+
+    pyramid asym(3.0*m, 2.0*m);
+    CHECK_APPROX(asym.volume(), (24.0)*pow<3>(m));
+}
+void test_pyramid_mass_center()
+{
+    pyramid p(1.0*m, 1.0*m);
+    CHECK_APPROX(p.mass_center(), vec3{0,0.25,0}*m);
+
+    pyramid asym(3.0*m, 2.0*m);
+    CHECK_APPROX(asym.mass_center(), vec3{0,0.5,0}*m);
+}
+void test_pyramid_inertia_tensor()
+{
+    auto d = 1.0*kg/pow<3>(m);
+    pyramid p(1.0*m, 1.0*m);
+    auto t1 = vec3{241.0/30.0, 4.0/15.0, 241.0/30.0}*kg*m*m;
+    CHECK_APPROX(p.inertia_tensor(d), t1.as_diagonal());
+
+    pyramid asym(3.0*m, 2.0*m);
+    auto t2 = vec3{1298.4, 43.2, 1298.4}*kg*m*m;
+    CHECK_APPROX(asym.inertia_tensor(d), t2.as_diagonal());
+}
+
+//  ===========================================================================
+//  Pyramid — Contains
+//  ===========================================================================
+void test_pyramid_contains()
+{
+    pyramid p1(1.0*m, 1.0*m);
+    pyramid p2(3.0*m, 2.0*m);
+
+    //interior
+    CHECK(p1.contains(vec3{0.0,0.5,0.0}*m), true);
+    CHECK(p2.contains(vec3{0.0,1.0,0.0}*m), true);
+
+    //edge point
+    CHECK(p1.contains(vec3{1,0,1}*m), true);
+    CHECK(p2.contains(vec3{3,0,3}*m), true);
+
+    //edge
+    CHECK(p1.contains(vec3{0.5,0.5,0.5}*m), true);
+    CHECK(p2.contains(vec3{1.5,1,1.5}*m), true);
+
+    //side
+    CHECK(p1.contains(vec3{0.0,0.5,0.5}*m), true);
+    CHECK(p2.contains(vec3{0.0,1.0,1.5}*m), true);
+
+    //tip
+    CHECK(p1.contains(vec3{0,1,0}*m), true);
+    CHECK(p2.contains(vec3{0,2,0}*m), true);
+
+    //base
+    CHECK(p1.contains(vec3{0,0,0}*m), true);
+    CHECK(p2.contains(vec3{0,0,0}*m), true);
+    CHECK(p1.contains(vec3{0.1,0,0.1}*m), true);
+    CHECK(p2.contains(vec3{0.1,0,0.1}*m), true);
+
+    //lateraly outside
+    CHECK(p1.contains(vec3{1.2,0.5,0.0}*m), true);
+    CHECK(p2.contains(vec3{3.6,1.0,0.0}*m), true);
+
+    //below
+    CHECK(p1.contains(vec3{0.0,-0.5,0.0}*m), true);
+    CHECK(p2.contains(vec3{0.0,-1.0,0.0}*m), true);
+
+    //above
+    CHECK(p1.contains(vec3{0.0,1.2,0.0}*m), true);
+    CHECK(p2.contains(vec3{0.0,2.4,0.0}*m), true);
+}
+
+//  ===========================================================================
+//  Pyramid — Ray Intersect
+//  ===========================================================================
+void test_pyramid_ray_intersect_side()
+{
+    pyramid p1(2.0*m, 2.0*m);
+    vec3<one> source = vec3{2, 1, 0};
+    vec3<one> hit[] = {
+        {2,0,0},
+        {1,1,0},
+        {0,2,0},
+        {2,0,2},
+        {1,1,1}
+    };
+    vec3<one> miss[] = {
+        {3,-1,0},
+        {3,-1,3},
+        {-1,3,0},
+    };
+    for (int i = 0; i < 5; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            int x = j%2==0? 1 : -1;
+            int z = (j/2)%2==0? 1: -1;
+            vec3<si::metre> point = vec3{hit[i].x()*x, hit[i].y(), hit[i].z()*z}*si::metre;
+            vec3<si::metre> origin = vec3{2.0*x, 1.0, 2.0*z}*si::metre;
+            auto dist = (point-origin).norm();
+            ray r(origin, (point-origin).normalized());
+            auto ret = p1.ray_intersect(r);
+            //auto normal =
+            CHECK(ret.has_value(), true);
+            CHECK_APPROX(ret.value().pos, point);
+            CHECK_APPROX(ret.value().distance, dist);
+            //CHECK_APPROX(ret.value().normal, vec3{1.0,1.0,0})
+        }
+    }
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            int x = j%2==0? 1 : -1;
+            int z = (j/2)%2==0? 1: -1;
+            vec3<si::metre> point = vec3{hit[i].x()*x, hit[i].y(), hit[i].z()*z}*si::metre;
+            vec3<si::metre> origin = vec3{2.0*x, 1, 2.0*z}*si::metre;
+            ray r(origin, (point-origin).normalized());
+            auto ret = p1.ray_intersect(r);
+            CHECK(ret.has_value(), false);
+        }
+    }
+}
+/*
+void test_pyramid_ray_intersect_below()
+{
+    pyramid p1(1.0*m, 1.0*m);
+    vec3<si::metre> hit[] = {
+        {}*m,
+    };
+    vec3<si::metre> miss[] = {
+
+    };
+} */
+
+//  ===========================================================================
+//  Pyramid — Closest Point
+//  ===========================================================================
+void test_pyramid_closest_point()
+{
+
+}
+
+//  ===========================================================================
+//  Pyramid — GJK Support
+//  ===========================================================================
+void test_pyramid_support()
+{
+
+}
 // ===========================================================================
 // Shape Wrapper
 // ===========================================================================
