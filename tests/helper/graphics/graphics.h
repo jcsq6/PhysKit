@@ -20,6 +20,11 @@
 #ifndef PHYSKIT_MODULES
 #include <mp-units/framework.h>
 #include <physkit/physkit.h>
+// #ifdef _WIN32
+// #include <windows.h> // first, which resulted in the near far error.
+// #undef near // second
+// #undef far // second
+// #endif
 #endif
 
 #include "camera.h"

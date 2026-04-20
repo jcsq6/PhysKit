@@ -132,6 +132,30 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::sphere &phys_sphere,
     return MeshTools::compile(data);
 }
 
+inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cylinder &phys_cylinder, unsigned int rings = 3,
+                                       unsigned int segments = 24)
+{
+    // TODO: implement
+    //assert(false && "to_magnum_mesh(cone) is not implemented");
+    throw std::logic_error("to_magnum_mesh(cone) is not implemented");
+
+    // THERE seems to be no bottom to the cone...
+    // rings, segments, half length
+    // using namespace Magnum;
+    // using namespace Math::Literals;
+    // float radius = phys_cone.radius().numerical_value_in(physkit::si::metre);
+    // float height = phys_cone.height().numerical_value_in(physkit::si::metre);
+    // auto data = Primitives::coneSolid(rings, segments, 0.5f * height / radius,
+    //                                   Primitives::ConeFlag::CapEnd);
+
+    // for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
+    //     i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
+    // for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
+    //     i = Matrix4::translation({0, height * 0.5f, 0}).transformPoint(i);
+
+    // return MeshTools::compile(data);
+}
+
 inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cone &phys_cone, unsigned int rings = 3,
                                        unsigned int segments = 24)
 {
