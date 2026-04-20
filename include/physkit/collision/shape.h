@@ -723,14 +723,16 @@ public:
     {
         using namespace mp_units::si::unit_symbols;
         std::optional<ray::hit> ret = std::nullopt;
-        quantity<m> best = max_distance;
+        quantity<m> best = std::numeric_limits<quantity<si::metre>>::infinity();
+		  constexpr auto epsilon = 1e-10 * m;
 
         //base intersect
         if (r.direction().y() != 0)
         {
             quantity<m> dist = -r.origin().y()/r.direction().y();
             vec3<m> point = r.origin() + r.direction()*dist;
-            if (dist >= 0.0*si::metre && abs(point.x()) <= M_base_half && abs(point.z()) <= M_base_half)
+            if (dist >= 0.0*si::metre && dist <= max_distance+epsilon &&
+						abs(point.x()) <= M_base_half && abs(point.z()) <= M_base_half)
             {
                 best = dist;
                 ret = ray::hit{.pos = point, .normal = vec3<one>{0.0, -1.0, 0.0}, .distance = dist};
@@ -741,17 +743,21 @@ public:
         for (int i = 0; i < 4; i++)
         {
             quantity<one>y = M_base_half.numerical_value_in(m);
-            quantity<one>x = i%2==0 ? M_base_half.numerical_value_in(m) : -M_base_half.numerical_value_in(m);
-            quantity<one>z = i%2==0 ? M_base_half.numerical_value_in(m) : -M_base_half.numerical_value_in(m);
+            quantity<one>x = i%2==0 ? M_height.numerical_value_in(m) : -M_height.numerical_value_in(m);
+            quantity<one>z = i%2==0 ? M_height.numerical_value_in(m) : -M_height.numerical_value_in(m);
             if ((i/2)%2==0)
                 z = 0.0;
             else
                 x = 0.0;
             auto normal = (vec3<one>{x,y,z}).normalized();
+				auto plane_point = (vec3<one>{x,0,z})*si::metre*M_base_half/M_height;
+            if (r.direction().dot(normal) == 0.0)
+                continue;
 
-            quantity<m> dist = -r.origin().dot(normal)/(r.direction().dot(normal));
+            quantity<m> dist = -(r.origin()-plane_point).dot(normal)/(r.direction().dot(normal));
             vec3<m> point = r.origin() + r.direction()*dist;
-            if (dist >= 0.0*si::metre && best > dist &&
+						
+            if (dist >= 0.0*si::metre && dist <= max_distance+epsilon && best > dist &&
                 point.y() >= 0.0*si::metre && point.y() <= M_height &&
                 abs(point.x()) <= M_base_half*(1- point.y()/M_height) &&
                 abs(point.z()) <= M_base_half*(1-point.y()/M_height))
@@ -765,6 +771,7 @@ public:
     /// @brief Closest point on the box surface in local space. O(N) time.
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const
     {
+        //tip point
         auto retx = 0.0*si::metre;
         auto rety = M_height;
         auto retz = 0.0*si::metre;
@@ -779,9 +786,9 @@ public:
         if (abs(z) > M_base_half)
             z = z < 0.0*si::metre ? -M_base_half : M_base_half;
 
-        //tip point
         if (best > (vec3<si::metre>{x,0.0*si::metre, z} - point).norm())
         {
+			   best = (vec3{x, 0.0*si::metre, z} - point).norm();
             retx = x;
             rety = 0.0*si::metre;
             retz = z;
@@ -798,8 +805,8 @@ public:
             z = (i/2)%2==0 ? M_base_half : -M_base_half;
             vec3<one> temp_p = vec3{x.numerical_value_in(si::metre),
                 y.numerical_value_in(si::metre),z.numerical_value_in(si::metre)};
-            vec3<one> temp_v = vec3<one>{0.0, M_height.numerical_value_in(si::metre), 0.0 } - temp_p;
-            vec3<si::metre> temp = (temp_p + ((temp_v).dot(p-temp_p))*temp_v)*si::metre; //TODO
+            vec3<one> temp_v = (vec3<one>{0.0, M_height.numerical_value_in(si::metre), 0.0 } - temp_p).normalized();
+            vec3<si::metre> temp = (temp_p + ((temp_v).dot(p-temp_p))*temp_v)*si::metre;
             if (temp.y() >= 0.0*si::metre && temp.y() <= M_height && best > (temp-point).norm())
             {
                 best = (temp-point).norm();
@@ -807,6 +814,12 @@ public:
                 rety = temp.y();
                 retz = temp.z();
             }
+				if (best > (vec3{x,y,z}-point).norm()) {
+					best = (vec3{x,y,z}-point).norm();
+					retx = x;
+					rety = y;
+					retz = z;
+				}
         }
 
         //sides
@@ -823,9 +836,9 @@ public:
             auto plane_point = point - (normal*normal.dot(point-vec3<si::metre>{x,0.0*si::metre,z}));
             if (point.y() < 0.0*si::metre || point.y() > M_height)
                 continue;
-            if (abs(plane_point.x()) > M_base_half*(1.0 - plane_point.y()/si::metre))
+            if (abs(plane_point.x()) > M_base_half*(1.0 - plane_point.y()/M_height))
                 continue;
-            if (abs(plane_point.z()) > M_base_half*(1.0 - plane_point.y()/si::metre))
+            if (abs(plane_point.z()) > M_base_half*(1.0 - plane_point.y()/M_height))
                 continue;
 
             if (best > (plane_point - point).norm())
@@ -836,11 +849,13 @@ public:
                 retz = plane_point.z();
             }
         }
-        return vec3<si::metre>{x,y,z};
+        return vec3<si::metre>{retx,rety,retz};
     }
     /// @brief Point containment test in local space. O(N) time.
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const
     {
+        if (point.y() > M_height || point.y() < 0.0*si::metre)
+            return false;
         auto lim = M_base_half*(1-point.y()/M_height);
         return (point.x() <= lim && point.x() >= -lim && point.z() <= lim && point.z() >= -lim);
     }
