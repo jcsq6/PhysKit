@@ -139,6 +139,8 @@ public:
     }
 
     [[nodiscard]] const struct shape &shape() const { return M_shape; }
+    [[nodiscard]] const physkit::shape *shape_ptr() const { return &M_shape; }
+    [[nodiscard]] const struct mesh &mesh() const { return *M_shape.mesh(); }
 
     void shape(physkit::shape new_shape)
     {

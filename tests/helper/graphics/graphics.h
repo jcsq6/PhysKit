@@ -621,7 +621,7 @@ public:
     /// @return A shared pointer to the GL::Mesh corresponding to the given physkit::mesh.
     std::shared_ptr<GL::Mesh> get_mesh(const physkit::shape &phys_shape)
     {
-        auto shared = phys_mesh.ptr();
+        auto shared = &phys_shape;
         if (auto it = M_phys_shape_map.find(shared); it != M_phys_shape_map.end()) return it->second;
         auto mesh = std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape));
         M_phys_shape_map[std::move(shared)] = mesh;
@@ -643,9 +643,9 @@ public:
             .transform(
                 [&](auto obj)
                 {
-                    if (auto it = M_phys_shape_map.find(obj->shape());
+                    if (auto it = M_phys_shape_map.find(obj->shape_ptr());
                         it == M_phys_shape_map.end())
-                        M_phys_shape_map[obj->shape()] = mesh;
+                        M_phys_shape_map[obj->shape_ptr()] = mesh;
                     else if (it->second != mesh)
                         throw std::runtime_error(
                             "graphics_app::add_object: provided mesh does not match "
@@ -671,7 +671,7 @@ public:
         auto *phys_obj = new physics_obj{M_scene, *this, handle};
         auto &obj = phys_obj->obj();
 
-        internal_add_obj(phys_obj, get_mesh(obj.mesh()), color);
+        internal_add_obj(phys_obj, get_mesh(obj.shape()), color);
 
         M_physics_objs.push_back(phys_obj);
         return phys_obj;

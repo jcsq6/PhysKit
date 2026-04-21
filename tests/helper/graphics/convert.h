@@ -171,8 +171,8 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::pyramid &phys_pyramid)
     auto h = static_cast<float>(phys_pyramid.height().numerical_value_in(physkit::si::metre));
     auto data = Primitives::coneSolid(1, 4, 0.5f * h / b, Primitives::ConeFlag::CapEnd);
 
-    auto transform = Matrix4::scaling({b, b, b}) * Matrix4::translation({0, h * 0.5f, 0}) *
-                     Matrix4::rotationY(Deg(45));
+    auto transform = Matrix4::translation({0, h*0.5f, 0})*Matrix4::scaling({b, b, b})*
+        Matrix4::rotationY(Deg(45));
     data = MeshTools::transform3D(data, transform);
     return MeshTools::compile(data);
 }
