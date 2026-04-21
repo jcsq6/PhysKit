@@ -61,6 +61,8 @@ Adjust the compiler paths to match your MSYS2 installation.
 
 > **See the [Graphics & Demo Framework documentation](tests/README.md)** for a comprehensive guide covering the configuration API (JSON + CLI + builder), the `graphics_app` base class, camera controls, animation tracks, scene objects, and mesh helpers.
 
+> **See the [Coroutine Task Orchestration documentation](docs/coroutines.md)** for a guide on how to orchestrate complex simulation events using C++ coroutines, bypassing the need for tedious manual state management.
+
 ### Complete Example
 
 See [tests/graphics_demo/main.cpp](tests/graphics_demo/main.cpp) for a working demonstration of camera tracks in action, featuring a smooth camera path that visits multiple points of interest while maintaining focus on different targets.

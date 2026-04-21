@@ -151,6 +151,7 @@ using Magnum::Math::isInf;
 using Magnum::Math::lerp;
 using Magnum::Math::select;
 using Magnum::Math::slerp;
+using Magnum::Math::slerpShortestPath;
 using Magnum::Math::splerp;
 
 } // namespace Magnum::Math

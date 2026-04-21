@@ -66,8 +66,6 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
     struct world_config
     {
         std::array<double, 3> gravity = {0.0, -9.81, 0.0};
-        // physkit::world_desc::integ_t integrator =
-        // physkit::world_desc::semi_implicit_euler;
         std::size_t solver_iterations = 10;
         std::vector<obj> objects{};
         std::optional<std::array<double, 3>> look_at;
@@ -91,7 +89,6 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
 
     self.M_gravity =
         physkit::vec3{config.gravity[0], config.gravity[1], config.gravity[2]} * m / s / s;
-    // self.M_integrator = config.integrator;
     self.M_solver_iterations = config.solver_iterations;
 
     std::map<std::string, physkit::shape> shape_map;
@@ -151,7 +148,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                 .with_shape(shape_map.at(shape_name))
                 .with_restitution(obj.restitution)
                 .with_friction(obj.friction),
-            Color3{obj.color[0], obj.color[1], obj.color[2]});
+            Color4{obj.color[0], obj.color[1], obj.color[2], obj.color[3]});
     }
 
     std::println("Read config from: {}", path);
@@ -215,7 +212,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         std::println("      Mass: {}", o.mass());
         std::println("      Type: {}",
                      glz::reflect<physkit::body_type>::keys[static_cast<int>(o.type())]); // NOLINT
-        std::println("      Color: ({}, {}, {})", color[0], color[1], color[2]);
+        std::println("      Color: ({}, {}, {}, {})", color[0], color[1], color[2], color[3]);
         config.objects[i].shape.visit(
             [](auto &&shape_desc)
             {
@@ -282,6 +279,19 @@ g_config::g_config(Magnum::Platform::Application::Arguments args, bool read_conf
         .default_value(static_cast<double>(default_time_step.numerical_value_in(s)))
         .help("Time step in seconds")
         .scan<'g', double>();
+    parser.add_argument("--record-output")
+        .help("Write a video to the given output path instead of running interactively");
+    parser.add_argument("--record-duration")
+        .default_value(static_cast<double>(default_record_duration.numerical_value_in(s)))
+        .help("Duration of the recorded video in seconds")
+        .scan<'g', double>();
+    parser.add_argument("--record-fps")
+        .default_value(default_record_fps)
+        .help("Frame rate of the recorded video")
+        .scan<'i', int>();
+    parser.add_argument("--magnum-dpi-scaling")
+        .default_value(std::string{})
+        .help("Forwarded to Magnum window creation for DPI scaling control");
     parser.add_argument("--testing").flag().help("Enable testing mode");
     if (read_config)
         parser.add_argument("--config", "-c")
@@ -348,16 +358,25 @@ g_config::g_config(Magnum::Platform::Application::Arguments args, bool read_conf
         auto drag_val = parser.get<bool>("--drag");
         auto vsync_val = parser.get<bool>("--vsync");
         auto time_step_val = parser.get<double>("--time-step") * s;
+        auto record_duration_val = parser.get<double>("--record-duration") * s;
+        auto record_fps_val = parser.get<int>("--record-fps");
         M_testing = parser.get<bool>("--testing");
 
         if (parser.is_used("--fov")) fov(fov_val);
         if (parser.is_used("--cam-pos")) cam_pos(cam_pos_val);
         if (parser.is_used("--cam-dir")) cam_dir(cam_dir_val);
         if (parser.is_used("--title")) title(title_val);
-        if (parser.is_used("--window-size")) window_size(window_size_val);
+        window_size(window_size_val);
         if (parser.is_used("--drag")) drag(drag_val);
         if (parser.is_used("--vsync")) vsync(vsync_val);
         if (parser.is_used("--time-step")) time_step(time_step_val);
+        if (auto record_path = parser.present("--record-output"))
+        {
+            this->record_output(*record_path);
+            record_duration(record_duration_val);
+            record_fps(record_fps_val);
+            vsync(false);
+        }
 
         if (auto look_at_str = parser.present("--look-at"))
             look_at(read_vec(*look_at_str, std::integral_constant<int, 3>{}) * m);

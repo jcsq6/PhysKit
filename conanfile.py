@@ -42,9 +42,7 @@ class PhysKit(ConanFile):
             )
 
         tc.cache_variables["PHYSKIT_MODULES"] = bool(self.options.physkit_modules)
-        tc.cache_variables["PHYSKIT_GRAPHICS_MODULES"] = bool(
-            self.options.physkit_modules
-        )
+        tc.cache_variables["PHYSKIT_GRAPHICS_MODULES"] = bool(self.options.physkit_modules)
         if self.options.physkit_modules:
             tc.cache_variables["CMAKE_CXX_SCAN_FOR_MODULES"] = True
         if self.options.import_std:
@@ -52,8 +50,6 @@ class PhysKit(ConanFile):
             tc.cache_variables["CMAKE_EXPERIMENTAL_CXX_IMPORT_STD"] = (
                 "d0edc3af-4c50-42ea-a356-e2862fe7a444"
             )
-            
-        tc.cache_variables["PHYSKIT_BUILD_STATIC"] = self.options.build_static
 
         tc.cache_variables["PHYSKIT_BUILD_STATIC"] = self.options.build_static
 
@@ -71,8 +67,10 @@ class PhysKit(ConanFile):
                 "contracts": "none",
             },
         )
-
-        self.requires("eigen/5.0.1")
+        
+        self.requires(
+            "eigen/5.0.1"
+        )
 
         self.requires(
             "abseil/20250814.1"

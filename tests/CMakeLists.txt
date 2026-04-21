@@ -79,7 +79,7 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
       FILES
         ${PHYS_GRAPHICS_HEADERS}
         PUBLIC
-        ${PHYS_GRAPHICS_SOURCES}
+        ${PHYS_GRAPHICS_SOURCES} 
     )
 
     if (NOT PHYSKIT_MODULES)
@@ -87,7 +87,6 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
         [["graphics/detail/magnum_headers.h"]]
         <GLFW/glfw3.h>
         <glaze/glaze.hpp>
-        <physkit/physkit.h>
       )
     endif()
     target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit)
@@ -100,9 +99,11 @@ add_subdirectory(obb)
 add_subdirectory(dynamic_bvh)
 add_subdirectory(gjk)
 add_subdirectory(epa)
+add_subdirectory(co)
 add_subdirectory(shape)
 
 if (PHYSKIT_BUILD_GRAPHICS_TESTS)
   add_subdirectory(demo)
   add_subdirectory(graphics_demo)
+  add_subdirectory(pool)
 endif()
