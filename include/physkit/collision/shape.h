@@ -1,5 +1,4 @@
 #pragma once
-#include <absl/strings/internal/str_format/extension.h>
 
 #ifdef PHYSKIT_IN_MODULE_IMPL
 #ifdef PHYSKIT_IMPORT_STD
@@ -412,23 +411,27 @@ public:
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
     {
+        // Solid square pyramid (base side a = 2b, height h) about the base centre.
+        //   I_y  = (1/10) M a^2  =  (2/5) M b^2  =  (8/15) \rho b^4 h
+        //   I_xz = (1/10) M (a^2 + 4h^2/3)\times... derived directly as
+        //          \rho (8 b^4 h + 4 b^2 h^3) / 30
         using namespace mp_units::si::unit_symbols;
-        auto mass = density * volume();
-        auto ixz = density *
-                   (8.0 * pow<4>(M_base_half) * M_height + pow<2>(M_base_half) * pow<3>(M_height)) /
-                   30.0;
-        auto iy = (1.0 / 20.0) * mass * pow<2>(2 * M_base_half);
+        auto ixz =
+            density *
+            (8.0 * pow<4>(M_base_half) * M_height + 4.0 * pow<2>(M_base_half) * pow<3>(M_height)) /
+            30.0;
+        auto iy = (8.0 / 15.0) * density * pow<4>(M_base_half) * M_height;
 
         return vec3{ixz, iy, ixz}.as_diagonal();
     }
 
-    /// @brief Ray intersection in local (model) space. O(log N) time.
+    /// @brief Ray intersection in local (model) space.
     [[nodiscard]] std::optional<ray::hit>
     ray_intersect(const ray &r, quantity<si::metre> max_distance =
                                     std::numeric_limits<quantity<si::metre>>::infinity()) const;
-    /// @brief Closest point on the box surface in local space. O(N) time.
+    /// @brief Closest point on the box surface in local space.
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
-    /// @brief Point containment test in local space. O(N) time.
+    /// @brief Point containment test in local space.
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const
     {
         if (point.y() > M_height || point.y() < 0.0 * si::metre) return false;
@@ -818,13 +821,9 @@ public:
     }
 
     /// @brief Compute the world-space AABB by rotating the local AABB and translating.
-    [[nodiscard]] aabb bounds() const
-    {
-        auto ret = M_shape->bounds() * M_orientation + M_position;
-        return M_shape->bounds() * M_orientation + M_position;
-    }
+    [[nodiscard]] aabb bounds() const { return M_shape->bounds() * M_orientation + M_position; }
 
-    /// @brief Compute the world-space bounding sphere. Rotation-invariant — only the
+    /// @brief Compute the world-space bounding sphere. Rotation-invariant - only the
     /// center is translated.
     [[nodiscard]] bounding_sphere bsphere() const
     {
@@ -854,34 +853,26 @@ public:
     }
 
     /// @brief Compute the closest point on the mesh surface to the given world-space point.
-    /// O(log N) time.
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const
     {
-        auto inv_orient = M_orientation.conjugate();
-        auto local_point = inv_orient * (point - M_position);
-        auto local_closest = M_shape->closest_point(local_point);
-        auto ret = M_orientation * local_closest + M_position;
-        return M_orientation * local_closest + M_position;
+        auto local_point = M_orientation.conjugate() * (point - M_position);
+        return M_orientation * M_shape->closest_point(local_point) + M_position;
     }
 
-    /// @brief Point containment test in world space. O(log N) time.
+    /// @brief Point containment test in world space.
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const
     {
-        auto inv_orient = M_orientation.conjugate();
-        auto local_point = inv_orient * (point - M_position);
-        auto ret = M_shape->contains(local_point);
+        auto local_point = M_orientation.conjugate() * (point - M_position);
         return M_shape->contains(local_point);
     }
 
     /// @brief Gathers indices of triangles whose vertices overlap the given world-space sphere.
     [[nodiscard]] std::vector<std::uint32_t> overlap_sphere(const bounding_sphere &sphere) const
     {
-        auto inv_orient = M_orientation.conjugate();
         bounding_sphere local_sphere{
-            .center = inv_orient * (sphere.center - M_position),
+            .center = M_orientation.conjugate() * (sphere.center - M_position),
             .radius = sphere.radius,
         };
-        auto ret = M_shape->overlap_sphere(local_sphere);
         return M_shape->overlap_sphere(local_sphere);
     }
 
@@ -889,20 +880,16 @@ public:
     /// local frame, queries the mesh, and transforms the result back.
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
     {
-        auto inv_orient = M_orientation.conjugate();
-        auto local_dir = inv_orient * direction;
-        auto local_support = M_shape->support(local_dir);
-        auto ret = M_orientation * local_support + M_position;
-        return M_orientation * local_support + M_position;
+        auto local_dir = M_orientation.conjugate() * direction;
+        return M_orientation * M_shape->support(local_dir) + M_position;
     }
 
-    /// @brief Compute the inertia tensor rotated into the world frame and shifted to the
-    /// instance's position via the parallel axis theorem.
+    /// @brief Rotate the local-frame inertia tensor into the world frame: I_world = R I_local R^T.
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
     {
-        // TODO is this correct???
-        return M_shape->inertia_tensor(density) * M_orientation.to_rotation_matrix();
+        auto R = M_orientation.to_rotation_matrix(); // NOLINT
+        return R * M_shape->inertia_tensor(density) * R.transpose();
     }
 
 private:

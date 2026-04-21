@@ -7,225 +7,182 @@ namespace physkit
 using namespace mp_units;
 using namespace mp_units::si::unit_symbols;
 
-// ray intersection
+// slab method
 std::optional<ray::hit> box::ray_intersect(const ray &r, quantity<m> max_distance) const
 {
-    ray::hit best;
-    auto origin = r.origin();
-    auto direction = r.direction();
-    bool hit = false;
-    best.distance = max_distance;
-    for (int i = 0; i < 6; i++)
-    {
-        auto p = i % 2 == 0 ? M_half_extents[i / 2] : -M_half_extents[i / 2];
-        vec3<m> point = vec3{0.0, 0.0, 0.0} * m;
-        point.set(i / 2, p);
-        vec3<one> n = point.normalized();
+    const auto &o = r.origin();
+    const auto &d = r.direction();
 
-        // parallel case
-        if (direction.dot(n) == 0.0)
+    auto tmin = -std::numeric_limits<quantity<m>>::infinity();
+    auto tmax = std::numeric_limits<quantity<m>>::infinity();
+    int axis_min = 0;
+    int axis_max = 0;
+    double sign_min = 0.0;
+    double sign_max = 0.0;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        auto half = M_half_extents[i];
+        auto oi = o[i];
+        auto di = d[i];
+
+        if (di == 0.0)
         {
-            // contained on the plane or no hit.
-            // we will detect the ray hit by checking the other planes.
+            if (mp_units::abs(oi) > half) return std::nullopt;
             continue;
         }
 
-        // other cases
-        quantity<m> dist = ((point - origin).dot(n)) / (direction.dot(n));
-        if (dist <= best.distance && dist >= 0.0 * m)
+        auto inv = 1.0 / di;
+        auto t1 = (-half - oi) * inv;
+        auto t2 = (half - oi) * inv;
+        double s1 = -1.0;
+        double s2 = 1.0;
+        if (t1 > t2)
         {
-            vec3<m> pos = origin + dist * direction;
-            if (mp_units::abs(pos.x()) <= M_half_extents.x() &&
-                mp_units::abs(pos.y()) <= M_half_extents.y() &&
-                mp_units::abs(pos.z()) <= M_half_extents.z())
-            {
-                best.distance = dist;
-                best.pos = origin + dist * direction;
-                best.normal = n;
-                hit = true;
-            }
+            std::swap(t1, t2);
+            std::swap(s1, s2);
         }
+        if (t1 > tmin)
+        {
+            tmin = t1;
+            axis_min = i;
+            sign_min = s1;
+        }
+        if (t2 < tmax)
+        {
+            tmax = t2;
+            axis_max = i;
+            sign_max = s2;
+        }
+        if (tmin > tmax) return std::nullopt;
     }
 
-    if (hit) return best;
-    return std::nullopt;
+    // ray starts inside
+    int axis = axis_min;
+    double sign = sign_min;
+    auto dist = tmin;
+    if (dist < 0.0 * m)
+    {
+        axis = axis_max;
+        sign = sign_max;
+        dist = tmax;
+    }
+    if (dist < 0.0 * m || dist > max_distance) return std::nullopt;
+
+    vec3<one> normal{0.0, 0.0, 0.0};
+    normal.set(axis, sign);
+    return ray::hit{.pos = o + dist * d, .normal = normal, .distance = dist};
 }
 
 vec3<m> box::closest_point(const vec3<m> &p) const
 {
-    auto x = p.x();
-    auto y = p.y();
-    auto z = p.z();
+    vec3<m> clamped{std::clamp(p.x(), -M_half_extents.x(), M_half_extents.x()),
+                    std::clamp(p.y(), -M_half_extents.y(), M_half_extents.y()),
+                    std::clamp(p.z(), -M_half_extents.z(), M_half_extents.z())};
 
-    // clamp the point to the box interior
-    if (mp_units::abs(x) > M_half_extents.x())
-        x = (x < 0.0 * m) ? -M_half_extents.x() : M_half_extents.x();
-    if (mp_units::abs(y) > M_half_extents.y())
-        y = (y < 0.0 * m) ? -M_half_extents.y() : M_half_extents.y();
-    if (mp_units::abs(z) > M_half_extents.z())
-        z = (z < 0.0 * m) ? -M_half_extents.z() : M_half_extents.z();
+    if (clamped != p) return clamped;
 
-    // bind the point to the edge of the cube
-    quantity<m> dist = mp_units::abs(x) - M_half_extents.x();
-    int j = 0;
-    for (int i = 1; i < 3; i++)
+    int axis = 0;
+    auto min_slack = M_half_extents[0] - mp_units::abs(p[0]);
+    for (int i = 1; i < 3; ++i)
     {
-        vec3<m> v = {x, y, z};
-        quantity<m> d = mp_units::abs(v[i]) - M_half_extents[i];
-        if (dist < d)
+        auto slack = M_half_extents[i] - mp_units::abs(p[i]);
+        if (slack < min_slack)
         {
-            dist = d;
-            j = i;
+            min_slack = slack;
+            axis = i;
         }
     }
-    switch (j)
-    {
-    default:
-    case 0:
-        x = (x < 0.0 * m) ? -M_half_extents.x() : M_half_extents.x();
-        break;
-    case 1:
-        y = (y < 0.0 * m) ? -M_half_extents.y() : M_half_extents.y();
-        break;
-    case 2:
-        z = (z < 0.0 * m) ? -M_half_extents.z() : M_half_extents.z();
-        break;
-    }
-    vec3<m> ret = vec3(x, y, z);
-    return ret;
+    clamped.set(axis, p[axis] < 0.0 * m ? -M_half_extents[axis] : M_half_extents[axis]);
+    return clamped;
 }
 
 [[nodiscard]] std::optional<ray::hit> pyramid::ray_intersect(const ray &r,
                                                              quantity<si::metre> max_distance) const
 {
-    using namespace mp_units::si::unit_symbols;
-    std::optional<ray::hit> ret = std::nullopt;
-    quantity<m> best = std::numeric_limits<quantity<si::metre>>::infinity();
-    constexpr auto epsilon = 1e-10 * m;
-
-    // base intersect
-    if (r.direction().y() != 0)
+    std::optional<ray::hit> best;
+    auto update = [&](quantity<m> dist, const vec3<m> &point, const vec3<one> &normal)
     {
-        quantity<m> dist = -r.origin().y() / r.direction().y();
-        vec3<m> point = r.origin() + r.direction() * dist;
-        if (dist >= 0.0 * si::metre && dist <= max_distance + epsilon &&
-            abs(point.x()) <= M_base_half && abs(point.z()) <= M_base_half)
-        {
-            best = dist;
-            ret = ray::hit{.pos = point, .normal = vec3<one>{0.0, -1.0, 0.0}, .distance = dist};
-        }
+        if (dist < 0.0 * m || dist > max_distance) return;
+        if (best && best->distance <= dist) return;
+        best = ray::hit{.pos = point, .normal = normal, .distance = dist};
+    };
+
+    const auto &o = r.origin();
+    const auto &d = r.direction();
+
+    // base face
+    if (d.y() != 0.0)
+    {
+        auto dist = -o.y() / d.y();
+        auto point = o + dist * d;
+        if (abs(point.x()) <= M_base_half && abs(point.z()) <= M_base_half)
+            update(dist, point, vec3<one>{0.0, -1.0, 0.0});
     }
 
-    // triangle intersections
-    for (int i = 0; i < 4; i++)
+    // slant faces
+    static const auto face_axes = std::array{
+        vec3<one>{1.0, 0.0, 0.0},
+        vec3<one>{-1.0, 0.0, 0.0},
+        vec3<one>{0.0, 0.0, 1.0},
+        vec3<one>{0.0, 0.0, -1.0},
+    };
+    const auto hval = M_height;
+    const auto bval = M_base_half;
+    const auto rhs = bval * hval;
+
+    for (const auto &axis : face_axes)
     {
-        quantity<one> y = M_base_half.numerical_value_in(m);
-        quantity<one> x =
-            i % 2 == 0 ? M_height.numerical_value_in(m) : -M_height.numerical_value_in(m);
-        quantity<one> z =
-            i % 2 == 0 ? M_height.numerical_value_in(m) : -M_height.numerical_value_in(m);
-        if ((i / 2) % 2 == 0)
-            z = 0.0;
-        else
-            x = 0.0;
-        auto normal = (vec3<one>{x, y, z}).normalized();
-        auto plane_point = (vec3<one>{x, 0, z}) * si::metre * M_base_half / M_height;
-        if (r.direction().dot(normal) == 0.0) continue;
+        vec3<m> n_unn{axis.x() * hval, bval, axis.z() * hval};
+        auto denom = d.dot(n_unn);
+        if (denom == 0.0 * m) continue;
 
-        quantity<m> dist = -(r.origin() - plane_point).dot(normal) / (r.direction().dot(normal));
-        vec3<m> point = r.origin() + r.direction() * dist;
+        auto num = rhs - o.dot(n_unn);
+        auto dist = num / denom;
+        auto point = o + dist * d;
+        if (point.y() < 0.0 * m || point.y() > hval) continue;
+        auto slice = bval * (1.0 - point.y() / hval);
+        if (abs(point.x()) > slice + 1e-12 * m) continue;
+        if (abs(point.z()) > slice + 1e-12 * m) continue;
 
-        if (dist >= 0.0 * si::metre && dist <= max_distance + epsilon && best > dist &&
-            point.y() >= 0.0 * si::metre && point.y() <= M_height &&
-            abs(point.x()) <= M_base_half * (1 - point.y() / M_height) &&
-            abs(point.z()) <= M_base_half * (1 - point.y() / M_height))
-        {
-            best = dist;
-            ret = ray::hit{.pos = point, .normal = normal, .distance = dist};
-        }
+        update(dist, point, n_unn.normalized());
     }
-    return ret;
+
+    return best;
 }
 
 [[nodiscard]] vec3<si::metre> pyramid::closest_point(const vec3<si::metre> &point) const
 {
-    // tip point
-    auto retx = 0.0 * si::metre;
-    auto rety = M_height;
-    auto retz = 0.0 * si::metre;
-    auto best = (vec3<si::metre>{retx, rety, retz} - point).norm();
+    const auto b = M_base_half;
+    const auto h = M_height;
 
-    // base point
-    auto x = point.x();
-    auto y = point.y();
-    auto z = point.z();
-    if (abs(x) > M_base_half) x = x < 0.0 * si::metre ? -M_base_half : M_base_half;
-    if (abs(z) > M_base_half) z = z < 0.0 * si::metre ? -M_base_half : M_base_half;
+    static const std::array<vec3<si::metre>, 5> verts{
+        vec3{b, 0.0 * m, b},  vec3{-b, 0.0 * m, b},      vec3{-b, 0.0 * m, -b},
+        vec3{b, 0.0 * m, -b}, vec3{0.0 * m, h, 0.0 * m},
+    };
 
-    if (best > (vec3<si::metre>{x, 0.0 * si::metre, z} - point).norm())
+    static constexpr std::array<triangle_t, 6> tris{
+        triangle_t{0, 4, 1}, // +z slant
+        triangle_t{1, 4, 2}, // -x slant
+        triangle_t{2, 4, 3}, // -z slant
+        triangle_t{3, 4, 0}, // +x slant
+        triangle_t{0, 1, 2}, // base half #1
+        triangle_t{0, 2, 3}, // base half #2
+    };
+
+    auto best = tris[0].closest_point(point, std::span{verts});
+    auto best_dist2 = (best - point).squared_norm();
+    for (std::size_t i = 1; i < tris.size(); ++i)
     {
-        best = (vec3{x, 0.0 * si::metre, z} - point).norm();
-        retx = x;
-        rety = 0.0 * si::metre;
-        retz = z;
-    }
-
-    // edges
-    for (int i = 0; i < 4; i++)
-    {
-        vec3<one> p =
-            vec3{point.x().numerical_value_in(si::metre), point.y().numerical_value_in(si::metre),
-                 point.z().numerical_value_in(si::metre)};
-        y = 0.0 * si::metre;
-        x = i % 2 == 0 ? M_base_half : -M_base_half;
-        z = (i / 2) % 2 == 0 ? M_base_half : -M_base_half;
-        vec3<one> temp_p = vec3{x.numerical_value_in(si::metre), y.numerical_value_in(si::metre),
-                                z.numerical_value_in(si::metre)};
-        vec3<one> temp_v =
-            (vec3<one>{0.0, M_height.numerical_value_in(si::metre), 0.0} - temp_p).normalized();
-        vec3<si::metre> temp = (temp_p + ((temp_v).dot(p - temp_p)) * temp_v) * si::metre;
-        if (temp.y() >= 0.0 * si::metre && temp.y() <= M_height && best > (temp - point).norm())
+        auto candidate = tris[i].closest_point(point, std::span{verts});
+        auto dist2 = (candidate - point).squared_norm();
+        if (dist2 < best_dist2)
         {
-            best = (temp - point).norm();
-            retx = temp.x();
-            rety = temp.y();
-            retz = temp.z();
-        }
-        if (best > (vec3{x, y, z} - point).norm())
-        {
-            best = (vec3{x, y, z} - point).norm();
-            retx = x;
-            rety = y;
-            retz = z;
+            best = candidate;
+            best_dist2 = dist2;
         }
     }
-
-    // sides
-    for (int i = 0; i < 4; i++)
-    {
-        y = M_base_half;
-        x = i % 2 == 0 ? M_height : -M_height;
-        z = i % 2 == 0 ? M_height : -M_height;
-        if ((i / 2) % 2 == 0)
-            z = 0.0 * si::metre;
-        else
-            x = 0.0 * si::metre;
-        auto normal = (vec3<si::metre>{x, y, z}).normalized();
-        auto plane_point =
-            point - (normal * normal.dot(point - vec3<si::metre>{x, 0.0 * si::metre, z}));
-        if (point.y() < 0.0 * si::metre || point.y() > M_height) continue;
-        if (abs(plane_point.x()) > M_base_half * (1.0 - plane_point.y() / M_height)) continue;
-        if (abs(plane_point.z()) > M_base_half * (1.0 - plane_point.y() / M_height)) continue;
-
-        if (best > (plane_point - point).norm())
-        {
-            best = (plane_point - point).norm();
-            retx = plane_point.x();
-            rety = plane_point.y();
-            retz = plane_point.z();
-        }
-    }
-    return vec3<si::metre>{retx, rety, retz};
+    return best;
 }
 
 [[nodiscard]] vec3<si::metre> cone::closest_point(const vec3<si::metre> &point) const
@@ -236,8 +193,8 @@ vec3<m> box::closest_point(const vec3<m> &p) const
     auto d = sqrt(point.x() * point.x() + point.z() * point.z());
 
     // Direction from axis in xz plane (for converting back to 3D)
-    auto dir_x = d > 0 * m ? point.x() / d : 1.0 * one;
-    auto dir_z = d > 0 * m ? point.z() / d : 0.0 * one;
+    auto dir_x = d > 0 * m ? point.x() / d : 1.0;
+    auto dir_z = d > 0 * m ? point.z() / d : 0.0;
 
     // Candidate 1: closest point on the base disk ($y=0, 0 \leq \text{dist} \leq r$)
     auto base_d = d < M_radius ? d : M_radius;
@@ -271,6 +228,7 @@ vec3<m> box::closest_point(const vec3<m> &p) const
     return vec3{res_d * dir_x, res_y, res_d * dir_z};
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 [[nodiscard]] std::optional<ray::hit> cone::ray_intersect(const ray &r,
                                                           quantity<si::metre> max_distance) const
 {
@@ -353,11 +311,7 @@ vec3<m> box::closest_point(const vec3<m> &p) const
         // this is only if strictly inside caps
         auto side = M_radius - d;              // should be positive.
         auto caps = abs(half_height - abs(y)); // y <
-        if (side >= caps)
-        { // prioritize caps y axis for faser code.
-            y = (y > 0.0 * si::metre) ? (half_height) : (-half_height);
-        }
-        else
+        if (side < caps)
         {
             if (d > 0.0 * si::metre)
             {
@@ -372,28 +326,28 @@ vec3<m> box::closest_point(const vec3<m> &p) const
                 z = 0.0 * si::metre;
             }
         }
+        else // prioritize caps y axis for speed.
+            y = (y > 0.0 * si::metre) ? (half_height) : (-half_height);
     }
 
     return vec3{x, y, z};
 }
 
 [[nodiscard]] std::optional<ray::hit>
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 cylinder::ray_intersect(const ray &r, quantity<si::metre> max_distance) const
 {
     std::optional<ray::hit> best;
 
     const auto &o = r.origin();
     const auto &d = r.direction();
-    const auto &[ox, oy, oz] = o;
-    const auto &[dx, dy, dz] = d;
-    // const auto [x1,y1,z1] = r.origin() + r.direction() * max_distance;
     const auto half_h = M_height * 0.5;
 
-    auto a = dx * dx + dz * dz;                       // m2
-    auto b = 2 * (ox * dx + oz * dz);                 // m2
-    auto c = ox * ox + oz * oz - M_radius * M_radius; // m2
+    auto a = d.x() * d.x() + d.z() * d.z();                       // m2
+    auto b = 2 * (o.x() * d.x() + o.z() * d.z());                 // m2
+    auto c = o.x() * o.x() + o.z() * o.z() - M_radius * M_radius; // m2
 
-    if (a != 0.0 * one)
+    if (a != 0.0)
     {
         auto det = b * b - 4 * a * c; // m4
 
@@ -420,13 +374,9 @@ cylinder::ray_intersect(const ray &r, quantity<si::metre> max_distance) const
                 vec3<one> norm;
 
                 if (p.x() == (0.0 * si::metre) && p.z() == (0.0 * si::metre))
-                {
                     norm = vec3<one>{0, 1, 0};
-                }
                 else
-                {
                     norm = vec3{p.x(), 0.0 * si::metre, p.z()}.normalized();
-                }
 
                 best = ray::hit{.pos = p, .normal = norm, .distance = t};
 
@@ -436,43 +386,19 @@ cylinder::ray_intersect(const ray &r, quantity<si::metre> max_distance) const
     }
 
     // caps
-    if (dy != 0.0 * one)
+    if (d.y() != 0.0)
     {
         // bottom cap y = -h/2
-        {
-            auto t = (-half_h - oy) / dy;
-
-            if (t >= (0.0 * si::metre) && t <= max_distance)
-            {
-                auto p = o + t * d;
-
-                if (p.x() * p.x() + p.z() * p.z() <= M_radius * M_radius)
-                {
-                    if (!best || t < best->distance)
-                    {
-                        best = ray::hit{.pos = p, .normal = vec3<one>{0, -1, 0}, .distance = t};
-                    }
-                }
-            }
-        }
+        if (auto t = (-half_h - o.y()) / d.y(); t >= (0.0 * si::metre) && t <= max_distance)
+            if (auto p = o + t * d; p.x() * p.x() + p.z() * p.z() <= M_radius * M_radius)
+                if (!best || t < best->distance)
+                    best = ray::hit{.pos = p, .normal = vec3<one>{0, -1, 0}, .distance = t};
 
         // top cap y = +h/2
-        {
-            auto t = (half_h - oy) / dy;
-
-            if (t >= (0.0 * si::metre) && t <= max_distance)
-            {
-                auto p = o + t * d;
-
-                if (p.x() * p.x() + p.z() * p.z() <= M_radius * M_radius)
-                {
-                    if (!best || t < best->distance)
-                    {
-                        best = ray::hit{.pos = p, .normal = vec3<one>{0, 1, 0}, .distance = t};
-                    }
-                }
-            }
-        }
+        if (auto t = (half_h - o.y()) / d.y(); t >= (0.0 * si::metre) && t <= max_distance)
+            if (auto p = o + t * d; p.x() * p.x() + p.z() * p.z() <= M_radius * M_radius)
+                if (!best || t < best->distance)
+                    best = ray::hit{.pos = p, .normal = vec3<one>{0, 1, 0}, .distance = t};
     }
 
     return best;

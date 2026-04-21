@@ -662,10 +662,6 @@ void test_cylinder_construction()
 void test_cylinder_bounds()
 {
     // Cylinder centered at origin: AABB should be (-r, -h/2, -r) to (r, h/2, r).
-    // NOTE: There is a known bug in the AABB constructor in cylinder — both points
-    // passed to aabb::from_points use the same sign for y (both use ±h/2 in the
-    // same field), producing a degenerate AABB. These tests document the CORRECT
-    // expected behavior that the fix should satisfy.
     cylinder cyl(1.0 * m, 4.0 * m);
     CHECK_APPROX(cyl.bounds().min, vec3{-1.0, -2.0, -1.0} * m);
     CHECK_APPROX(cyl.bounds().max, vec3{1.0, 2.0, 1.0} * m);
@@ -1193,7 +1189,7 @@ void test_cone_bsphere()
     CHECK_APPROX(c.bsphere().center, vec3{0.0, 1.0, 0.0} * m);
     // Correct circumsphere radius (from mid-height to the base edge):
     // sqrt(1² + 1²) = sqrt(2) ≈ 1.414
-    CHECK_APPROX(c.bsphere().radius, std::sqrt(2.0) * m); // currently sqrt(2)/2 (bug)
+    CHECK_APPROX(c.bsphere().radius, std::sqrt(2.0) * m);
 }
 
 void test_cone_volume()
@@ -1842,30 +1838,33 @@ void test_pyramid_mass_center()
 
 void test_pyramid_inertia_tensor()
 {
-    // Given base_half=b, height=h, density=ρ:
-    //   mass  m = ρ * (4/3)*b²*h
-    //   I_y   = (1/20) * m * (2b)² = (1/5) * m * b²
-    //   I_xz  = ρ * (8b⁴h + b²h³) / 30
+    // Solid square pyramid about base centre, given base_half=b, height=h, density=ρ:
+    //   mass M = ρ * (4/3) b² h
+    //   I_y   = (2/5) M b²                    = (8/15) ρ b⁴ h
+    //   I_xz  = ρ (8 b⁴ h + 4 b² h³) / 30
     // Off-diagonal elements must be zero.
 
-    // b=1, h=3, ρ=1  →  m = 4,  I_y = 4/5,  I_xz = (8*3 + 27)/30 = 33/30 = 1.1
+    // b=1, h=3, ρ=1  →  M = 4
+    //   I_y  = (2/5)(4)(1)                   = 1.6
+    //   I_xz = (8·3 + 4·27)/30 = 132/30      = 4.4
     auto density = 1.0 * kg / (m * m * m);
     pyramid p(1.0 * m, 3.0 * m);
     auto I = p.inertia_tensor(density);
-    CHECK_APPROX(I[0, 0], 1.7 * kg * m * m);
-    CHECK_APPROX(I[1, 1], 0.8 * kg * m * m);
-    CHECK_APPROX(I[2, 2], 1.7 * kg * m * m);
+    CHECK_APPROX(I[0, 0], 4.4 * kg * m * m);
+    CHECK_APPROX(I[1, 1], 1.6 * kg * m * m);
+    CHECK_APPROX(I[2, 2], 4.4 * kg * m * m);
     CHECK_APPROX(I[0, 1], 0.0 * kg * m * m);
     CHECK_APPROX(I[0, 2], 0.0 * kg * m * m);
     CHECK_APPROX(I[1, 2], 0.0 * kg * m * m);
 
-    // b=2, h=3, ρ=1  →  m=16, I_y=(1/20)*16*16=12.8
-    //   I_xz = (8*16*3 + 4*27)/30 = (384+108)/30 = 492/30 = 16.4
+    // b=2, h=3, ρ=1  →  M = 16
+    //   I_y  = (2/5)(16)(4)                       = 25.6
+    //   I_xz = (8·16·3 + 4·4·27)/30 = 816/30      = 27.2
     pyramid p2(2.0 * m, 3.0 * m);
     auto I2 = p2.inertia_tensor(density);
-    CHECK_APPROX(I2[0, 0], 16.4 * kg * m * m);
-    CHECK_APPROX(I2[1, 1], 12.8 * kg * m * m);
-    CHECK_APPROX(I2[2, 2], 16.4 * kg * m * m);
+    CHECK_APPROX(I2[0, 0], 27.2 * kg * m * m);
+    CHECK_APPROX(I2[1, 1], 25.6 * kg * m * m);
+    CHECK_APPROX(I2[2, 2], 27.2 * kg * m * m);
 
     // Verify symmetry: I_xz == I_zz for a square pyramid
     CHECK_APPROX(I[0, 0], I[2, 2]);
@@ -2065,9 +2064,6 @@ void test_pyramid_ray_from_inside()
     CHECK_APPROX(hit2->distance, 0.5 * m);
 }
 
-// BUG-6 note: only two of the four triangular faces are covered by the loop's
-// normal-generation pattern, so rays aimed at the +z and -z faces may miss.
-// The test below documents expected correct behaviour.
 void test_pyramid_ray_all_four_faces()
 {
     pyramid p(1.0 * m, 2.0 * m);
@@ -2151,12 +2147,13 @@ void test_pyramid_closest_point_lateral()
     // Point outside the +x face, at mid-height.  The closest surface point
     // should lie on the +x triangular face.
     auto cp = p.closest_point(vec3{3.0, 1.0, 0.0} * m);
-    // Must be on or inside the pyramid.
-    CHECK(p.contains(cp) || /* on boundary */ true); // boundary may not pass contains()
     // Must be in the +x half-space and at a valid height
     CHECK(cp.x() >= 0.0 * m);
     CHECK(cp.y() >= 0.0 * m);
     CHECK(cp.y() <= 2.0 * m);
+    // Must lie on the +x face plane:  x + (base_half/height)*y == base_half
+    //   here base_half=1, height=2 → x + 0.5*y == 1
+    CHECK_APPROX(cp.x() + 0.5 * cp.y(), 1.0 * m);
 
     // Point outside the +z face
     auto cp2 = p.closest_point(vec3{0.0, 1.0, 3.0} * m);
