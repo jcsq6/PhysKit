@@ -57,7 +57,7 @@ public:
     static void integrate_pos(object &obj, quantity<si::second> dt)
     {
         obj.pos() += obj.vel() * dt;
-        obj.orientation() = detail::exp(obj.ang_vel(), dt) * obj.orientation();
+        obj.orientation(detail::exp(obj.ang_vel(), dt) * obj.orientation());
     }
 };
 

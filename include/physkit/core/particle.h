@@ -10,14 +10,14 @@
 PHYSKIT_EXPORT
 namespace physkit
 {
-class particle
+class rigid_body
 {
 public:
-    particle(const vec3<si::metre> &pos, const vec3<si::metre / si::second> &vel,
-             quantity<si::kilogram> mass, const quat<one> &orientation = quat<one>::identity(),
-             const vec3<si::radian / si::second> &ang_vel = vec3<si::radian / si::second>::zero(),
-             const mat3<si::kilogram * si::metre * si::metre> &inertia =
-                 mat3<si::kilogram * si::metre * si::metre>::identity())
+    rigid_body(const vec3<si::metre> &pos, const vec3<si::metre / si::second> &vel,
+               quantity<si::kilogram> mass, const quat<one> &orientation = quat<one>::identity(),
+               const vec3<si::radian / si::second> &ang_vel = vec3<si::radian / si::second>::zero(),
+               const mat3<si::kilogram * si::metre * si::metre> &inertia =
+                   mat3<si::kilogram * si::metre * si::metre>::identity())
         : M_pos(pos), M_vel(vel), M_mass(mass), M_inv_mass(1.0 / mass), M_orientation(orientation),
           M_ang_vel(ang_vel), M_inertia_tensor_local(inertia),
           M_inv_inertia_tensor_local(inertia.inverse())
@@ -33,7 +33,6 @@ public:
     [[nodiscard]] auto &ang_vel() { return M_ang_vel; }
 
     [[nodiscard]] const auto &orientation() const { return M_orientation; }
-    [[nodiscard]] auto &orientation() { return M_orientation; }
     void orientation(const quat<one> &orient)
     {
         M_orientation = orient;
