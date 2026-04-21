@@ -39,16 +39,10 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         float radius;
     };
 
-    struct cylinder_type // NOLINT(cppcoreguidelines-pro-type-member-init)
+    struct radial_shape_type // NOLINT(cppcoreguidelines-pro-type-member-init)
     {
-        std::string name; // must be "cylinder"
-        float radius;
-        float height;
-    };
-
-    struct cone_type // NOLINT(cppcoreguidelines-pro-type-member-init)
-    {
-        std::string name; // must be "cone"
+        // must be "cylinder" or "cone"
+        std::string name;
         float radius;
         float height;
     };
@@ -61,7 +55,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         std::array<double, 3> angular_velocity = {0.0, 0.0, 0.0}; // rad/s
         std::array<double, 3> inertia_tensor = {1.0, 1.0, 1.0};   // diagonal [Ixx, Iyy, Izz]
         physkit::body_type type = physkit::body_type::dynam;
-        std::variant<box_type, pyramid_type, sphere_type, cylinder_type, cone_type> shape =
+        std::variant<box_type, pyramid_type, sphere_type, radial_shape_type> shape =
             box_type{"box", {0.5f, 0.5f, 0.5f}};
         double mass;
         double restitution = 0.5;
@@ -123,12 +117,18 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                     // physkit::mesh::pyramid(shape_desc.height * m, shape_desc.base_size * m);
                     else if constexpr (std::same_as<T, sphere_type>)
                         shape_map[shape_name] = physkit::sphere{shape_desc.radius * m};
-                    else if constexpr (std::same_as<T, cylinder_type>)
-                        shape_map[shape_name] =
-                            physkit::cylinder{shape_desc.radius * m, shape_desc.height * m};
-                    else if constexpr (std::same_as<T, cone_type>)
-                        shape_map[shape_name] =
-                            physkit::cone{shape_desc.radius * m, shape_desc.height * m};
+                    else if constexpr (std::same_as<T, radial_shape_type>)
+                    {
+                        if (shape_desc.name == "cylinder")
+                            shape_map[shape_name] =
+                                physkit::cylinder{shape_desc.radius * m, shape_desc.height * m};
+                        else if (shape_desc.name == "cone")
+                            shape_map[shape_name] =
+                                physkit::cone{shape_desc.radius * m, shape_desc.height * m};
+                        else
+                            throw std::runtime_error(std::format(
+                                "Unsupported radial shape '{}' in config", shape_desc.name));
+                    }
                 });
         }
 
@@ -201,10 +201,6 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
     }
 
     std::println("  Gravity: {}", *self.M_gravity);
-    // std::println("  Integrator: {}",
-    //              glz::reflect<physkit::world_desc::integ_t>::keys[static_cast<int>( //
-    //              NOLINT
-    //                  config.integrator)]);
     std::println("  Solver iterations: {}", config.solver_iterations);
     std::println("  Objects: {}", config.objects.size());
     for (std::size_t i = 0; i < self.M_objects.size(); ++i)
@@ -237,11 +233,8 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                 else if constexpr (std::same_as<T, sphere_type>)
                     std::println("      Mesh: sphere (radius: {})", // TODO
                                  shape_desc.radius * m);
-                else if constexpr (std::same_as<T, cylinder_type>)
-                    std::println("      Shape: cylinder (radius: {}, height: {})",
-                                 shape_desc.radius * m, shape_desc.height * m);
-                else if constexpr (std::same_as<T, cone_type>)
-                    std::println("      Shape: cone (radius: {}, height: {})",
+                else if constexpr (std::same_as<T, radial_shape_type>)
+                    std::println("      Shape: {} (radius: {}, height: {})", shape_desc.name,
                                  shape_desc.radius * m, shape_desc.height * m);
             });
     }

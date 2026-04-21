@@ -151,14 +151,12 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cone &phys_cone, unsigned 
                                        unsigned int segments = 24)
 {
     using namespace Magnum;
-    using namespace Math::Literals;
     auto radius = static_cast<float>(phys_cone.radius().numerical_value_in(physkit::si::metre));
     auto height = static_cast<float>(phys_cone.height().numerical_value_in(physkit::si::metre));
-    auto data = Primitives::coneSolid(rings, segments, 0.5f * height / radius,
-                                      Primitives::ConeFlag::CapEnd);
+    auto data = Primitives::coneSolid(rings, segments, 0.5f * height, Primitives::ConeFlag::CapEnd);
 
-    auto transform = Matrix4::scaling({radius, radius, radius}) *
-                     Matrix4::translation({0, height * 0.5f, 0}) * Matrix4::rotationY(Deg(45));
+    auto transform =
+        Matrix4::translation({0, height * 0.5f, 0}) * Matrix4::scaling({radius, 1.0f, radius});
     data = MeshTools::transform3D(data, transform);
 
     return MeshTools::compile(data);
