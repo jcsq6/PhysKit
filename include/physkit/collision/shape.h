@@ -467,13 +467,13 @@ class shape
 public:
     enum class type : std::uint8_t
     {
-        shape_sphere = 0,
-        shape_box,
-        shape_cylinder,
-        shape_cone,
-        shape_pyramid,
-        // shape_convex_hull,
-        shape_mesh
+        sphere = 0,
+        box,
+        cylinder,
+        cone,
+        pyramid,
+        // convex_hull,
+        mesh
     };
 
     shape(const shape &other) : M_type(other.M_type) { copy_from(other); }
@@ -503,56 +503,56 @@ public:
     }
     ~shape() { destroy_active(); }
 
-    shape() : M_type(type::shape_box) { construct_box(vec3{0.5f, 0.5f, 0.5f} * si::metre); }
+    shape() : M_type(type::box) { construct_box(vec3{0.5f, 0.5f, 0.5f} * si::metre); }
 
-    shape(std::shared_ptr<const physkit::mesh> m) : M_type(type::shape_mesh)
+    shape(std::shared_ptr<const physkit::mesh> m) : M_type(type::mesh)
     { construct_mesh(std::move(m)); }
 
-    shape(const physkit::sphere &s) : M_type(type::shape_sphere) { construct_sphere(s); }
+    shape(const physkit::sphere &s) : M_type(type::sphere) { construct_sphere(s); }
 
-    shape(const physkit::box &b) : M_type(type::shape_box) { construct_box(b); }
+    shape(const physkit::box &b) : M_type(type::box) { construct_box(b); }
 
-    shape(const physkit::cylinder &cy) : M_type(type::shape_cylinder) { construct_cylinder(cy); }
+    shape(const physkit::cylinder &cy) : M_type(type::cylinder) { construct_cylinder(cy); }
 
-    shape(const physkit::cone &c) : M_type(type::shape_cone) { construct_cone(c); }
+    shape(const physkit::cone &c) : M_type(type::cone) { construct_cone(c); }
 
-    shape(const physkit::pyramid &p) : M_type(type::shape_pyramid) { construct_pyramid(p); }
+    shape(const physkit::pyramid &p) : M_type(type::pyramid) { construct_pyramid(p); }
 
     [[nodiscard]] const std::shared_ptr<const physkit::mesh> &mesh() const
     {
-        assert(M_type == type::shape_mesh);
+        assert(M_type == type::mesh);
         return M_storage.msh;
     }
     [[nodiscard]] const physkit::sphere &sphere() const
     {
-        assert(M_type == type::shape_sphere);
+        assert(M_type == type::sphere);
         return M_storage.sph;
     }
     [[nodiscard]] const physkit::box &box() const
     {
-        assert(M_type == type::shape_box);
+        assert(M_type == type::box);
         return M_storage.bx;
     }
     [[nodiscard]] const physkit::cylinder &cylinder() const
     {
-        assert(M_type == type::shape_cylinder);
+        assert(M_type == type::cylinder);
         return M_storage.cyl;
     }
     [[nodiscard]] const physkit::cone &cone() const
     {
-        assert(M_type == type::shape_cone);
+        assert(M_type == type::cone);
         return M_storage.cn;
     }
     [[nodiscard]] const physkit::pyramid &pyramid() const
     {
-        assert(M_type == type::shape_pyramid);
+        assert(M_type == type::pyramid);
         return M_storage.pyr;
     }
 
     shape &operator=(std::shared_ptr<const physkit::mesh> m)
     {
         destroy_active();
-        M_type = type::shape_mesh;
+        M_type = type::mesh;
         construct_mesh(std::move(m));
         return *this;
     }
@@ -564,17 +564,17 @@ private:
     {
         switch (M_type)
         {
-        case type::shape_sphere:
+        case type::sphere:
             return std::forward<F>(f)(M_storage.sph);
-        case type::shape_box:
+        case type::box:
             return std::forward<F>(f)(M_storage.bx);
-        case type::shape_mesh:
+        case type::mesh:
             return std::forward<F>(f)(*M_storage.msh);
-        case type::shape_cylinder:
+        case type::cylinder:
             return std::forward<F>(f)(M_storage.cyl);
-        case type::shape_cone:
+        case type::cone:
             return std::forward<F>(f)(M_storage.cn);
-        case type::shape_pyramid:
+        case type::pyramid:
             return std::forward<F>(f)(M_storage.pyr);
         default:
             std::unreachable();
@@ -631,7 +631,7 @@ public:
     /// @brief Gathers indices of triangles whose vertices overlap the given sphere.
     [[nodiscard]] std::vector<std::uint32_t> overlap_sphere(const bounding_sphere &sphere) const
     {
-        assert(M_type == type::shape_mesh);
+        assert(M_type == type::mesh);
         return M_storage.msh->overlap_sphere(sphere);
     }
 
@@ -646,13 +646,13 @@ public:
         switch (M_type)
         {
         default:
-        case type::shape_mesh:
+        case type::mesh:
             return M_storage.msh->is_convex();
-        case type::shape_sphere:
-        case type::shape_box:
-        case type::shape_cylinder:
-        case type::shape_cone:
-        case type::shape_pyramid:
+        case type::sphere:
+        case type::box:
+        case type::cylinder:
+        case type::cone:
+        case type::pyramid:
             return true;
         }
     }
@@ -662,17 +662,17 @@ public:
     // mesh only methods for compatibility
     [[nodiscard]] std::span<const vec3<si::metre>> vertices() const
     {
-        assert(M_type == type::shape_mesh);
+        assert(M_type == type::mesh);
         return M_storage.msh->vertices();
     }
     [[nodiscard]] std::span<const triangle_t> triangles() const
     {
-        assert(M_type == type::shape_mesh);
+        assert(M_type == type::mesh);
         return M_storage.msh->triangles();
     }
     [[nodiscard]] const vec3<si::metre> &vertex(unsigned int index) const
     {
-        assert(M_type == type::shape_mesh);
+        assert(M_type == type::mesh);
         const auto &msh = M_storage.msh;
         assert(index < msh->vertices().size());
         return msh->vertices()[index];
@@ -701,22 +701,22 @@ private:
     {
         switch (M_type)
         {
-        case type::shape_mesh:
+        case type::mesh:
             M_storage.msh.~shared_ptr();
             break;
-        case type::shape_sphere:
+        case type::sphere:
             M_storage.sph.~sphere();
             break;
-        case type::shape_box:
+        case type::box:
             M_storage.bx.~box();
             break;
-        case type::shape_cylinder:
+        case type::cylinder:
             M_storage.cyl.~cylinder();
             break;
-        case type::shape_cone:
+        case type::cone:
             M_storage.cn.~cone();
             break;
-        case type::shape_pyramid:
+        case type::pyramid:
             M_storage.pyr.~pyramid();
             break;
         }
@@ -744,22 +744,22 @@ private:
     {
         switch (M_type)
         {
-        case type::shape_mesh:
+        case type::mesh:
             construct_mesh(other.M_storage.msh);
             break;
-        case type::shape_sphere:
+        case type::sphere:
             construct_sphere(other.M_storage.sph);
             break;
-        case type::shape_box:
+        case type::box:
             construct_box(other.M_storage.bx);
             break;
-        case type::shape_cylinder:
+        case type::cylinder:
             construct_cylinder(other.M_storage.cyl);
             break;
-        case type::shape_cone:
+        case type::cone:
             construct_cone(other.M_storage.cn);
             break;
-        case type::shape_pyramid:
+        case type::pyramid:
             construct_pyramid(other.M_storage.pyr);
             break;
         default:
@@ -772,22 +772,22 @@ private:
     {
         switch (M_type)
         {
-        case type::shape_mesh:
+        case type::mesh:
             construct_mesh(std::move(other.M_storage.msh));
             break;
-        case type::shape_sphere:
+        case type::sphere:
             construct_sphere(std::move(other.M_storage.sph));
             break;
-        case type::shape_box:
+        case type::box:
             construct_box(std::move(other.M_storage.bx));
             break;
-        case type::shape_cylinder:
+        case type::cylinder:
             construct_cylinder(std::move(other.M_storage.cyl));
             break;
-        case type::shape_cone:
+        case type::cone:
             construct_cone(std::move(other.M_storage.cn));
             break;
-        case type::shape_pyramid:
+        case type::pyramid:
             construct_pyramid(std::move(other.M_storage.pyr));
             break;
         default:
@@ -815,7 +815,7 @@ public:
 
     [[nodiscard]] vec3<si::metre> vertex(unsigned int index) const
     {
-        assert(M_shape->type() == shape::type::shape_mesh);
+        assert(M_shape->type() == shape::type::mesh);
         assert(index < M_shape->vertices().size());
         return M_orientation * M_shape->vertices()[index] + M_position;
     }

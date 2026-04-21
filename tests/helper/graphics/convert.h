@@ -183,17 +183,17 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::shape &phys_shape)
 {
     switch (phys_shape.type())
     {
-    case physkit::shape::type::shape_mesh:
+    case physkit::shape::type::mesh:
         return to_magnum_mesh(*phys_shape.mesh());
-    case physkit::shape::type::shape_box:
+    case physkit::shape::type::box:
         return to_magnum_mesh(phys_shape.box());
-    case physkit::shape::type::shape_sphere:
+    case physkit::shape::type::sphere:
         return to_magnum_mesh(phys_shape.sphere());
-    case physkit::shape::type::shape_cylinder:
+    case physkit::shape::type::cylinder:
         return to_magnum_mesh(phys_shape.cylinder());
-    case physkit::shape::type::shape_cone:
+    case physkit::shape::type::cone:
         return to_magnum_mesh(phys_shape.cone());
-    case physkit::shape::type::shape_pyramid:
+    case physkit::shape::type::pyramid:
         return to_magnum_mesh(phys_shape.pyramid());
     default:
         std::unreachable();

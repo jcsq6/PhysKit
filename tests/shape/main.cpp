@@ -2331,7 +2331,7 @@ void test_pyramid_asymmetric_contains()
 void test_shape_default()
 {
     shape s;
-    CHECK(s.type() == shape::type::shape_box);
+    CHECK(s.type() == shape::type::box);
     // Default box has half_extents (0.5, 0.5, 0.5), volume = 1
     CHECK_APPROX(s.volume(), 1.0 * m * m * m);
 }
@@ -2340,7 +2340,7 @@ void test_shape_from_sphere()
 {
     sphere sph(2.0 * m);
     shape s(sph);
-    CHECK(s.type() == shape::type::shape_sphere);
+    CHECK(s.type() == shape::type::sphere);
     CHECK_APPROX(s.volume(), sph.volume());
     CHECK_APPROX(s.mass_center(), sph.mass_center());
     CHECK(s.is_convex());
@@ -2351,7 +2351,7 @@ void test_shape_from_box()
 {
     box bx(vec3{1.0, 2.0, 3.0} * m);
     shape s(bx);
-    CHECK(s.type() == shape::type::shape_box);
+    CHECK(s.type() == shape::type::box);
     CHECK_APPROX(s.volume(), bx.volume());
     CHECK_APPROX(s.bounds(), bx.bounds());
     CHECK(s.is_convex());
@@ -2361,7 +2361,7 @@ void test_shape_from_mesh()
 {
     auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
     shape s(msh);
-    CHECK(s.type() == shape::type::shape_mesh);
+    CHECK(s.type() == shape::type::mesh);
     CHECK_APPROX(s.volume(), msh->volume());
     CHECK(!s.vertices().empty());
     CHECK(!s.triangles().empty());
@@ -2372,7 +2372,7 @@ void test_shape_copy()
     sphere sph(1.0 * m);
     shape s1(sph);
     shape s2 = s1; // NOLINT(performance-unnecessary-copy-initialization)
-    CHECK(s2.type() == shape::type::shape_sphere);
+    CHECK(s2.type() == shape::type::sphere);
     CHECK_APPROX(s2.volume(), s1.volume());
     CHECK_APPROX(s2.sphere().radius(), 1.0 * m);
 
@@ -2380,7 +2380,7 @@ void test_shape_copy()
     box bx(vec3{1.0, 1.0, 1.0} * m);
     shape s3(bx);
     s2 = s3;
-    CHECK(s2.type() == shape::type::shape_box);
+    CHECK(s2.type() == shape::type::box);
     CHECK_APPROX(s2.volume(), s3.volume());
 }
 
@@ -2389,14 +2389,14 @@ void test_shape_move()
     sphere sph(1.0 * m);
     shape s1(sph);
     shape s2 = std::move(s1);
-    CHECK(s2.type() == shape::type::shape_sphere);
+    CHECK(s2.type() == shape::type::sphere);
     CHECK_APPROX(s2.volume(), sph.volume());
 
     // Move assign
     box bx(vec3{2.0, 2.0, 2.0} * m);
     shape s3(bx);
     s2 = std::move(s3);
-    CHECK(s2.type() == shape::type::shape_box);
+    CHECK(s2.type() == shape::type::box);
 }
 
 void test_shape_dispatch()
