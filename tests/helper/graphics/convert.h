@@ -135,25 +135,18 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::sphere &phys_sphere,
 inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cylinder &phys_cylinder, unsigned int rings = 3,
                                        unsigned int segments = 24)
 {
-    // TODO: implement
-    //assert(false && "to_magnum_mesh(cone) is not implemented");
-    throw std::logic_error("to_magnum_mesh(cone) is not implemented");
+    using namespace Magnum;
+    using namespace Math::Literals;
+    
+    float radius = phys_cylinder.radius().numerical_value_in(physkit::si::metre);
+    float height = phys_cylinder.height().numerical_value_in(physkit::si::metre);
 
-    // THERE seems to be no bottom to the cone...
-    // rings, segments, half length
-    // using namespace Magnum;
-    // using namespace Math::Literals;
-    // float radius = phys_cone.radius().numerical_value_in(physkit::si::metre);
-    // float height = phys_cone.height().numerical_value_in(physkit::si::metre);
-    // auto data = Primitives::coneSolid(rings, segments, 0.5f * height / radius,
-    //                                   Primitives::ConeFlag::CapEnd);
+    auto data = Primitives::cylinderSolid(rings, segments,0.5f*height/radius,Primitives::CylinderFlag::CapEnds);
 
-    // for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
-    //     i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
-    // for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
-    //     i = Matrix4::translation({0, height * 0.5f, 0}).transformPoint(i);
+    for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
+        i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
 
-    // return MeshTools::compile(data);
+    return MeshTools::compile(data);
 }
 
 inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cone &phys_cone, unsigned int rings = 3,
@@ -186,6 +179,8 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::shape &phys_shape)
         return to_magnum_mesh(phys_shape.box());
     case physkit::shape::type::shape_sphere:
         return to_magnum_mesh(phys_shape.sphere());
+    case physkit::shape::type::shape_cylinder:
+        return to_magnum_mesh(phys_shape.cylinder());
     case physkit::shape::type::shape_cone:
         return to_magnum_mesh(phys_shape.cone());
     default:

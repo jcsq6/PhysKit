@@ -771,18 +771,18 @@ GRAPHICS_EXPORT namespace graphics
             MeshTools::compile(Primitives::icosphereSolid(subdivisions)));
     }
 
-    inline auto cone(unsigned int rings, unsigned int segments, float half_length)
-    {
-        return std::make_shared<GL::Mesh>(
-            MeshTools::compile(Primitives::coneSolid(rings, segments, half_length)));
-    }
-
     inline auto cylinder(unsigned int rings, unsigned int segments, float half_length,
                          bool include_caps = true)
     {
         return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cylinderSolid(
             rings, segments, half_length,
             include_caps ? Primitives::CylinderFlag::CapEnds : Primitives::CylinderFlag{})));
+    }
+
+    inline auto cone(unsigned int rings, unsigned int segments, float half_length)
+    {
+        return std::make_shared<GL::Mesh>(
+            MeshTools::compile(Primitives::coneSolid(rings, segments, half_length)));
     }
 
     inline auto plane()

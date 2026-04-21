@@ -210,7 +210,7 @@ public:
         : M_radius{radius}, M_height{height}
     {
         M_aabb = aabb::from_points({vec3<si::metre>{M_radius, M_height / 2.0f, M_radius},
-                                    vec3<si::metre>{M_radius, -M_height / 2.0f, M_radius}});
+                                    vec3<si::metre>{-M_radius, -M_height / 2.0f, -M_radius}});
 
         M_bsphere = bounding_sphere(vec3<si::metre>{0 * si::metre, 0 * si::metre, 0 * si::metre},
                                     sqrt(pow<2>(M_radius) + pow<2>(M_height / 2)));
@@ -378,72 +378,39 @@ public:
             // using namespace mp_units::si::unit_symbols;
             // std::optional<ray::hit> best;
 
-        // auto o = r.origin();
-        // auto dir = r.direction();
-
-        // // Base plane intersection (y = 0)
-        // if (dir.y() != 0)
-        //     if (auto dist = -o.y() / dir.y(); dist >= 0 * m && dist <= max_distance)
-        //         if (auto point = o + dist * dir;
-        //             pow<2>(point.x()) + pow<2>(point.z()) <= pow<2>(M_radius))
-        //             best = ray::hit{.pos = point, .normal = vec3<one>{0, -1, 0}, .distance = dist};
-
-        // // Lateral surface intersection: $x^2 + z^2 = (r/h)^2(h - y)^2$
-        // auto rad = M_radius;
-        // auto h = M_height;
-
-        // auto a = dir.x() * dir.x() + dir.z() * dir.z() - dir.y() * dir.y() * rad * rad / (h * h);
-        // auto b = 2 * o.x() * dir.x() + 2 * o.z() * dir.z() -
-        //          2 * rad * rad * o.y() * dir.y() / (h * h) + 2 * dir.y() * rad * rad / h;
-        // auto c = o.x() * o.x() + o.z() * o.z() - o.y() * o.y() * rad * rad / (h * h) +
-        //          2 * o.y() * rad * rad / h - rad * rad;
-
-        // auto det = b * b - 4 * a * c;
-        // if (det >= 0 * m * m)
-        // {
-        //     auto sqrt_det = sqrt(det);
-        //     auto t1 = (-b - sqrt_det) / (2 * a);
-        //     auto t2 = (-b + sqrt_det) / (2 * a);
-        //     if (t1 > t2) std::swap(t1, t2);
-
-        //     for (auto t : {t1, t2})
-        //     {
-        //         auto dist = t;
-        //         if (dist < 0 * m || dist > max_distance) continue;
-        //         if (best.has_value() && best->distance <= dist) break;
-
-        //         auto p = o + dist * dir;
-        //         // Reject hits outside the finite cylinder
-        //         if (p.y() < 0 * m || p.y() > M_height) continue;
-
-        //         // Outward normal: $\nabla(x^2+z^2-(r/h)^2(h-y)^2) \propto (x, (r^2/h^2)(h-y), z)$
-
-        //         vec3<one> norm;
-        //         if (p.x() == 0.0 * m && p.z() == 0.0 * m)
-        //             norm = vec3<one>{0.0, 1.0, 0.0};
-        //         else
-        //             norm = vec3{p.x(), rad * rad * (h - p.y()) / (h * h), p.z()}.normalized();
-
-        //         best = ray::hit{.pos = p, .normal = norm, .distance = dist};
-        //         break;
-        //     }
-        // }
-
-        // return best;
     }
     /// @brief Closest point on the cylinder surface in local space. O(1) time.
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const
     {
         auto [x,y,z] = point;
         const auto d2 = x*x + z*z;
+        const auto d = sqrt(d2);
         //const auto r2 = M_radius * M_radius;
-        if (d2 > M_radius * M_radius) {
-            auto s = M_radius / sqrt(d2); // projector to point on cylinder
-            x *= s;
-            z *= s;
-        }
         const auto half_height = M_height * 0.5; // no fp error because this just decrements the exponent.
         y = std::clamp(y,-half_height,half_height);
+        if (d2 > M_radius * M_radius) {
+            // project to side
+            auto s = M_radius / d; // d can't be 0 here even if the cylinder was 0 radius for some reason.
+            x *= s;
+            z *= s;
+        } else if (abs(y) < half_height) {
+            // this is only if strictly inside caps
+            auto side = M_radius - d;// should be positive.
+            auto caps = abs(half_height-abs(y)); // y <
+            if (side >= caps) { // prioritize caps y axis for faser code.
+                y = (y > 0.0*si::metre) ? (half_height) : (-half_height);
+            } else {
+                if (d > 0.0*si::metre) {  
+                    // project to side
+                    auto s = M_radius / d;
+                    x *= s;
+                    z *= s;
+                } else { // on y-axis but need project to side. chose +x axis for default.
+                    x = M_radius;
+                    z = 0.0*si::metre;
+                }
+            }
+        }
 
         return vec3{x, y, z};
     }

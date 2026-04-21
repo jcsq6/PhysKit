@@ -61,7 +61,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         std::array<double, 3> angular_velocity = {0.0, 0.0, 0.0}; // rad/s
         std::array<double, 3> inertia_tensor = {1.0, 1.0, 1.0};   // diagonal [Ixx, Iyy, Izz]
         physkit::body_type type = physkit::body_type::dynam;
-        std::variant<box_type, pyramid_type, sphere_type, cone_type> shape =
+        std::variant<box_type, pyramid_type, sphere_type, cylinder_type, cone_type> shape =
             box_type{"box", {0.5f, 0.5f, 0.5f}};
         double mass;
         double restitution = 0.5;
@@ -122,6 +122,8 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                             physkit::mesh::pyramid(shape_desc.height * m, shape_desc.base_size * m);
                     else if constexpr (std::same_as<T, sphere_type>)
                         shape_map[shape_name] = physkit::sphere{shape_desc.radius * m};
+                    else if constexpr (std::same_as<T, cylinder_type>)
+                        shape_map[shape_name] = physkit::cylinder{shape_desc.radius * m, shape_desc.height * m};
                     else if constexpr (std::same_as<T, cone_type>)
                         shape_map[shape_name] =
                             physkit::cone{shape_desc.radius * m, shape_desc.height * m};
@@ -233,6 +235,9 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                 else if constexpr (std::same_as<T, sphere_type>)
                     std::println("      Mesh: sphere (radius: {})", // TODO
                                  shape_desc.radius * m);
+                else if constexpr (std::same_as<T, cylinder_type>)
+                    std::println("      Shape: cylinder (radius: {}, height: {})",
+                                 shape_desc.radius * m, shape_desc.height * m);
                 else if constexpr (std::same_as<T, cone_type>)
                     std::println("      Shape: cone (radius: {}, height: {})",
                                  shape_desc.radius * m, shape_desc.height * m);
