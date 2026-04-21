@@ -122,7 +122,6 @@ private:
     quat<one> M_orientation = quat<one>::identity();
     vec3<si::radian / si::second> M_ang_vel = vec3<si::radian / si::second>::zero();
     std::optional<mat3<si::kilogram * si::metre * si::metre>> M_inertia;
-    // std::shared_ptr<const physkit::mesh> M_mesh;
     physkit::shape M_shape;
     double M_restitution = 0.5;
     double M_friction = 0.5;

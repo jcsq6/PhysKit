@@ -210,14 +210,65 @@
             ],
             "restitution": 0.4
         },
-		  {
-			  "shape": {"name": "cone", "radius": 1.2, "height": 1.5},
-			  "pos": [10.0, 5.0, 0.0],
-			  "vel": [0.0, 0.0, 0.0],
-			  "angular_velocity": [0.0, 0.0, 0.0],
-			  "mass": 1.0,
-			  "color": [1.0, 0.80, 0.1],
-			  "restitution": 0.0
-		  }
+        {
+            "shape": {
+                "name": "cylinder",
+                "radius": 0.6,
+                "height": 1.8
+            },
+            "pos": [
+                4.0,
+                4.0,
+                -1.5
+            ],
+            "type": "dynam",
+            "vel": [
+                -1.5,
+                0.0,
+                0.5
+            ],
+            "angular_velocity": [
+                0.5,
+                1.0,
+                0.0
+            ],
+            "mass": 1.5,
+            "color": [
+                0.2,
+                0.7,
+                0.8,
+                1.0
+            ],
+            "restitution": 0.4
+        },
+        {
+            "shape": {
+                "name": "cone",
+                "radius": 1.2,
+                "height": 1.5
+            },
+            "pos": [
+                10.0,
+                5.0,
+                0.0
+            ],
+            "vel": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "angular_velocity": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "mass": 1.0,
+            "color": [
+                1.0,
+                0.80,
+                0.1
+            ],
+            "restitution": 0.0
+        }
     ]
 }
