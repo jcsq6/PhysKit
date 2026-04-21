@@ -17,57 +17,44 @@ import std;
 template <class Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
 struct std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
 {
-    std::formatter<Scalar> underlying;
-
-    constexpr auto parse(std::format_parse_context &pc) { return underlying.parse(pc); }
+    constexpr auto parse(std::format_parse_context &pc)
+    {
+        const auto *it = pc.begin();
+        if ((it != pc.end()) && (*it != '}')) throw std::format_error("invalid format");
+        return it;
+    }
 
     template <class FormatContext>
     constexpr auto format(const Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols> &m,
                           FormatContext &ctx) const
     {
-        ctx.advance_to(std::ranges::copy("[", ctx.out()).out);
-
-        auto on_row = [this, &ctx](std::ranges::range auto &&vec, bool terminate = false)
+        if ((m.rows() == 1) || (m.cols() == 1))
         {
-            bool use_separator = false;
-            for (auto &&e : vec)
+            if (m.rows() == 1)
             {
-                if (use_separator)
-                    ctx.advance_to(std::ranges::copy(", ", ctx.out()).out);
-                else
-                    use_separator = true;
-                ctx.advance_to(underlying.format(e, ctx));
+                auto row_range = std::views::iota(Eigen::Index{0}, m.cols()) |
+                                 std::views::transform([&m](Eigen::Index col) -> const Scalar &
+                                                       { return m(0, col); });
+                return std::format_to(ctx.out(), "{}", row_range);
             }
 
-            if (terminate) ctx.advance_to(std::ranges::copy("]", ctx.out()).out);
-        };
-
-        auto on_mat = [&on_row, &ctx](auto &&m)
-        {
-            auto rows = m.rowwise();
-            bool use_separator = false;
-            for (auto row : rows)
-            {
-                if (use_separator)
-                    ctx.advance_to(std::ranges::copy(",\n ", ctx.out()).out);
-                else
-                    use_separator = true;
-                on_row(row, false);
-            }
-
-            ctx.advance_to(std::ranges::copy("]", ctx.out()).out);
-        };
-
-        if constexpr (m.IsVectorAtCompileTime == 1)
-        {
-            if ((m.rows() == 1) || (m.cols() == 1))
-                on_row(m, true);
-            else
-                on_mat(m);
+            auto col_range = std::views::iota(Eigen::Index{0}, m.rows()) |
+                             std::views::transform([&m](Eigen::Index row) -> const Scalar &
+                                                   { return m(row, 0); });
+            return std::format_to(ctx.out(), "{}", col_range);
         }
-        else
-            on_mat(m);
-        return ctx.out();
+
+        auto mat_range =
+            std::views::iota(Eigen::Index{0}, m.rows()) |
+            std::views::transform(
+                [&m](Eigen::Index row)
+                {
+                    return std::views::iota(Eigen::Index{0}, m.cols()) |
+                           std::views::transform([&m, row](Eigen::Index col) -> const Scalar &
+                                                 { return m(row, col); });
+                });
+
+        return std::format_to(ctx.out(), "{}", mat_range);
     }
 };
 

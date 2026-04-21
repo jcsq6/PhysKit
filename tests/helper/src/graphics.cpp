@@ -211,8 +211,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         std::println("      Velocity: {}", o.vel());
         std::println("      Orientation: {}", o.orientation());
         std::println("      Angular velocity: {}", o.ang_vel());
-        std::println("      Inertia tensor (diag): [{}, {}, {}]", o.inertia_tensor()[0, 0],
-                     o.inertia_tensor()[1, 1], o.inertia_tensor()[2, 2]);
+        std::println("      Inertia tensor: {}", o.inertia_tensor());
         std::println("      Mass: {}", o.mass());
         std::println("      Type: {}",
                      glz::reflect<physkit::body_type>::keys[static_cast<int>(o.type())]); // NOLINT
