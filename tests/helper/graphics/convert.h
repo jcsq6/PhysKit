@@ -13,7 +13,7 @@
 #include <physkit/physkit.h>
 #endif
 
-#include "detail/magnum_headers.h"
+// #include "detail/magnum_headers.h"
 
 #endif
 
@@ -114,7 +114,6 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::box &phys_box)
     auto transform = Matrix4::scaling(half_extents);
     data = MeshTools::transform3D(data, transform);
 
-
     return MeshTools::compile(data);
 }
 
@@ -122,7 +121,7 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::sphere &phys_sphere,
                                        unsigned int subdivisions = 3)
 {
     using namespace Magnum;
-    float radius = phys_sphere.radius().numerical_value_in(physkit::si::metre);
+    auto radius = static_cast<float>(phys_sphere.radius().numerical_value_in(physkit::si::metre));
     auto data = Primitives::icosphereSolid(subdivisions);
     auto transform = Matrix4::scaling({radius, radius, radius});
     data = MeshTools::transform3D(data, transform);
@@ -130,16 +129,17 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::sphere &phys_sphere,
     return MeshTools::compile(data);
 }
 
-inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cylinder &phys_cylinder, unsigned int rings = 3,
-                                       unsigned int segments = 24)
+inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cylinder &phys_cylinder,
+                                       unsigned int rings = 3, unsigned int segments = 24)
 {
     using namespace Magnum;
     using namespace Math::Literals;
-    
-    float radius = phys_cylinder.radius().numerical_value_in(physkit::si::metre);
-    float height = phys_cylinder.height().numerical_value_in(physkit::si::metre);
 
-    auto data = Primitives::cylinderSolid(rings, segments,0.5f*height/radius,Primitives::CylinderFlag::CapEnds);
+    auto radius = static_cast<float>(phys_cylinder.radius().numerical_value_in(physkit::si::metre));
+    auto height = static_cast<float>(phys_cylinder.height().numerical_value_in(physkit::si::metre));
+
+    auto data = Primitives::cylinderSolid(rings, segments, 0.5f * height / radius,
+                                          Primitives::CylinderFlag::CapEnds);
 
     for (Vector3 &i : data.mutableAttribute<Vector3>(Trade::MeshAttribute::Position))
         i = Matrix4::scaling({radius, radius, radius}).transformPoint(i);
@@ -152,13 +152,13 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::cone &phys_cone, unsigned 
 {
     using namespace Magnum;
     using namespace Math::Literals;
-    float radius = phys_cone.radius().numerical_value_in(physkit::si::metre);
-    float height = phys_cone.height().numerical_value_in(physkit::si::metre);
+    auto radius = static_cast<float>(phys_cone.radius().numerical_value_in(physkit::si::metre));
+    auto height = static_cast<float>(phys_cone.height().numerical_value_in(physkit::si::metre));
     auto data = Primitives::coneSolid(rings, segments, 0.5f * height / radius,
                                       Primitives::ConeFlag::CapEnd);
 
-    auto transform = Matrix4::scaling({radius,radius,radius})*
-        Matrix4::translation({0,height*0.5f, 0})*Matrix4::rotationY(Deg(45));
+    auto transform = Matrix4::scaling({radius, radius, radius}) *
+                     Matrix4::translation({0, height * 0.5f, 0}) * Matrix4::rotationY(Deg(45));
     data = MeshTools::transform3D(data, transform);
 
     return MeshTools::compile(data);
@@ -168,11 +168,13 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::pyramid &phys_pyramid)
 {
     using namespace Magnum;
     using namespace Math::Literals;
-    float b = std::numbers::sqrt2*phys_pyramid.base_half().numerical_value_in(physkit::si::metre);
-    float h = phys_pyramid.height().numerical_value_in(physkit::si::metre);
-    auto data = Primitives::coneSolid(1,4, 0.5f*h/b, Primitives::ConeFlag::CapEnd);
+    auto b = static_cast<float>(std::numbers::sqrt2 *
+                                phys_pyramid.base_half().numerical_value_in(physkit::si::metre));
+    auto h = static_cast<float>(phys_pyramid.height().numerical_value_in(physkit::si::metre));
+    auto data = Primitives::coneSolid(1, 4, 0.5f * h / b, Primitives::ConeFlag::CapEnd);
 
-    auto transform = Matrix4::scaling({b,b,b})*Matrix4::translation({0,h*0.5f, 0})*Matrix4::rotationY(Deg(45));
+    auto transform = Matrix4::scaling({b, b, b}) * Matrix4::translation({0, h * 0.5f, 0}) *
+                     Matrix4::rotationY(Deg(45));
     data = MeshTools::transform3D(data, transform);
     return MeshTools::compile(data);
 }
@@ -196,6 +198,5 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::shape &phys_shape)
     default:
         std::unreachable();
     }
-
 }
 } // namespace graphics

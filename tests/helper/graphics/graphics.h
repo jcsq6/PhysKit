@@ -468,8 +468,9 @@ GRAPHICS_EXPORT namespace graphics
             std::shared_ptr<GL::Mesh> mesh;
             if (auto it = M_phys_shape_map.find(&obj.shape()); it == M_phys_shape_map.end())
                 mesh = M_phys_shape_map
-                    .emplace(&obj.shape(), std::make_shared<GL::Mesh>(to_magnum_mesh(obj.shape())))
-                    .first->second;
+                           .emplace(&obj.shape(),
+                                    std::make_shared<GL::Mesh>(to_magnum_mesh(obj.shape())))
+                           .first->second;
             else
                 mesh = it->second;
 

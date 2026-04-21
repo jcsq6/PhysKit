@@ -647,18 +647,18 @@ void test_sphere_support_diagonal()
 // ===========================================================================
 // Cylinder — Construction & Properties
 // ===========================================================================
- 
+
 void test_cylinder_construction()
 {
     cylinder cyl(1.0 * m, 4.0 * m);
     CHECK_APPROX(cyl.radius(), 1.0 * m);
     CHECK_APPROX(cyl.height(), 4.0 * m);
- 
+
     cylinder asym(3.0 * m, 5.0 * m);
     CHECK_APPROX(asym.radius(), 3.0 * m);
     CHECK_APPROX(asym.height(), 5.0 * m);
 }
- 
+
 void test_cylinder_bounds()
 {
     // Cylinder centered at origin: AABB should be (-r, -h/2, -r) to (r, h/2, r).
@@ -668,13 +668,13 @@ void test_cylinder_bounds()
     // expected behavior that the fix should satisfy.
     cylinder cyl(1.0 * m, 4.0 * m);
     CHECK_APPROX(cyl.bounds().min, vec3{-1.0, -2.0, -1.0} * m);
-    CHECK_APPROX(cyl.bounds().max, vec3{ 1.0,  2.0,  1.0} * m);
- 
+    CHECK_APPROX(cyl.bounds().max, vec3{1.0, 2.0, 1.0} * m);
+
     cylinder cyl2(2.0 * m, 6.0 * m);
     CHECK_APPROX(cyl2.bounds().min, vec3{-2.0, -3.0, -2.0} * m);
-    CHECK_APPROX(cyl2.bounds().max, vec3{ 2.0,  3.0,  2.0} * m);
+    CHECK_APPROX(cyl2.bounds().max, vec3{2.0, 3.0, 2.0} * m);
 }
- 
+
 void test_cylinder_bsphere()
 {
     // Bsphere center is at origin. Radius = sqrt(r² + (h/2)²).
@@ -682,41 +682,41 @@ void test_cylinder_bsphere()
     CHECK_APPROX(cyl.bsphere().center, vec3{0.0, 0.0, 0.0} * m);
     // sqrt(1² + 2²) = sqrt(5)
     CHECK_APPROX(cyl.bsphere().radius, std::sqrt(5.0) * m);
- 
+
     // r=3, h=4: sqrt(9 + 4) = sqrt(13)
     cylinder cyl2(3.0 * m, 4.0 * m);
     CHECK_APPROX(cyl2.bsphere().radius, std::sqrt(13.0) * m);
 }
- 
+
 void test_cylinder_volume()
 {
     // V = π r² h
     cylinder unit(1.0 * m, 1.0 * m);
     CHECK_APPROX(unit.volume(), std::numbers::pi * m * m * m);
- 
+
     cylinder cyl(2.0 * m, 3.0 * m);
     CHECK_APPROX(cyl.volume(), 12.0 * std::numbers::pi * m * m * m);
- 
+
     cylinder cyl2(3.0 * m, 2.0 * m);
     CHECK_APPROX(cyl2.volume(), 18.0 * std::numbers::pi * m * m * m);
 }
- 
+
 void test_cylinder_mass_center()
 {
     // Symmetric about origin — mass center should always be (0, 0, 0).
     cylinder cyl(1.0 * m, 4.0 * m);
     CHECK_APPROX(cyl.mass_center(), vec3{0.0, 0.0, 0.0} * m);
- 
+
     cylinder cyl2(5.0 * m, 10.0 * m);
     CHECK_APPROX(cyl2.mass_center(), vec3{0.0, 0.0, 0.0} * m);
 }
- 
+
 void test_cylinder_inertia_tensor()
 {
     // I_y  = (1/2) m r²
     // I_xz = m (3 r² + h²) / 12
     // Off-diagonal elements are zero.
- 
+
     // r=1, h=2, density=1 → V=2π, m=2π
     //   I_y  = (1/2)(2π)(1)  = π
     //   I_xz = (2π)(3 + 4)/12 = 7π/6
@@ -730,7 +730,7 @@ void test_cylinder_inertia_tensor()
     CHECK_APPROX(I[0, 1], 0.0 * kg * m * m);
     CHECK_APPROX(I[0, 2], 0.0 * kg * m * m);
     CHECK_APPROX(I[1, 2], 0.0 * kg * m * m);
- 
+
     // r=2, h=4, density=1 → V=16π, m=16π
     //   I_y  = (1/2)(16π)(4) = 32π
     //   I_xz = (16π)(12 + 16)/12 = (16π)(28)/12 = 112π/3
@@ -740,92 +740,92 @@ void test_cylinder_inertia_tensor()
     CHECK_APPROX(I2[0, 0], (112.0 * std::numbers::pi / 3.0) * kg * m * m);
     CHECK_APPROX(I2[2, 2], (112.0 * std::numbers::pi / 3.0) * kg * m * m);
 }
- 
+
 // ===========================================================================
 // Cylinder — Contains
 // ===========================================================================
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_contains_interior()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // half-height = 2
- 
+
     // On the axis, various heights
-    CHECK(cyl.contains(vec3{0.0,  0.0, 0.0} * m));
-    CHECK(cyl.contains(vec3{0.0,  1.5, 0.0} * m));
+    CHECK(cyl.contains(vec3{0.0, 0.0, 0.0} * m));
+    CHECK(cyl.contains(vec3{0.0, 1.5, 0.0} * m));
     CHECK(cyl.contains(vec3{0.0, -1.5, 0.0} * m));
- 
+
     // Well inside, off-axis
     CHECK(cyl.contains(vec3{0.5, 0.0, 0.5} * m));
     CHECK(cyl.contains(vec3{0.7, 1.0, 0.0} * m));
 }
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_contains_boundary()
 {
     cylinder cyl(1.0 * m, 4.0 * m);
- 
+
     // On the curved surface (r == 1, |y| <= 2)
-    CHECK(cyl.contains(vec3{1.0,  0.0, 0.0} * m));
-    CHECK(cyl.contains(vec3{0.0,  0.0, 1.0} * m));
-    CHECK(cyl.contains(vec3{1.0,  1.5, 0.0} * m));
+    CHECK(cyl.contains(vec3{1.0, 0.0, 0.0} * m));
+    CHECK(cyl.contains(vec3{0.0, 0.0, 1.0} * m));
+    CHECK(cyl.contains(vec3{1.0, 1.5, 0.0} * m));
     CHECK(cyl.contains(vec3{1.0, -1.5, 0.0} * m));
- 
+
     // On the caps (y == ±h/2, xz within disk)
-    CHECK(cyl.contains(vec3{0.0,  2.0, 0.0} * m));
+    CHECK(cyl.contains(vec3{0.0, 2.0, 0.0} * m));
     CHECK(cyl.contains(vec3{0.0, -2.0, 0.0} * m));
-    CHECK(cyl.contains(vec3{0.5,  2.0, 0.5} * m));  // on cap, inside rim
- 
+    CHECK(cyl.contains(vec3{0.5, 2.0, 0.5} * m)); // on cap, inside rim
+
     // Rim edges (r == 1, y == ±h/2)
-    CHECK(cyl.contains(vec3{1.0,  2.0, 0.0} * m));
+    CHECK(cyl.contains(vec3{1.0, 2.0, 0.0} * m));
     CHECK(cyl.contains(vec3{1.0, -2.0, 0.0} * m));
 }
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_contains_exterior()
 {
     cylinder cyl(1.0 * m, 4.0 * m);
- 
+
     // Beyond the curved surface
-    CHECK(!cyl.contains(vec3{1.1,  0.0, 0.0} * m));
-    CHECK(!cyl.contains(vec3{0.0,  0.0, 1.1} * m));
-    CHECK(!cyl.contains(vec3{1.1,  1.5, 0.0} * m));
- 
+    CHECK(!cyl.contains(vec3{1.1, 0.0, 0.0} * m));
+    CHECK(!cyl.contains(vec3{0.0, 0.0, 1.1} * m));
+    CHECK(!cyl.contains(vec3{1.1, 1.5, 0.0} * m));
+
     // Beyond the caps
-    CHECK(!cyl.contains(vec3{0.0,  2.1, 0.0} * m));
+    CHECK(!cyl.contains(vec3{0.0, 2.1, 0.0} * m));
     CHECK(!cyl.contains(vec3{0.0, -2.1, 0.0} * m));
- 
+
     // Diagonal, outside
-    CHECK(!cyl.contains(vec3{1.0,  2.1, 0.0} * m));
-    CHECK(!cyl.contains(vec3{2.0,  2.0, 2.0} * m));
- 
+    CHECK(!cyl.contains(vec3{1.0, 2.1, 0.0} * m));
+    CHECK(!cyl.contains(vec3{2.0, 2.0, 2.0} * m));
+
     // Far away
     CHECK(!cyl.contains(vec3{10.0, 10.0, 10.0} * m));
 }
- 
+
 // ===========================================================================
 // Cylinder — Ray Intersect
 // ===========================================================================
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_ray_curved_surface()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // half-height = 2
- 
+
     // Horizontal ray along +X from outside, aimed at mid-height (y=0)
     auto hit = cyl.ray_intersect({vec3{5.0, 0.0, 0.0} * m, {-1, 0, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos, vec3{1.0, 0.0, 0.0} * m);
     CHECK_APPROX(hit->normal, vec3<one>{1, 0, 0});
     CHECK_APPROX(hit->distance, 4.0 * m);
- 
+
     // From -X
     auto hit2 = cyl.ray_intersect({vec3{-5.0, 0.0, 0.0} * m, {1, 0, 0}});
     CHECK(hit2.has_value());
     CHECK_APPROX(hit2->pos, vec3{-1.0, 0.0, 0.0} * m);
     CHECK_APPROX(hit2->normal, vec3<one>{-1, 0, 0});
     CHECK_APPROX(hit2->distance, 4.0 * m);
- 
+
     // From +Z
     auto hit3 = cyl.ray_intersect({vec3{0.0, 0.0, 5.0} * m, {0, 0, -1}});
     CHECK(hit3.has_value());
@@ -833,45 +833,45 @@ void test_cylinder_ray_curved_surface()
     CHECK_APPROX(hit3->normal, vec3<one>{0, 0, 1});
     CHECK_APPROX(hit3->distance, 4.0 * m);
 }
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_ray_top_cap()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // cap at y = +2
- 
+
     // Ray from above, aimed straight down at cap center
     auto hit = cyl.ray_intersect({vec3{0.0, 5.0, 0.0} * m, {0, -1, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos, vec3{0.0, 2.0, 0.0} * m);
     CHECK_APPROX(hit->normal, vec3<one>{0, 1, 0});
     CHECK_APPROX(hit->distance, 3.0 * m);
- 
+
     // Off-center hit on the top cap
     auto hit2 = cyl.ray_intersect({vec3{0.5, 5.0, 0.3} * m, {0, -1, 0}});
     CHECK(hit2.has_value());
     CHECK_APPROX(hit2->pos.y(), 2.0 * m);
     CHECK_APPROX(hit2->normal, vec3<one>{0, 1, 0});
     CHECK_APPROX(hit2->distance, 3.0 * m);
- 
+
     // Ray that would hit the cap plane outside the disk should miss
     auto miss = cyl.ray_intersect({vec3{1.5, 5.0, 0.0} * m, {0, -1, 0}});
     // This point is outside radius 1, so it misses the cap.
     // (It may still hit the curved surface; we just verify it did NOT report y=2.)
     if (miss.has_value()) CHECK(miss->pos.y() < 2.0 * m);
 }
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_ray_bottom_cap()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // cap at y = -2
- 
+
     // Ray from below, aimed straight up at cap center
     auto hit = cyl.ray_intersect({vec3{0.0, -5.0, 0.0} * m, {0, 1, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos, vec3{0.0, -2.0, 0.0} * m);
     CHECK_APPROX(hit->normal, vec3<one>{0, -1, 0});
     CHECK_APPROX(hit->distance, 3.0 * m);
- 
+
     // Off-center
     auto hit2 = cyl.ray_intersect({vec3{-0.4, -8.0, 0.6} * m, {0, 1, 0}});
     CHECK(hit2.has_value());
@@ -879,280 +879,280 @@ void test_cylinder_ray_bottom_cap()
     CHECK_APPROX(hit2->normal, vec3<one>{0, -1, 0});
     CHECK_APPROX(hit2->distance, 6.0 * m);
 }
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_ray_miss()
 {
     cylinder cyl(1.0 * m, 4.0 * m);
- 
+
     // Pointing away from the cylinder
     CHECK(!cyl.ray_intersect({vec3{5.0, 0.0, 0.0} * m, {1, 0, 0}}).has_value());
     CHECK(!cyl.ray_intersect({vec3{0.0, 5.0, 0.0} * m, {0, 1, 0}}).has_value());
- 
+
     // Parallel to axis, outside radius
     CHECK(!cyl.ray_intersect({vec3{2.0, -5.0, 0.0} * m, {0, 1, 0}}).has_value());
     CHECK(!cyl.ray_intersect({vec3{0.0, -5.0, 2.0} * m, {0, 1, 0}}).has_value());
- 
+
     // Horizontal, passing above the top cap
     CHECK(!cyl.ray_intersect({vec3{-5.0, 3.0, 0.0} * m, {1, 0, 0}}).has_value());
- 
+
     // Horizontal, passing below the bottom cap
     CHECK(!cyl.ray_intersect({vec3{-5.0, -3.0, 0.0} * m, {1, 0, 0}}).has_value());
- 
+
     // Passes beside the cylinder at the right height but too far in xz
     CHECK(!cyl.ray_intersect({vec3{-5.0, 0.0, 1.5} * m, {1, 0, 0}}).has_value());
 }
- 
+
 void test_cylinder_ray_from_inside()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // half-height = 2
- 
+
     // From origin toward +X: hits curved surface at distance 1
     auto hit = cyl.ray_intersect({vec3{0.0, 0.0, 0.0} * m, {1, 0, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos, vec3{1.0, 0.0, 0.0} * m);
     CHECK_APPROX(hit->distance, 1.0 * m);
- 
+
     // From origin toward +Y: hits top cap at distance 2
     auto hit_top = cyl.ray_intersect({vec3{0.0, 0.0, 0.0} * m, {0, 1, 0}});
     CHECK(hit_top.has_value());
     CHECK_APPROX(hit_top->pos, vec3{0.0, 2.0, 0.0} * m);
     CHECK_APPROX(hit_top->distance, 2.0 * m);
- 
+
     // From origin toward -Y: hits bottom cap at distance 2
     auto hit_bot = cyl.ray_intersect({vec3{0.0, 0.0, 0.0} * m, {0, -1, 0}});
     CHECK(hit_bot.has_value());
     CHECK_APPROX(hit_bot->pos, vec3{0.0, -2.0, 0.0} * m);
     CHECK_APPROX(hit_bot->distance, 2.0 * m);
- 
+
     // Off-center interior, closer to curved surface
     auto hit2 = cyl.ray_intersect({vec3{0.5, 0.0, 0.0} * m, {1, 0, 0}});
     CHECK(hit2.has_value());
     CHECK_APPROX(hit2->pos.x(), 1.0 * m);
     CHECK_APPROX(hit2->distance, 0.5 * m);
 }
- 
+
 void test_cylinder_ray_max_distance()
 {
     cylinder cyl(1.0 * m, 4.0 * m);
     ray r{vec3{-5.0, 0.0, 0.0} * m, {1, 0, 0}};
- 
+
     // Too short — hits at distance 4
     CHECK(!cyl.ray_intersect(r, 3.9 * m).has_value());
- 
+
     // Exactly at the hit distance
     CHECK(cyl.ray_intersect(r, 4.0 * m).has_value());
- 
+
     // Well past
     CHECK(cyl.ray_intersect(r, 100.0 * m).has_value());
 }
- 
+
 void test_cylinder_ray_nearest_root()
 {
     // When the ray enters and exits the curved surface, we should get the entry point.
     cylinder cyl(1.0 * m, 4.0 * m);
- 
+
     // Ray from (-5, 0, 0) along +X: enters at x=-1 (dist=4), exits at x=+1 (dist=6).
     auto hit = cyl.ray_intersect({vec3{-5.0, 0.0, 0.0} * m, {1, 0, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.x(), -1.0 * m);
     CHECK_APPROX(hit->distance, 4.0 * m);
 }
- 
+
 void test_cylinder_ray_asymmetric()
 {
     cylinder cyl(2.0 * m, 6.0 * m); // half-height = 3
- 
+
     // Along +X: hits curved surface at x=2
     auto hit = cyl.ray_intersect({vec3{8.0, 0.0, 0.0} * m, {-1, 0, 0}});
     CHECK(hit.has_value());
     CHECK_APPROX(hit->pos.x(), 2.0 * m);
     CHECK_APPROX(hit->distance, 6.0 * m);
- 
+
     // Along -Y: hits bottom cap at y=-3
     auto hit_y = cyl.ray_intersect({vec3{0.0, -8.0, 0.0} * m, {0, 1, 0}});
     CHECK(hit_y.has_value());
     CHECK_APPROX(hit_y->pos.y(), -3.0 * m);
     CHECK_APPROX(hit_y->distance, 5.0 * m);
- 
+
     // Miss: passes outside radius at the right y-range
     CHECK(!cyl.ray_intersect({vec3{-8.0, 0.0, 2.1} * m, {1, 0, 0}}).has_value());
 }
- 
+
 // ===========================================================================
 // Cylinder — Closest Point
 // ===========================================================================
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_closest_point_exterior_curved()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // half-height = 2
- 
+
     // Point radially outside at mid-height: projects onto curved surface
     CHECK_APPROX(cyl.closest_point(vec3{5.0, 0.0, 0.0} * m), vec3{1.0, 0.0, 0.0} * m);
     CHECK_APPROX(cyl.closest_point(vec3{-5.0, 0.0, 0.0} * m), vec3{-1.0, 0.0, 0.0} * m);
     CHECK_APPROX(cyl.closest_point(vec3{0.0, 0.0, 5.0} * m), vec3{0.0, 0.0, 1.0} * m);
     CHECK_APPROX(cyl.closest_point(vec3{0.0, 0.0, -5.0} * m), vec3{0.0, 0.0, -1.0} * m);
- 
+
     // Diagonal xz exterior, within height range
     auto cp = cyl.closest_point(vec3{3.0, 0.0, 4.0} * m);
     // Direction in xz: (3,4)/5; closest on rim: (3/5, 0, 4/5)
     CHECK_APPROX(cp, vec3{0.6, 0.0, 0.8} * m);
 }
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_closest_point_exterior_caps()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // half-height = 2
- 
+
     // Directly above/below on axis: projects onto cap center
     CHECK_APPROX(cyl.closest_point(vec3{0.0, 5.0, 0.0} * m), vec3{0.0, 2.0, 0.0} * m);
     CHECK_APPROX(cyl.closest_point(vec3{0.0, -5.0, 0.0} * m), vec3{0.0, -2.0, 0.0} * m);
- 
+
     // Inside the disk radius but beyond the cap in y
     CHECK_APPROX(cyl.closest_point(vec3{0.5, 5.0, 0.3} * m), vec3{0.5, 2.0, 0.3} * m);
     CHECK_APPROX(cyl.closest_point(vec3{0.5, -5.0, 0.3} * m), vec3{0.5, -2.0, 0.3} * m);
 }
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_closest_point_exterior_rim()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // half-height = 2
- 
+
     // Outside both cap and curved surface simultaneously:
     // Point (3, 5, 0): xz dist=3 > r=1, y=5 > h/2=2 → clamp to rim (1, 2, 0)
     CHECK_APPROX(cyl.closest_point(vec3{3.0, 5.0, 0.0} * m), vec3{1.0, 2.0, 0.0} * m);
     CHECK_APPROX(cyl.closest_point(vec3{0.0, -5.0, 3.0} * m), vec3{0.0, -2.0, 1.0} * m);
     CHECK_APPROX(cyl.closest_point(vec3{3.0, -5.0, 4.0} * m), vec3{0.6, -2.0, 0.8} * m);
 }
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_closest_point_interior()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // half-height = 2
- 
+
     // Interior points: closest_point projects to the surface.
     // We only verify that the result is on the boundary.
- 
+
     // Near curved surface: x close to r
     auto cp1 = cyl.closest_point(vec3{0.9, 0.0, 0.0} * m);
     // x component should be clamped to r=1
     CHECK_APPROX(cp1.x(), 1.0 * m);
     CHECK_APPROX(cp1.y(), 0.0 * m);
     CHECK_APPROX(cp1.z(), 0.0 * m);
- 
+
     // Near top cap: y close to h/2
     auto cp2 = cyl.closest_point(vec3{0.0, 1.9, 0.0} * m);
     CHECK_APPROX(cp2.y(), 2.0 * m);
- 
+
     // Near bottom cap
     auto cp3 = cyl.closest_point(vec3{0.0, -1.9, 0.0} * m);
     CHECK_APPROX(cp3.y(), -2.0 * m);
 }
- 
+
 void test_cylinder_closest_point_on_surface()
 {
     cylinder cyl(1.0 * m, 4.0 * m);
- 
+
     // Points exactly on the curved surface
     CHECK_APPROX(cyl.closest_point(vec3{1.0, 0.0, 0.0} * m), vec3{1.0, 0.0, 0.0} * m);
     CHECK_APPROX(cyl.closest_point(vec3{0.0, 0.0, -1.0} * m), vec3{0.0, 0.0, -1.0} * m);
- 
+
     // Points exactly on the caps
     CHECK_APPROX(cyl.closest_point(vec3{0.5, 2.0, 0.0} * m), vec3{0.5, 2.0, 0.0} * m);
     CHECK_APPROX(cyl.closest_point(vec3{0.0, -2.0, 0.5} * m), vec3{0.0, -2.0, 0.5} * m);
 }
- 
+
 // ===========================================================================
 // Cylinder — Support
 // ===========================================================================
- 
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_cylinder_support_axis()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // half-height = 2
- 
+
     // +Y: farthest point is the top cap rim; y = +h/2, any rim point.
     auto s_up = cyl.support({0, 1, 0});
     CHECK_APPROX(s_up.y(), 2.0 * m);
- 
+
     // -Y: farthest point is on the bottom cap rim.
     auto s_dn = cyl.support({0, -1, 0});
     CHECK_APPROX(s_dn.y(), -2.0 * m);
- 
+
     // +X: rim point at (r, cap, 0). The y is whichever cap the implementation chooses for
     //     a purely horizontal direction — the default is +h/2 (dir.y >= 0 branch).
     auto s_x = cyl.support({1, 0, 0});
     CHECK_APPROX(s_x.x(), 1.0 * m);
     CHECK_APPROX(s_x.z(), 0.0 * m);
- 
+
     // -X
     auto s_mx = cyl.support({-1, 0, 0});
     CHECK_APPROX(s_mx.x(), -1.0 * m);
     CHECK_APPROX(s_mx.z(), 0.0 * m);
- 
+
     // +Z
     auto s_z = cyl.support({0, 0, 1});
     CHECK_APPROX(s_z.z(), 1.0 * m);
     CHECK_APPROX(s_z.x(), 0.0 * m);
 }
- 
+
 void test_cylinder_support_diagonal()
 {
     cylinder cyl(1.0 * m, 4.0 * m); // half-height = 2
- 
+
     // Direction (1, 0, 1): dxz = sqrt(2), dy = 0.
     // Rim at 45°: (1/sqrt2, ±2, 1/sqrt2).
     auto inv_sqrt2 = 1.0 / std::sqrt(2.0);
     auto s = cyl.support(vec3{1.0, 0.0, 1.0});
     CHECK_APPROX(s.x(), inv_sqrt2 * m);
     CHECK_APPROX(s.z(), inv_sqrt2 * m);
- 
+
     // Direction (1, 1, 0): the farthest point is (r, +h/2, 0) on the top rim.
     auto s2 = cyl.support(vec3{1.0, 1.0, 0.0});
     CHECK_APPROX(s2.x(), 1.0 * m);
     CHECK_APPROX(s2.y(), 2.0 * m);
     CHECK_APPROX(s2.z(), 0.0 * m);
- 
+
     // Direction (1, -1, 0): farthest is (r, -h/2, 0) on the bottom rim.
     auto s3 = cyl.support(vec3{1.0, -1.0, 0.0});
     CHECK_APPROX(s3.x(), 1.0 * m);
     CHECK_APPROX(s3.y(), -2.0 * m);
     CHECK_APPROX(s3.z(), 0.0 * m);
 }
- 
+
 void test_cylinder_support_asymmetric()
 {
     // Wide, flat cylinder to exercise radius != half-height paths.
     cylinder cyl(3.0 * m, 2.0 * m); // r=3, half-height=1
- 
+
     // +X: rim at (3, ±1, 0)
     auto s = cyl.support({1, 0, 0});
     CHECK_APPROX(s.x(), 3.0 * m);
     CHECK_APPROX(s.z(), 0.0 * m);
- 
+
     // +Y: top cap rim
     auto s_up = cyl.support({0, 1, 0});
     CHECK_APPROX(s_up.y(), 1.0 * m);
- 
+
     // Direction (1, 0, 1): rim at (3/sqrt2, ±1, 3/sqrt2)
     auto inv_sqrt2 = 1.0 / std::sqrt(2.0);
     auto s2 = cyl.support(vec3{1.0, 0.0, 1.0});
     CHECK_APPROX(s2.x(), 3.0 * inv_sqrt2 * m);
     CHECK_APPROX(s2.z(), 3.0 * inv_sqrt2 * m);
 }
- 
+
 void test_cylinder_support_vertical_direction()
 {
     // Pure vertical direction with zero horizontal component.
     cylinder cyl(1.0 * m, 4.0 * m);
- 
+
     auto s_up = cyl.support({0, 1, 0});
     CHECK_APPROX(s_up.y(), 2.0 * m);
- 
+
     auto s_dn = cyl.support({0, -1, 0});
     CHECK_APPROX(s_dn.y(), -2.0 * m);
- 
+
     // The xz component can be anything on the rim when direction is pure vertical;
     // just verify the y is correct.
 }
@@ -1769,32 +1769,32 @@ void test_cone_asymmetric_contains()
     CHECK(!c.contains(vec3{2.1, 0.5, 0.0} * m));
 }
 
-//pyramid tests generated with claude sonnet 4.6
-// ===========================================================================
-// Pyramid — Construction & Properties
-// ===========================================================================
+// pyramid tests generated with claude sonnet 4.6
+//  ===========================================================================
+//  Pyramid — Construction & Properties
+//  ===========================================================================
 
 void test_pyramid_construction()
 {
     pyramid p(1.0 * m, 2.0 * m);
     CHECK_APPROX(p.base_half(), 1.0 * m);
-    CHECK_APPROX(p.height(),    2.0 * m);
+    CHECK_APPROX(p.height(), 2.0 * m);
 
     pyramid p2(3.0 * m, 5.0 * m);
     CHECK_APPROX(p2.base_half(), 3.0 * m);
-    CHECK_APPROX(p2.height(),    5.0 * m);
+    CHECK_APPROX(p2.height(), 5.0 * m);
 }
 
 void test_pyramid_bounds()
 {
     // AABB: min = (-b, 0, -b), max = (b, h, b)
     pyramid p(1.0 * m, 2.0 * m);
-    CHECK_APPROX(p.bounds().min, vec3{-1.0,  0.0, -1.0} * m);
-    CHECK_APPROX(p.bounds().max, vec3{ 1.0,  2.0,  1.0} * m);
+    CHECK_APPROX(p.bounds().min, vec3{-1.0, 0.0, -1.0} * m);
+    CHECK_APPROX(p.bounds().max, vec3{1.0, 2.0, 1.0} * m);
 
     pyramid p2(2.0 * m, 3.0 * m);
     CHECK_APPROX(p2.bounds().min, vec3{-2.0, 0.0, -2.0} * m);
-    CHECK_APPROX(p2.bounds().max, vec3{ 2.0, 3.0,  2.0} * m);
+    CHECK_APPROX(p2.bounds().max, vec3{2.0, 3.0, 2.0} * m);
 }
 
 void test_pyramid_bsphere()
@@ -1817,7 +1817,7 @@ void test_pyramid_volume()
 {
     // V = (1/3) * (2b)² * h = (4/3) * b² * h
     pyramid p(1.0 * m, 3.0 * m);
-    CHECK_APPROX(p.volume(), 4.0 * m * m * m);   // (4/3)*1*3 = 4
+    CHECK_APPROX(p.volume(), 4.0 * m * m * m); // (4/3)*1*3 = 4
 
     pyramid p2(2.0 * m, 3.0 * m);
     CHECK_APPROX(p2.volume(), 16.0 * m * m * m); // (4/3)*4*3 = 16
@@ -1852,12 +1852,12 @@ void test_pyramid_inertia_tensor()
     auto density = 1.0 * kg / (m * m * m);
     pyramid p(1.0 * m, 3.0 * m);
     auto I = p.inertia_tensor(density);
-    CHECK_APPROX(I[0, 0], 1.7  * kg * m * m);
-    CHECK_APPROX(I[1, 1], 0.8  * kg * m * m);
-    CHECK_APPROX(I[2, 2], 1.7  * kg * m * m);
-    CHECK_APPROX(I[0, 1], 0.0  * kg * m * m);
-    CHECK_APPROX(I[0, 2], 0.0  * kg * m * m);
-    CHECK_APPROX(I[1, 2], 0.0  * kg * m * m);
+    CHECK_APPROX(I[0, 0], 1.7 * kg * m * m);
+    CHECK_APPROX(I[1, 1], 0.8 * kg * m * m);
+    CHECK_APPROX(I[2, 2], 1.7 * kg * m * m);
+    CHECK_APPROX(I[0, 1], 0.0 * kg * m * m);
+    CHECK_APPROX(I[0, 2], 0.0 * kg * m * m);
+    CHECK_APPROX(I[1, 2], 0.0 * kg * m * m);
 
     // b=2, h=3, ρ=1  →  m=16, I_y=(1/20)*16*16=12.8
     //   I_xz = (8*16*3 + 4*27)/30 = (384+108)/30 = 492/30 = 16.4
@@ -1890,16 +1890,16 @@ void test_pyramid_contains_interior()
     CHECK(p.contains(vec3{0.0, 1.99, 0.0} * m));
 
     // At y=1 (half-height) the allowed half-width is b*(1-1/2)=0.5
-    CHECK( p.contains(vec3{0.49, 1.0, 0.0} * m));
+    CHECK(p.contains(vec3{0.49, 1.0, 0.0} * m));
     CHECK(!p.contains(vec3{0.51, 1.0, 0.0} * m));
-    CHECK( p.contains(vec3{0.0, 1.0, 0.49} * m));
+    CHECK(p.contains(vec3{0.0, 1.0, 0.49} * m));
     CHECK(!p.contains(vec3{0.0, 1.0, 0.51} * m));
 
     // At base (y=0) the full base_half applies
-    CHECK( p.contains(vec3{0.99, 0.0, 0.99} * m));
-    CHECK( p.contains(vec3{1.0,  0.0, 1.0 } * m)); // on boundary
-    CHECK(!p.contains(vec3{1.01, 0.0, 0.0 } * m));
-    CHECK(!p.contains(vec3{0.0,  0.0, 1.01} * m));
+    CHECK(p.contains(vec3{0.99, 0.0, 0.99} * m));
+    CHECK(p.contains(vec3{1.0, 0.0, 1.0} * m)); // on boundary
+    CHECK(!p.contains(vec3{1.01, 0.0, 0.0} * m));
+    CHECK(!p.contains(vec3{0.0, 0.0, 1.01} * m));
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -1908,20 +1908,20 @@ void test_pyramid_contains_exterior()
     pyramid p(1.0 * m, 2.0 * m);
 
     // Radially outside at various heights
-    CHECK(!p.contains(vec3{1.1,  0.0, 0.0} * m));
-    CHECK(!p.contains(vec3{0.0,  0.0, 1.1} * m));
-    CHECK(!p.contains(vec3{0.6,  1.0, 0.6} * m)); // both x and z > 0.5
+    CHECK(!p.contains(vec3{1.1, 0.0, 0.0} * m));
+    CHECK(!p.contains(vec3{0.0, 0.0, 1.1} * m));
+    CHECK(!p.contains(vec3{0.6, 1.0, 0.6} * m)); // both x and z > 0.5
 
     // Far away
     CHECK(!p.contains(vec3{10.0, 1.0, 10.0} * m));
 
     // Points below the base should NOT be contained.
     CHECK(!p.contains(vec3{0.0, -0.01, 0.0} * m));
-    CHECK(!p.contains(vec3{0.5, -1.0,  0.5} * m));
+    CHECK(!p.contains(vec3{0.5, -1.0, 0.5} * m));
 
     // Points above the tip should NOT be contained.
     CHECK(!p.contains(vec3{0.0, 2.01, 0.0} * m));
-    CHECK(!p.contains(vec3{0.0, 3.0,  0.0} * m));
+    CHECK(!p.contains(vec3{0.0, 3.0, 0.0} * m));
 }
 
 void test_pyramid_contains_tip()
@@ -1929,9 +1929,9 @@ void test_pyramid_contains_tip()
     pyramid p(1.0 * m, 2.0 * m);
 
     // The tip itself — lim = b*(1-1) = 0, only exact (0,h,0) is contained
-    CHECK( p.contains(vec3{0.0,  2.0,  0.0 } * m));
-    CHECK(!p.contains(vec3{0.01, 2.0,  0.0 } * m));
-    CHECK(!p.contains(vec3{0.0,  2.0,  0.01} * m));
+    CHECK(p.contains(vec3{0.0, 2.0, 0.0} * m));
+    CHECK(!p.contains(vec3{0.01, 2.0, 0.0} * m));
+    CHECK(!p.contains(vec3{0.0, 2.0, 0.01} * m));
 }
 
 void test_pyramid_contains_asymmetric()
@@ -1940,15 +1940,15 @@ void test_pyramid_contains_asymmetric()
     pyramid p(3.0 * m, 1.0 * m);
 
     // At y=0.5 the allowed half-width is 3*(1-0.5)=1.5
-    CHECK( p.contains(vec3{1.4, 0.5, 1.4} * m));
+    CHECK(p.contains(vec3{1.4, 0.5, 1.4} * m));
     CHECK(!p.contains(vec3{1.6, 0.5, 0.0} * m));
 
     // Tall thin pyramid: b=0.5, h=4
     pyramid p2(0.5 * m, 4.0 * m);
 
     // At y=2 (half-height) the allowed half-width is 0.5*(1-0.5)=0.25
-    CHECK( p2.contains(vec3{0.24, 2.0, 0.0 } * m));
-    CHECK(!p2.contains(vec3{0.26, 2.0, 0.0 } * m));
+    CHECK(p2.contains(vec3{0.24, 2.0, 0.0} * m));
+    CHECK(!p2.contains(vec3{0.26, 2.0, 0.0} * m));
 }
 
 // ===========================================================================
@@ -1963,14 +1963,14 @@ void test_pyramid_ray_base()
     // Ray straight down onto the base center
     auto hit = p.ray_intersect({vec3{0.0, 0.5, 0.0} * m, {0, -1, 0}});
     CHECK(hit.has_value());
-    CHECK_APPROX(hit->pos,      vec3{0.0, 0.0, 0.0} * m);
-    CHECK_APPROX(hit->normal,   vec3<one>{0, -1, 0});
+    CHECK_APPROX(hit->pos, vec3{0.0, 0.0, 0.0} * m);
+    CHECK_APPROX(hit->normal, vec3<one>{0, -1, 0});
     CHECK_APPROX(hit->distance, 0.5 * m);
 
     // Ray from below pointing up — hits the base from underneath
     auto hit2 = p.ray_intersect({vec3{0.0, -3.0, 0.0} * m, {0, 1, 0}});
     CHECK(hit2.has_value());
-    CHECK_APPROX(hit2->pos.y(),  0.0 * m);
+    CHECK_APPROX(hit2->pos.y(), 0.0 * m);
     CHECK_APPROX(hit2->distance, 3.0 * m);
 
     // Off-center but still inside the base square
@@ -1980,8 +1980,7 @@ void test_pyramid_ray_base()
 
     // xz footprint outside the base — must miss the base (may hit a face)
     auto maybe = p.ray_intersect({vec3{1.5, 5.0, 0.0} * m, {0, -1, 0}});
-    if (maybe.has_value())
-        CHECK(maybe->pos.y() > 0.0 * m); // lateral hit only
+    if (maybe.has_value()) CHECK(maybe->pos.y() > 0.0 * m); // lateral hit only
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -2044,8 +2043,8 @@ void test_pyramid_ray_max_distance()
     ray r{vec3{0.0, 5.0, 0.0} * m, {0, -1, 0}};
 
     CHECK(!p.ray_intersect(r, 2.9 * m).has_value());  // too short
-    CHECK( p.ray_intersect(r, 3.0 * m).has_value());  // exact
-    CHECK( p.ray_intersect(r, 100.0 * m).has_value()); // well past
+    CHECK(p.ray_intersect(r, 3.0 * m).has_value());   // exact
+    CHECK(p.ray_intersect(r, 100.0 * m).has_value()); // well past
 }
 
 void test_pyramid_ray_from_inside()
@@ -2074,12 +2073,18 @@ void test_pyramid_ray_all_four_faces()
     pyramid p(1.0 * m, 2.0 * m);
 
     // At y=1 all four face half-widths are 0.5.
-    struct face_case { vec3<m> origin; vec3<one> dir; double expected_x; double expected_z; };
-    std::array cases {
-        face_case{vec3{ 5.0, 1.0,  0.0} * m, {-1,0,0},  0.5,  0.0}, // +x face
-        face_case{vec3{-5.0, 1.0,  0.0} * m, { 1,0,0}, -0.5,  0.0}, // -x face
-        face_case{vec3{ 0.0, 1.0,  5.0} * m, {0,0,-1},  0.0,  0.5}, // +z face
-        face_case{vec3{ 0.0, 1.0, -5.0} * m, {0,0, 1},  0.0, -0.5}, // -z face
+    struct face_case
+    {
+        vec3<m> origin;
+        vec3<one> dir;
+        double expected_x;
+        double expected_z;
+    };
+    std::array cases{
+        face_case{vec3{5.0, 1.0, 0.0} * m, {-1, 0, 0}, 0.5, 0.0},  // +x face
+        face_case{vec3{-5.0, 1.0, 0.0} * m, {1, 0, 0}, -0.5, 0.0}, // -x face
+        face_case{vec3{0.0, 1.0, 5.0} * m, {0, 0, -1}, 0.0, 0.5},  // +z face
+        face_case{vec3{0.0, 1.0, -5.0} * m, {0, 0, 1}, 0.0, -0.5}, // -z face
     };
 
     for (const auto &[origin, dir, ex, ez] : cases)
@@ -2220,23 +2225,23 @@ void test_pyramid_support_lateral()
 
     // +x direction: base corner (+b, 0, *) beats the tip at x=0.
     auto s = p.support({1, 0, 0});
-    CHECK_APPROX(s.x(),  1.0 * m);
-    CHECK_APPROX(s.y(),  0.0 * m);
+    CHECK_APPROX(s.x(), 1.0 * m);
+    CHECK_APPROX(s.y(), 0.0 * m);
 
     // -x direction: base corner (-b, 0, *)
     auto s2 = p.support({-1, 0, 0});
     CHECK_APPROX(s2.x(), -1.0 * m);
-    CHECK_APPROX(s2.y(),  0.0 * m);
+    CHECK_APPROX(s2.y(), 0.0 * m);
 
     // +z direction: base corner (*, 0, +b)
     auto s3 = p.support({0, 0, 1});
-    CHECK_APPROX(s3.z(),  1.0 * m);
-    CHECK_APPROX(s3.y(),  0.0 * m);
+    CHECK_APPROX(s3.z(), 1.0 * m);
+    CHECK_APPROX(s3.y(), 0.0 * m);
 
     // -z direction: base corner (*, 0, -b)
     auto s4 = p.support({0, 0, -1});
     CHECK_APPROX(s4.z(), -1.0 * m);
-    CHECK_APPROX(s4.y(),  0.0 * m);
+    CHECK_APPROX(s4.y(), 0.0 * m);
 }
 
 void test_pyramid_support_diagonal_tip_wins()
@@ -2259,9 +2264,9 @@ void test_pyramid_support_diagonal_corner_wins()
     // while the tip at (0,2,0) has dot ≈ 0.2/|d|  → corner wins.
     auto dir = vec3<one>{1.0, 0.1, 1.0}.normalized();
     auto s = p.support(dir);
-    CHECK_APPROX(s.y(), 0.0 * m);   // base level
-    CHECK_APPROX(s.x(), 1.0 * m);   // +x corner
-    CHECK_APPROX(s.z(), 1.0 * m);   // +z corner
+    CHECK_APPROX(s.y(), 0.0 * m); // base level
+    CHECK_APPROX(s.x(), 1.0 * m); // +x corner
+    CHECK_APPROX(s.z(), 1.0 * m); // +z corner
 }
 
 void test_pyramid_support_properties()
@@ -2270,15 +2275,15 @@ void test_pyramid_support_properties()
     pyramid p(1.0 * m, 2.0 * m);
 
     for (const auto &dir : {
-            vec3<one>{ 1,  0,  0},
-            vec3<one>{-1,  0,  0},
-            vec3<one>{ 0,  1,  0},
-            vec3<one>{ 0, -1,  0},
-            vec3<one>{ 0,  0,  1},
-            vec3<one>{ 0,  0, -1},
-            vec3<one>{ 1,  1,  1}.normalized(),
-            vec3<one>{-1,  1, -1}.normalized(),
-        })
+             vec3<one>{1, 0, 0},
+             vec3<one>{-1, 0, 0},
+             vec3<one>{0, 1, 0},
+             vec3<one>{0, -1, 0},
+             vec3<one>{0, 0, 1},
+             vec3<one>{0, 0, -1},
+             vec3<one>{1, 1, 1}.normalized(),
+             vec3<one>{-1, 1, -1}.normalized(),
+         })
     {
         auto s = p.support(dir);
         // y must be in [0, height]
@@ -2315,11 +2320,11 @@ void test_pyramid_asymmetric_contains()
     pyramid p(3.0 * m, 1.0 * m);
 
     // At y=0.5 lim = 3*(1-0.5) = 1.5
-    CHECK( p.contains(vec3{1.4, 0.5, 1.4} * m));
+    CHECK(p.contains(vec3{1.4, 0.5, 1.4} * m));
     CHECK(!p.contains(vec3{1.6, 0.5, 0.0} * m));
 
     // At y=0 lim = 3 (full base)
-    CHECK( p.contains(vec3{2.9, 0.0, 2.9} * m));
+    CHECK(p.contains(vec3{2.9, 0.0, 2.9} * m));
     CHECK(!p.contains(vec3{3.1, 0.0, 0.0} * m));
 }
 // ===========================================================================
@@ -2654,12 +2659,12 @@ int main()
         .test("volume", test_cylinder_volume)
         .test("mass_center", test_cylinder_mass_center)
         .test("inertia_tensor", test_cylinder_inertia_tensor);
- 
+
     tests.group("Cylinder Contains")
         .test("interior", test_cylinder_contains_interior)
         .test("boundary", test_cylinder_contains_boundary)
         .test("exterior", test_cylinder_contains_exterior);
- 
+
     tests.group("Cylinder Ray Intersect")
         .test("curved surface", test_cylinder_ray_curved_surface)
         .test("top cap", test_cylinder_ray_top_cap)
@@ -2669,14 +2674,14 @@ int main()
         .test("max_distance", test_cylinder_ray_max_distance)
         .test("nearest root", test_cylinder_ray_nearest_root)
         .test("asymmetric cylinder", test_cylinder_ray_asymmetric);
- 
+
     tests.group("Cylinder Closest Point")
         .test("exterior curved surface", test_cylinder_closest_point_exterior_curved)
         .test("exterior caps", test_cylinder_closest_point_exterior_caps)
         .test("exterior rim", test_cylinder_closest_point_exterior_rim)
         .test("interior", test_cylinder_closest_point_interior)
         .test("on surface", test_cylinder_closest_point_on_surface);
- 
+
     tests.group("Cylinder Support")
         .test("axis-aligned", test_cylinder_support_axis)
         .test("diagonal", test_cylinder_support_diagonal)
@@ -2734,48 +2739,48 @@ int main()
         .test("contains", test_cone_asymmetric_contains);
 
     tests.group("Pyramid Properties")
-        .test("construction",   test_pyramid_construction)
-        .test("bounds",         test_pyramid_bounds)
-        .test("bsphere",        test_pyramid_bsphere)
-        .test("volume",         test_pyramid_volume)
-        .test("mass_center",    test_pyramid_mass_center)
+        .test("construction", test_pyramid_construction)
+        .test("bounds", test_pyramid_bounds)
+        .test("bsphere", test_pyramid_bsphere)
+        .test("volume", test_pyramid_volume)
+        .test("mass_center", test_pyramid_mass_center)
         .test("inertia_tensor", test_pyramid_inertia_tensor);
 
     tests.group("Pyramid Contains")
-        .test("interior",      test_pyramid_contains_interior)
-        .test("exterior",      test_pyramid_contains_exterior)
-        .test("tip",           test_pyramid_contains_tip)
-        .test("asymmetric",    test_pyramid_contains_asymmetric);
+        .test("interior", test_pyramid_contains_interior)
+        .test("exterior", test_pyramid_contains_exterior)
+        .test("tip", test_pyramid_contains_tip)
+        .test("asymmetric", test_pyramid_contains_asymmetric);
 
     tests.group("Pyramid Ray Intersect")
-        .test("base",           test_pyramid_ray_base)
-        .test("lateral face",   test_pyramid_ray_lateral_face)
-        .test("tip",            test_pyramid_ray_tip)
-        .test("miss",           test_pyramid_ray_miss)
-        .test("max_distance",   test_pyramid_ray_max_distance)
-        .test("from inside",    test_pyramid_ray_from_inside)
+        .test("base", test_pyramid_ray_base)
+        .test("lateral face", test_pyramid_ray_lateral_face)
+        .test("tip", test_pyramid_ray_tip)
+        .test("miss", test_pyramid_ray_miss)
+        .test("max_distance", test_pyramid_ray_max_distance)
+        .test("from inside", test_pyramid_ray_from_inside)
         .test("all four faces", test_pyramid_ray_all_four_faces);
 
     tests.group("Pyramid Closest Point")
-        .test("tip",          test_pyramid_closest_point_tip)
-        .test("base center",  test_pyramid_closest_point_base_center)
-        .test("base edge",    test_pyramid_closest_point_base_edge)
-        .test("lateral",      test_pyramid_closest_point_lateral)
-        .test("inside",       test_pyramid_closest_point_inside)
-        .test("base corner",  test_pyramid_closest_point_base_corner);
+        .test("tip", test_pyramid_closest_point_tip)
+        .test("base center", test_pyramid_closest_point_base_center)
+        .test("base edge", test_pyramid_closest_point_base_edge)
+        .test("lateral", test_pyramid_closest_point_lateral)
+        .test("inside", test_pyramid_closest_point_inside)
+        .test("base corner", test_pyramid_closest_point_base_corner);
 
     tests.group("Pyramid Support")
-        .test("upward",              test_pyramid_support_upward)
-        .test("downward",            test_pyramid_support_downward)
-        .test("lateral",             test_pyramid_support_lateral)
-        .test("diagonal tip wins",   test_pyramid_support_diagonal_tip_wins)
-        .test("diagonal corner wins",test_pyramid_support_diagonal_corner_wins)
-        .test("properties",          test_pyramid_support_properties);
+        .test("upward", test_pyramid_support_upward)
+        .test("downward", test_pyramid_support_downward)
+        .test("lateral", test_pyramid_support_lateral)
+        .test("diagonal tip wins", test_pyramid_support_diagonal_tip_wins)
+        .test("diagonal corner wins", test_pyramid_support_diagonal_corner_wins)
+        .test("properties", test_pyramid_support_properties);
 
     tests.group("Pyramid Asymmetric")
-        .test("volume",      test_pyramid_asymmetric_volume)
+        .test("volume", test_pyramid_asymmetric_volume)
         .test("mass_center", test_pyramid_asymmetric_mass_center)
-        .test("contains",    test_pyramid_asymmetric_contains);
+        .test("contains", test_pyramid_asymmetric_contains);
 
     tests.group("Shape Wrapper")
         .test("default construction", test_shape_default)

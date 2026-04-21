@@ -120,11 +120,12 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                     else if constexpr (std::same_as<T, pyramid_type>)
                         shape_map[shape_name] =
                             physkit::pyramid(shape_desc.base_size * m, shape_desc.height * m);
-                            //physkit::mesh::pyramid(shape_desc.height * m, shape_desc.base_size * m);
+                    // physkit::mesh::pyramid(shape_desc.height * m, shape_desc.base_size * m);
                     else if constexpr (std::same_as<T, sphere_type>)
                         shape_map[shape_name] = physkit::sphere{shape_desc.radius * m};
                     else if constexpr (std::same_as<T, cylinder_type>)
-                        shape_map[shape_name] = physkit::cylinder{shape_desc.radius * m, shape_desc.height * m};
+                        shape_map[shape_name] =
+                            physkit::cylinder{shape_desc.radius * m, shape_desc.height * m};
                     else if constexpr (std::same_as<T, cone_type>)
                         shape_map[shape_name] =
                             physkit::cone{shape_desc.radius * m, shape_desc.height * m};
