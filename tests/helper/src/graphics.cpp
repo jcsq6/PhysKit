@@ -130,7 +130,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
                 .with_mesh(mesh_map.at(mesh_name))
                 .with_restitution(obj.restitution)
                 .with_friction(obj.friction),
-            Color3{obj.color[0], obj.color[1], obj.color[2]});
+            Color4{obj.color[0], obj.color[1], obj.color[2], obj.color[3]});
     }
 
     std::println("Read config from: {}", path);
@@ -195,7 +195,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         std::println("      Mass: {}", o.mass());
         std::println("      Type: {}",
                      glz::reflect<physkit::body_type>::keys[static_cast<int>(o.type())]); // NOLINT
-        std::println("      Color: ({}, {}, {})", color[0], color[1], color[2]);
+        std::println("      Color: ({}, {}, {}, {})", color[0], color[1], color[2], color[3]);
         config.objects[i].mesh.visit(
             [](auto &&mesh_desc)
             {
