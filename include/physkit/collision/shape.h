@@ -1,4 +1,5 @@
 #pragma once
+#include <absl/strings/internal/str_format/extension.h>
 
 #ifdef PHYSKIT_IN_MODULE_IMPL
 #ifdef PHYSKIT_IMPORT_STD
@@ -482,7 +483,7 @@ public:
     [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
-    { return (M_height * pow<2>(M_radius)) * std::numbers::pi / 3; }
+    { return M_height * pow<2>(M_radius) * std::numbers::pi / 3; }
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] vec3<si::metre> mass_center() const
     { return vec3<si::metre>{0 * si::metre, M_height / 4, 0 * si::metre}; }
@@ -638,6 +639,215 @@ private:
     quantity<si::metre> M_height;
 };
 
+//pyramid points positioned at +-base_half, 0, +-base_half
+class pyramid
+{
+public:
+    pyramid(const pyramid &) = default;
+    pyramid &operator=(const pyramid &) = default;
+    pyramid(pyramid &&) = default;
+    pyramid &operator=(pyramid &&) = default;
+    ~pyramid() = default;
+
+    pyramid(const quantity<si::metre> &base_half, const quantity<si::metre> &height) : M_base_half{base_half}, M_height{height}
+    {
+        M_aabb = aabb::from_points({vec3{base_half, height, base_half},
+            vec3{-base_half, 0.0*si::metre, -base_half}});
+
+        M_bsphere = bounding_sphere(vec3<si::metre>{0*si::metre, 0.5*height,0*si::metre},
+            sqrt(2*pow<2>(base_half) + pow<2>(height/2)));
+    }
+
+    [[nodiscard]] const quantity<si::metre> &base_half() const { return M_base_half; }
+    [[nodiscard]] const quantity<si::metre> &height() const {return M_height; }
+    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
+    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
+
+    [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
+    { return (1.0/3.0)*pow<2>(M_base_half*2.0)*M_height; }
+
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    [[nodiscard]] vec3<si::metre> mass_center() const
+    {
+        using namespace mp_units::si::unit_symbols;
+        return {0.0 * m, 0.25 * M_height, 0.0 * m};
+    }
+    [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
+    inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
+    {
+        using namespace mp_units::si::unit_symbols;
+        auto mass = density * volume();
+        auto ixz = density*(8.0*pow<4>(M_base_half)*M_height+pow<2>(M_base_half)*pow<3>(M_height))/30.0;
+        auto iy = (1.0/20.0)*mass*pow<2>(2*M_base_half);
+
+        return vec3{ixz, iy, ixz}.as_diagonal();
+    }
+
+    /// @brief Ray intersection in local (model) space. O(log N) time.
+    [[nodiscard]] std::optional<ray::hit>
+    ray_intersect(const ray &r, quantity<si::metre> max_distance =
+                                    std::numeric_limits<quantity<si::metre>>::infinity()) const
+    {
+        using namespace mp_units::si::unit_symbols;
+        std::optional<ray::hit> ret = std::nullopt;
+        quantity<m> best = std::numeric_limits<quantity<si::metre>>::infinity();
+		  constexpr auto epsilon = 1e-10 * m;
+
+        //base intersect
+        if (r.direction().y() != 0)
+        {
+            quantity<m> dist = -r.origin().y()/r.direction().y();
+            vec3<m> point = r.origin() + r.direction()*dist;
+            if (dist >= 0.0*si::metre && dist <= max_distance+epsilon &&
+						abs(point.x()) <= M_base_half && abs(point.z()) <= M_base_half)
+            {
+                best = dist;
+                ret = ray::hit{.pos = point, .normal = vec3<one>{0.0, -1.0, 0.0}, .distance = dist};
+            }
+        }
+
+        //triangle intersections
+        for (int i = 0; i < 4; i++)
+        {
+            quantity<one>y = M_base_half.numerical_value_in(m);
+            quantity<one>x = i%2==0 ? M_height.numerical_value_in(m) : -M_height.numerical_value_in(m);
+            quantity<one>z = i%2==0 ? M_height.numerical_value_in(m) : -M_height.numerical_value_in(m);
+            if ((i/2)%2==0)
+                z = 0.0;
+            else
+                x = 0.0;
+            auto normal = (vec3<one>{x,y,z}).normalized();
+				auto plane_point = (vec3<one>{x,0,z})*si::metre*M_base_half/M_height;
+            if (r.direction().dot(normal) == 0.0)
+                continue;
+
+            quantity<m> dist = -(r.origin()-plane_point).dot(normal)/(r.direction().dot(normal));
+            vec3<m> point = r.origin() + r.direction()*dist;
+						
+            if (dist >= 0.0*si::metre && dist <= max_distance+epsilon && best > dist &&
+                point.y() >= 0.0*si::metre && point.y() <= M_height &&
+                abs(point.x()) <= M_base_half*(1- point.y()/M_height) &&
+                abs(point.z()) <= M_base_half*(1-point.y()/M_height))
+            {
+                best = dist;
+                ret = ray::hit{.pos = point, .normal = normal, .distance = dist};
+            }
+        }
+        return ret;
+    }
+    /// @brief Closest point on the box surface in local space. O(N) time.
+    [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const
+    {
+        //tip point
+        auto retx = 0.0*si::metre;
+        auto rety = M_height;
+        auto retz = 0.0*si::metre;
+        auto best = (vec3<si::metre>{retx,rety,retz} - point).norm();
+
+        //base point
+        auto x = point.x();
+        auto y = point.y();
+        auto z = point.z();
+        if (abs(x) > M_base_half)
+            x = x < 0.0*si::metre ? -M_base_half : M_base_half;
+        if (abs(z) > M_base_half)
+            z = z < 0.0*si::metre ? -M_base_half : M_base_half;
+
+        if (best > (vec3<si::metre>{x,0.0*si::metre, z} - point).norm())
+        {
+			   best = (vec3{x, 0.0*si::metre, z} - point).norm();
+            retx = x;
+            rety = 0.0*si::metre;
+            retz = z;
+        }
+
+        //edges
+        for (int i = 0; i < 4; i++)
+        {
+            vec3<one> p = vec3{point.x().numerical_value_in(si::metre),
+                point.y().numerical_value_in(si::metre),
+                point.z().numerical_value_in(si::metre)};
+            y = 0.0*si::metre;
+            x = i%2==0 ? M_base_half : -M_base_half;
+            z = (i/2)%2==0 ? M_base_half : -M_base_half;
+            vec3<one> temp_p = vec3{x.numerical_value_in(si::metre),
+                y.numerical_value_in(si::metre),z.numerical_value_in(si::metre)};
+            vec3<one> temp_v = (vec3<one>{0.0, M_height.numerical_value_in(si::metre), 0.0 } - temp_p).normalized();
+            vec3<si::metre> temp = (temp_p + ((temp_v).dot(p-temp_p))*temp_v)*si::metre;
+            if (temp.y() >= 0.0*si::metre && temp.y() <= M_height && best > (temp-point).norm())
+            {
+                best = (temp-point).norm();
+                retx = temp.x();
+                rety = temp.y();
+                retz = temp.z();
+            }
+				if (best > (vec3{x,y,z}-point).norm()) {
+					best = (vec3{x,y,z}-point).norm();
+					retx = x;
+					rety = y;
+					retz = z;
+				}
+        }
+
+        //sides
+        for (int i = 0; i < 4; i++)
+        {
+            y = M_base_half;
+            x = i%2==0 ? M_height : -M_height;
+            z = i%2==0 ? M_height : -M_height;
+            if ((i/2)%2==0)
+                z = 0.0*si::metre;
+            else
+                x = 0.0*si::metre;
+            auto normal = (vec3<si::metre>{x,y,z}).normalized();
+            auto plane_point = point - (normal*normal.dot(point-vec3<si::metre>{x,0.0*si::metre,z}));
+            if (point.y() < 0.0*si::metre || point.y() > M_height)
+                continue;
+            if (abs(plane_point.x()) > M_base_half*(1.0 - plane_point.y()/M_height))
+                continue;
+            if (abs(plane_point.z()) > M_base_half*(1.0 - plane_point.y()/M_height))
+                continue;
+
+            if (best > (plane_point - point).norm())
+            {
+                best = (plane_point - point).norm();
+                retx = plane_point.x();
+                rety = plane_point.y();
+                retz = plane_point.z();
+            }
+        }
+        return vec3<si::metre>{retx,rety,retz};
+    }
+    /// @brief Point containment test in local space. O(N) time.
+    [[nodiscard]] bool contains(const vec3<si::metre> &point) const
+    {
+        if (point.y() > M_height || point.y() < 0.0*si::metre)
+            return false;
+        auto lim = M_base_half*(1-point.y()/M_height);
+        return (point.x() <= lim && point.x() >= -lim && point.z() <= lim && point.z() >= -lim);
+    }
+
+    /// @brief GJK support function in local space.
+    [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
+    {
+        using namespace mp_units::si::unit_symbols;
+        quantity<m> x = (vec3<m>{M_base_half, 0*m, 0*m}).dot(direction) < 0.0*m ? -M_base_half : M_base_half;
+        quantity<m> z = (vec3<m>{0*m, 0*m, M_base_half}).dot(direction) < 0.0*m ? -M_base_half : M_base_half;
+        vec3<m> a = vec3<m>{0*m, M_height, 0*m};
+        vec3<m> b = vec3<m>{x, 0*m, z};
+        vec3<m> ret = (a.dot(direction) > b.dot(direction)) ? a : b;
+        return ret;
+    }
+
+    /// @brief - Add in support to return obb objects -> much more tedious, more research later.
+
+private:
+    quantity <si::metre> M_base_half;
+    quantity <si::metre> M_height;
+    aabb M_aabb;
+    bounding_sphere M_bsphere;
+};
+
 class shape
 {
 public:
@@ -647,6 +857,7 @@ public:
         shape_box,
         shape_cylinder,
         shape_cone,
+        shape_pyramid,
         // shape_convex_hull,
         shape_mesh
     };
@@ -691,6 +902,8 @@ public:
 
     shape(const physkit::cone &c) : M_type(type::shape_cone) { construct_cone(c); }
 
+    shape(const physkit::pyramid &p) : M_type(type::shape_pyramid) { construct_pyramid(p); }
+
     [[nodiscard]] const std::shared_ptr<const physkit::mesh> &mesh() const
     {
         assert(M_type == type::shape_mesh);
@@ -715,6 +928,11 @@ public:
     {
         assert(M_type == type::shape_cone);
         return M_storage.cn;
+    }
+    [[nodiscard]] const physkit::pyramid &pyramid() const
+    {
+        assert(M_type == type::shape_pyramid);
+        return M_storage.pyr;
     }
 
     shape &operator=(std::shared_ptr<const physkit::mesh> m)
@@ -742,6 +960,8 @@ private:
             return std::forward<F>(f)(M_storage.cyl);
         case type::shape_cone:
             return std::forward<F>(f)(M_storage.cn);
+        case type::shape_pyramid:
+            return std::forward<F>(f)(M_storage.pyr);
         default:
             std::unreachable();
         }
@@ -818,6 +1038,7 @@ public:
         case type::shape_box:
         case type::shape_cylinder:
         case type::shape_cone:
+        case type::shape_pyramid:
             return true;
         }
     }
@@ -851,6 +1072,7 @@ private:
         physkit::box bx;
         physkit::cylinder cyl;
         physkit::cone cn;
+        physkit::pyramid pyr;
         storage_t() {}
         storage_t(const storage_t &other) = delete;
         storage_t &operator=(const storage_t &other) = delete;
@@ -880,6 +1102,9 @@ private:
         case type::shape_cone:
             M_storage.cn.~cone();
             break;
+        case type::shape_pyramid:
+            M_storage.pyr.~pyramid();
+            break;
         }
     }
 
@@ -897,6 +1122,9 @@ private:
 
     template <typename... Args> void construct_cone(Args &&...args)
     { std::construct_at(&M_storage.cn, std::forward<Args>(args)...); }
+
+    template <typename... Args> void construct_pyramid(Args &&...args)
+    { std::construct_at(&M_storage.pyr, std::forward<Args>(args)...); }
 
     void copy_from(const shape &other)
     {
@@ -916,6 +1144,9 @@ private:
             break;
         case type::shape_cone:
             construct_cone(other.M_storage.cn);
+            break;
+        case type::shape_pyramid:
+            construct_pyramid(other.M_storage.pyr);
             break;
         default:
             std::unreachable();
@@ -941,6 +1172,9 @@ private:
             break;
         case type::shape_cone:
             construct_cone(std::move(other.M_storage.cn));
+            break;
+        case type::shape_pyramid:
+            construct_pyramid(std::move(other.M_storage.pyr));
             break;
         default:
             std::unreachable();
