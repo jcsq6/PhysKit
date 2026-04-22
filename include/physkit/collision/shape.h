@@ -36,17 +36,16 @@ public:
     box &operator=(box &&) = default;
     ~box() = default;
 
-    box(const vec3<si::metre> &half_extents) : M_half_extents(half_extents)
-    {
-        M_aabb = aabb::from_points({half_extents, -half_extents});
-
-        M_bsphere = bounding_sphere({0.0 * si::metre, 0.0 * si::metre, 0.0 * si::metre},
-                                    half_extents.norm());
-    }
+    box(const vec3<si::metre> &half_extents) : M_half_extents(half_extents) {}
 
     [[nodiscard]] const vec3<si::metre> &half_extents() const { return M_half_extents; }
-    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
-    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
+    [[nodiscard]] aabb bounds() const
+    { return aabb::from_points({M_half_extents, -M_half_extents}); }
+    [[nodiscard]] bounding_sphere bsphere() const
+    {
+        return bounding_sphere({0.0 * si::metre, 0.0 * si::metre, 0.0 * si::metre},
+                               M_half_extents.norm());
+    }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
     { return 8 * M_half_extents.x() * M_half_extents.y() * M_half_extents.z(); }
@@ -106,8 +105,6 @@ public:
 
 private:
     vec3<si::metre> M_half_extents;
-    aabb M_aabb;
-    bounding_sphere M_bsphere;
 };
 
 class sphere
@@ -122,17 +119,16 @@ public:
     sphere &operator=(sphere &&) = default;
     ~sphere() = default;
 
-    sphere(const quantity<si::metre> radius) : M_radius{radius}
+    sphere(const quantity<si::metre> radius) : M_radius{radius} {}
+
+    [[nodiscard]] quantity<si::metre> radius() const { return M_radius; }
+    [[nodiscard]] aabb bounds() const
     {
-        M_aabb = aabb::from_points({vec3<si::metre>{M_radius, M_radius, M_radius},
-                                    vec3<si::metre>{-M_radius, -M_radius, -M_radius}});
-
-        M_bsphere = bounding_sphere(vec3<si::metre>::zero(), M_radius);
+        return aabb::from_points({vec3<si::metre>{M_radius, M_radius, M_radius},
+                                  vec3<si::metre>{-M_radius, -M_radius, -M_radius}});
     }
-
-    [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius; }
-    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
-    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
+    [[nodiscard]] bounding_sphere bsphere() const
+    { return bounding_sphere(vec3<si::metre>::zero(), M_radius); }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
     { return (4.0 / 3.0) * std::numbers::pi * mp_units::pow<3>(M_radius); }
@@ -205,8 +201,6 @@ public:
     bool operator==(const sphere &other) const { return M_radius == other.M_radius; }
 
 private:
-    aabb M_aabb;
-    bounding_sphere M_bsphere;
     quantity<si::metre> M_radius;
 };
 
@@ -225,17 +219,21 @@ public:
     cylinder(const quantity<si::metre> radius, const quantity<si::metre> height)
         : M_radius{radius}, M_height{height}
     {
-        M_aabb = aabb::from_points({vec3<si::metre>{M_radius, M_height / 2.0f, M_radius},
-                                    vec3<si::metre>{-M_radius, -M_height / 2.0f, -M_radius}});
-
-        M_bsphere = bounding_sphere(vec3<si::metre>{0 * si::metre, 0 * si::metre, 0 * si::metre},
-                                    sqrt(pow<2>(M_radius) + pow<2>(M_height / 2)));
     }
 
-    [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius; }
-    [[nodiscard]] const quantity<si::metre> &height() const { return M_height; }
-    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
-    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
+    [[nodiscard]] quantity<si::metre> radius() const { return M_radius; }
+    [[nodiscard]] quantity<si::metre> height() const { return M_height; }
+    [[nodiscard]] aabb bounds() const
+    {
+        return aabb::from_points({vec3<si::metre>{M_radius, M_height / 2.0, M_radius},
+                                  vec3<si::metre>{-M_radius, -M_height / 2.0, -M_radius}});
+    }
+    [[nodiscard]] bounding_sphere bsphere() const
+    {
+        using namespace mp_units;
+        return bounding_sphere(vec3<si::metre>{0 * si::metre, 0 * si::metre, 0 * si::metre},
+                               sqrt(pow<2>(M_radius) + pow<2>(M_height / 2.0)));
+    }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
     { return (M_height * pow<2>(M_radius)) * std::numbers::pi; } // pi*r^2*h
@@ -299,8 +297,6 @@ public:
     { return M_radius == other.M_radius && M_height == other.M_height; }
 
 private:
-    aabb M_aabb;
-    bounding_sphere M_bsphere;
     quantity<si::metre> M_radius;
     quantity<si::metre> M_height;
 };
@@ -320,17 +316,21 @@ public:
     cone(const quantity<si::metre> radius, const quantity<si::metre> height)
         : M_radius{radius}, M_height{height}
     {
-        M_aabb = aabb::from_points({vec3<si::metre>{M_radius, M_height, M_radius},
-                                    vec3<si::metre>{-M_radius, 0.0 * si::metre, -M_radius}});
-
-        M_bsphere = bounding_sphere(vec3<si::metre>{0 * si::metre, M_height / 2, 0 * si::metre},
-                                    sqrt(pow<2>(M_radius) + pow<2>(M_height / 2)));
     }
 
-    [[nodiscard]] const quantity<si::metre> &radius() const { return M_radius; }
-    [[nodiscard]] const quantity<si::metre> &height() const { return M_height; }
-    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
-    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
+    [[nodiscard]] quantity<si::metre> radius() const { return M_radius; }
+    [[nodiscard]] quantity<si::metre> height() const { return M_height; }
+    [[nodiscard]] aabb bounds() const
+    {
+        return aabb::from_points({vec3<si::metre>{M_radius, M_height, M_radius},
+                                  vec3<si::metre>{-M_radius, 0.0 * si::metre, -M_radius}});
+    }
+    [[nodiscard]] bounding_sphere bsphere() const
+    {
+        using namespace mp_units;
+        return bounding_sphere(vec3<si::metre>{0 * si::metre, M_height / 2.0, 0 * si::metre},
+                               sqrt(pow<2>(M_radius) + pow<2>(M_height / 2.0)));
+    }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
     { return M_height * pow<2>(M_radius) * std::numbers::pi / 3; }
@@ -391,8 +391,6 @@ public:
     { return M_radius == other.M_radius && M_height == other.M_height; }
 
 private:
-    aabb M_aabb;
-    bounding_sphere M_bsphere;
     quantity<si::metre> M_radius;
     quantity<si::metre> M_height;
 };
@@ -407,20 +405,24 @@ public:
     pyramid &operator=(pyramid &&) = default;
     ~pyramid() = default;
 
-    pyramid(const quantity<si::metre> &base_half, const quantity<si::metre> &height)
+    pyramid(quantity<si::metre> base_half, quantity<si::metre> height)
         : M_base_half{base_half}, M_height{height}
     {
-        M_aabb = aabb::from_points(
-            {vec3{base_half, height, base_half}, vec3{-base_half, 0.0 * si::metre, -base_half}});
-
-        M_bsphere = bounding_sphere(vec3<si::metre>{0 * si::metre, 0.5 * height, 0 * si::metre},
-                                    sqrt(2 * pow<2>(base_half) + pow<2>(height / 2)));
     }
 
-    [[nodiscard]] const quantity<si::metre> &base_half() const { return M_base_half; }
-    [[nodiscard]] const quantity<si::metre> &height() const { return M_height; }
-    [[nodiscard]] const aabb &bounds() const { return M_aabb; }
-    [[nodiscard]] const bounding_sphere &bsphere() const { return M_bsphere; }
+    [[nodiscard]] quantity<si::metre> base_half() const { return M_base_half; }
+    [[nodiscard]] quantity<si::metre> height() const { return M_height; }
+    [[nodiscard]] aabb bounds() const
+    {
+        return aabb::from_points({vec3{M_base_half, M_height, M_base_half},
+                                  vec3{-M_base_half, 0.0 * si::metre, -M_base_half}});
+    }
+    [[nodiscard]] bounding_sphere bsphere() const
+    {
+        using namespace mp_units;
+        return bounding_sphere(vec3<si::metre>{0 * si::metre, 0.5 * M_height, 0 * si::metre},
+                               sqrt(2.0 * pow<2>(M_base_half) + pow<2>(M_height / 2.0)));
+    }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
     { return (1.0 / 3.0) * pow<2>(M_base_half * 2.0) * M_height; }
@@ -487,8 +489,6 @@ public:
 private:
     quantity<si::metre> M_base_half;
     quantity<si::metre> M_height;
-    aabb M_aabb;
-    bounding_sphere M_bsphere;
 };
 
 class shape
@@ -611,14 +611,14 @@ private:
     }
 
 public:
-    [[nodiscard]] const aabb &bounds() const
+    [[nodiscard]] aabb bounds() const
     {
-        return visit([](const auto &s) -> const aabb & { return s.bounds(); });
+        return visit([](const auto &s) { return s.bounds(); });
     }
 
-    [[nodiscard]] const bounding_sphere &bsphere() const
+    [[nodiscard]] bounding_sphere bsphere() const
     {
-        return visit([](const auto &s) -> const bounding_sphere & { return s.bsphere(); });
+        return visit([](const auto &s) { return s.bsphere(); });
     }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
@@ -735,13 +735,14 @@ public:
 private:
     union storage_t
     {
+        std::monostate empty;
         std::shared_ptr<const physkit::mesh> msh;
         physkit::sphere sph;
         physkit::box bx;
         physkit::cylinder cyl;
         physkit::cone cn;
         physkit::pyramid pyr;
-        storage_t() {}
+        storage_t() : empty{} {}
         storage_t(const storage_t &other) = delete;
         storage_t &operator=(const storage_t &other) = delete;
         storage_t(storage_t &&other) = delete;
@@ -830,19 +831,19 @@ private:
             construct_mesh(std::move(other.M_storage.msh));
             break;
         case type::sphere:
-            construct_sphere(std::move(other.M_storage.sph));
+            construct_sphere(other.M_storage.sph);
             break;
         case type::box:
-            construct_box(std::move(other.M_storage.bx));
+            construct_box(other.M_storage.bx);
             break;
         case type::cylinder:
-            construct_cylinder(std::move(other.M_storage.cyl));
+            construct_cylinder(other.M_storage.cyl);
             break;
         case type::cone:
-            construct_cone(std::move(other.M_storage.cn));
+            construct_cone(other.M_storage.cn);
             break;
         case type::pyramid:
-            construct_pyramid(std::move(other.M_storage.pyr));
+            construct_pyramid(other.M_storage.pyr);
             break;
         default:
             std::unreachable();

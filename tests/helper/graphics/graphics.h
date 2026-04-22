@@ -206,7 +206,7 @@ public:
     class pass : public SceneGraph::Drawable3D
     {
     public:
-        enum class kind
+        enum class kind : std::uint8_t
         {
             opaque,
             transparent
@@ -359,7 +359,7 @@ inline void instanced_drawables::draw_transparent(const Matrix4 & /*transformati
                                  M_instances[b].transformation.translation().z();
                       });
 
-    GL::Renderer::setDepthMask(false);
+    GL::Renderer::setDepthMask(false); // NOLINT
     Containers::arrayResize(M_upload_scratch, 1);
     M_mesh->setInstanceCount(1);
 
@@ -375,7 +375,7 @@ inline void instanced_drawables::draw_transparent(const Matrix4 & /*transformati
         M_shader->draw(*M_mesh);
     }
 
-    GL::Renderer::setDepthMask(true);
+    GL::Renderer::setDepthMask(true); // NOLINT
     GL::Renderer::setFaceCullingMode(GL::Renderer::PolygonFacing::Back);
 }
 
