@@ -28,282 +28,375 @@
 
 #endif
 
-GRAPHICS_EXPORT namespace graphics
+namespace std
 {
-    using namespace Magnum;
-    using gfx_obj_base = SceneGraph::Object<SceneGraph::MatrixTransformation3D>;
-
-    class gfx_obj : public gfx_obj_base
+template <auto unit> struct hash<physkit::vec3<unit>>
+{
+    std::size_t operator()(const physkit::vec3<unit> &v) const
     {
-    public:
-        using SceneGraph::Object<SceneGraph::MatrixTransformation3D>::Object;
+        std::size_t h1 =
+            std::hash<typename physkit::quantity<unit>::rep>{}(v.x().numerical_value_in(unit));
+        std::size_t h2 =
+            std::hash<typename physkit::quantity<unit>::rep>{}(v.y().numerical_value_in(unit));
+        std::size_t h3 =
+            std::hash<typename physkit::quantity<unit>::rep>{}(v.z().numerical_value_in(unit));
 
-        void rotate(physkit::quantity<mp_units::si::radian, float> angle,
-                    const physkit::vec3<mp_units::one> &axis)
+        // Combine the hash values (you can use any method you prefer)
+        return h1 ^ (h2 << 1) ^ (h3 << 2);
+    }
+};
+template <> struct hash<physkit::box>
+{
+    std::size_t operator()(const physkit::box &b) const
+    { return std::hash<physkit::vec3<physkit::si::metre>>{}(b.half_extents()); }
+};
+template <> struct hash<physkit::sphere>
+{
+    std::size_t operator()(const physkit::sphere &s) const
+    {
+        return std::hash<physkit::quantity<physkit::si::metre>::rep>{}(
+            s.radius().numerical_value_in(physkit::si::metre));
+    }
+};
+template <> struct hash<physkit::cylinder>
+{
+    std::size_t operator()(const physkit::cylinder &c) const
+    {
+        std::size_t h1 = std::hash<physkit::quantity<physkit::si::metre>::rep>{}(
+            c.radius().numerical_value_in(physkit::si::metre));
+        std::size_t h2 = std::hash<physkit::quantity<physkit::si::metre>::rep>{}(
+            c.height().numerical_value_in(physkit::si::metre));
+
+        return h1 ^ (h2 << 1);
+    }
+};
+
+template <> struct hash<physkit::pyramid>
+{
+    std::size_t operator()(const physkit::pyramid &p) const
+    {
+        std::size_t h1 = std::hash<physkit::quantity<physkit::si::metre>::rep>{}(
+            p.base_half().numerical_value_in(physkit::si::metre));
+        std::size_t h2 = std::hash<physkit::quantity<physkit::si::metre>::rep>{}(
+            p.height().numerical_value_in(physkit::si::metre));
+
+        return h1 ^ (h2 << 1);
+    }
+};
+
+template <> struct hash<physkit::cone>
+{
+    std::size_t operator()(const physkit::cone &c) const
+    {
+        std::size_t h1 = std::hash<physkit::quantity<physkit::si::metre>::rep>{}(
+            c.radius().numerical_value_in(physkit::si::metre));
+        std::size_t h2 = std::hash<physkit::quantity<physkit::si::metre>::rep>{}(
+            c.height().numerical_value_in(physkit::si::metre));
+
+        return h1 ^ (h2 << 1);
+    }
+};
+template <> struct hash<physkit::shape>
+{
+    std::size_t operator()(const physkit::shape &s) const
+    {
+        switch (s.type())
         {
-            Quaternion rot =
-                Quaternion::rotation(Rad(angle.numerical_value_in(mp_units::si::radian)),
-                                     to_magnum_vector<mp_units::one, float>(axis.normalized()));
-            Object::rotate(rot);
+        case physkit::shape::type::sphere:
+            return std::hash<physkit::sphere>{}(s.sphere());
+        case physkit::shape::type::box:
+            return std::hash<physkit::box>{}(s.box());
+        case physkit::shape::type::cylinder:
+            return std::hash<physkit::cylinder>{}(s.cylinder());
+        case physkit::shape::type::cone:
+            return std::hash<physkit::cone>{}(s.cone());
+        case physkit::shape::type::pyramid:
+            return std::hash<physkit::pyramid>{}(s.pyramid());
+        case physkit::shape::type::mesh:
+            return std::hash<std::shared_ptr<const physkit::mesh>>{}(s.mesh());
+        default:
+            std::unreachable();
         }
+    }
+};
+} // namespace std
+
+GRAPHICS_EXPORT
+namespace graphics
+{
+using namespace Magnum;
+using gfx_obj_base = SceneGraph::Object<SceneGraph::MatrixTransformation3D>;
+
+class gfx_obj : public gfx_obj_base
+{
+public:
+    using SceneGraph::Object<SceneGraph::MatrixTransformation3D>::Object;
+
+    void rotate(physkit::quantity<mp_units::si::radian, float> angle,
+                const physkit::vec3<mp_units::one> &axis)
+    {
+        Quaternion rot =
+            Quaternion::rotation(Rad(angle.numerical_value_in(mp_units::si::radian)),
+                                 to_magnum_vector<mp_units::one, float>(axis.normalized()));
+        Object::rotate(rot);
+    }
+};
+
+// class caching_object : public gfx_obj, SceneGraph::AbstractFeature3D
+// {
+// public:
+//     explicit caching_object(gfx_obj* parent): gfx_obj{parent},
+//     SceneGraph::AbstractFeature3D{*this}
+//     {
+//         setCachedTransformations(SceneGraph::CachedTransformation::Absolute);
+//     }
+
+// protected:
+//     void clean(const Matrix4& transform) override
+//     {
+
+//     }
+
+// private:
+//     Vector3 M_absolute_position;
+// };
+
+class graphics_app;
+
+class physics_obj : public gfx_obj
+{
+public:
+    explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent, graphics_app &app,
+                         physkit::world_base::handle handle)
+        : gfx_obj(&parent), M_app{&app}, M_handle{handle}
+    {
+    }
+
+    physics_obj(const physics_obj &) = delete;
+    physics_obj &operator=(const physics_obj &) = delete;
+    physics_obj(physics_obj &&) = delete;
+    physics_obj &operator=(physics_obj &&) = delete;
+
+    ~physics_obj();
+
+    [[nodiscard]] auto handle() const { return M_handle; }
+
+    physkit::object &obj();
+    [[nodiscard]] const physkit::object &obj() const;
+
+    void sync();
+
+private:
+    graphics_app *M_app;
+    physkit::world_base::handle M_handle;
+};
+
+class instanced_drawable;
+
+class instanced_drawables
+{
+public:
+    struct instance_data
+    {
+        Matrix4 transformation;
+        Matrix3x3 normal_matrix;
+        Color4 color;
     };
 
-    // class caching_object : public gfx_obj, SceneGraph::AbstractFeature3D
-    // {
-    // public:
-    //     explicit caching_object(gfx_obj* parent): gfx_obj{parent},
-    //     SceneGraph::AbstractFeature3D{*this}
-    //     {
-    //         setCachedTransformations(SceneGraph::CachedTransformation::Absolute);
-    //     }
-
-    // protected:
-    //     void clean(const Matrix4& transform) override
-    //     {
-
-    //     }
-
-    // private:
-    //     Vector3 M_absolute_position;
-    // };
-
-    class graphics_app;
-
-    class physics_obj : public gfx_obj
+    class pass : public SceneGraph::Drawable3D
     {
     public:
-        explicit physics_obj(std::derived_from<gfx_obj_base> auto &parent, graphics_app &app,
-                             physkit::world_base::handle handle)
-            : gfx_obj(&parent), M_app{&app}, M_handle{handle}
+        enum class kind
         {
-        }
-
-        physics_obj(const physics_obj &) = delete;
-        physics_obj &operator=(const physics_obj &) = delete;
-        physics_obj(physics_obj &&) = delete;
-        physics_obj &operator=(physics_obj &&) = delete;
-
-        ~physics_obj();
-
-        [[nodiscard]] auto handle() const { return M_handle; }
-
-        physkit::object &obj();
-        [[nodiscard]] const physkit::object &obj() const;
-
-        void sync();
-
-    private:
-        graphics_app *M_app;
-        physkit::world_base::handle M_handle;
-    };
-
-    class instanced_drawable;
-
-    class instanced_drawables
-    {
-    public:
-        struct instance_data
-        {
-            Matrix4 transformation;
-            Matrix3x3 normal_matrix;
-            Color4 color;
+            opaque,
+            transparent
         };
-
-        class pass : public SceneGraph::Drawable3D
+        pass(gfx_obj_base &parent, SceneGraph::DrawableGroup3D *group, instanced_drawables &owner,
+             kind k)
+            : SceneGraph::Drawable3D{parent, group}, M_owner{&owner}, M_kind{k}
         {
-        public:
-            enum class kind
-            {
-                opaque,
-                transparent
-            };
-            pass(gfx_obj_base &parent, SceneGraph::DrawableGroup3D *group,
-                 instanced_drawables &owner, kind k)
-                : SceneGraph::Drawable3D{parent, group}, M_owner{&owner}, M_kind{k}
-            {
-            }
-
-        private:
-            instanced_drawables *M_owner;
-            kind M_kind;
-
-            void draw(const Matrix4 &transformation, SceneGraph::Camera3D &camera) override
-            {
-                if (M_kind == kind::opaque)
-                    M_owner->draw_opaque(transformation, camera);
-                else
-                    M_owner->draw_transparent(transformation, camera);
-            }
-        };
-
-        template <typename Parent>
-            requires std::derived_from<Parent, gfx_obj_base>
-        explicit instanced_drawables(Parent &parent, SceneGraph::DrawableGroup3D *opaque_group,
-                                     SceneGraph::DrawableGroup3D *transparent_group,
-                                     std::shared_ptr<GL::Mesh> mesh, Shaders::PhongGL &shader)
-            : M_mesh{std::move(mesh)}, M_shader{&shader}
-        {
-            // Two sub-drawables, one per render pass, sharing this instance list.
-            M_opaque_pass = new pass{parent, opaque_group, *this, pass::kind::opaque};
-            M_transparent_pass =
-                new pass{parent, transparent_group, *this, pass::kind::transparent};
-
-            M_mesh->addVertexBufferInstanced(
-                M_buffer, 1, 0, Shaders::PhongGL::TransformationMatrix{},
-                Shaders::PhongGL::NormalMatrix{}, Shaders::PhongGL::Color4{});
-        }
-
-        Containers::Array<instance_data> &instances() { return M_instances; }
-
-        void add_object(instanced_drawable &drawable)
-        {
-            Containers::arrayAppend(M_instances, instance_data{});
-            Containers::arrayAppend(M_objects, &drawable);
-        }
-
-        void remove_object(instanced_drawable &drawable)
-        {
-            auto *it = std::ranges::find(M_objects, &drawable);
-            if (it != M_objects.end())
-            {
-                auto index = std::distance(M_objects.begin(), it);
-                Containers::arrayRemove(M_instances, index);
-                Containers::arrayRemove(M_objects, index);
-            }
         }
 
     private:
-        Containers::Array<instance_data> M_instances;
-        Containers::Array<instanced_drawable *> M_objects;
-        Containers::Array<std::size_t> M_opaque_indices;
-        Containers::Array<std::size_t> M_transparent_indices;
-        Containers::Array<instance_data> M_upload_scratch;
-        std::shared_ptr<GL::Mesh> M_mesh;
-        GL::Buffer M_buffer;
-        Shaders::PhongGL *M_shader;
-        pass *M_opaque_pass{};
-        pass *M_transparent_pass{};
+        instanced_drawables *M_owner;
+        kind M_kind;
 
-        void draw_opaque(const Matrix4 &transformation, SceneGraph::Camera3D &camera);
-        void draw_transparent(const Matrix4 &transformation, SceneGraph::Camera3D &camera);
-    };
-
-    class instanced_drawable : public SceneGraph::Drawable3D, public gfx_obj
-    {
-    public:
-        explicit instanced_drawable(std::derived_from<gfx_obj_base> auto &parent,
-                                    instanced_drawables &group)
-            : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}, M_group{&group}
-        { group.add_object(*this); }
-
-        instanced_drawable(const instanced_drawable &) = delete;
-        instanced_drawable &operator=(const instanced_drawable &) = delete;
-        instanced_drawable(instanced_drawable &&) = delete;
-        instanced_drawable &operator=(instanced_drawable &&) = delete;
-
-        [[nodiscard]] virtual Color4 color() const { return Color4{1.0f, 1.0f, 1.0f, 1.0f}; }
-        [[nodiscard]] virtual const Matrix3x3 *normal_matrix() const { return nullptr; }
-
-        friend instanced_drawables;
-
-        virtual ~instanced_drawable()
+        void draw(const Matrix4 &transformation, SceneGraph::Camera3D &camera) override
         {
-            if (M_group != nullptr)
-            {
-                M_group->remove_object(*this);
-                M_group = nullptr;
-            }
-        }
-
-    private:
-        void draw(const Matrix4 &transformation, SceneGraph::Camera3D &camera) override {}
-
-        instanced_drawables *M_group;
-    };
-
-    inline void instanced_drawables::draw_opaque(const Matrix4 &transformation,
-                                                 SceneGraph::Camera3D &camera)
-    {
-        Containers::arrayResize(M_opaque_indices, 0);
-        Containers::arrayResize(M_transparent_indices, 0);
-        if (M_instances.isEmpty()) return;
-
-        for (std::size_t i = 0; i < M_instances.size(); ++i)
-        {
-            auto *obj = M_objects[i];
-            auto &instance = M_instances[i];
-            obj->draw(transformation, camera);
-            instance.transformation = transformation * (obj->absoluteTransformation());
-            instance.normal_matrix = instance.transformation.normalMatrix();
-            instance.color = obj->color();
-            obj->setClean();
-            if (instance.color.a() < 1.0f)
-                Containers::arrayAppend(M_transparent_indices, i);
+            if (M_kind == kind::opaque)
+                M_owner->draw_opaque(transformation, camera);
             else
-                Containers::arrayAppend(M_opaque_indices, i);
+                M_owner->draw_transparent(transformation, camera);
         }
+    };
 
-        if (M_opaque_indices.isEmpty()) return;
+    template <typename Parent>
+        requires std::derived_from<Parent, gfx_obj_base>
+    explicit instanced_drawables(Parent &parent, SceneGraph::DrawableGroup3D *opaque_group,
+                                 SceneGraph::DrawableGroup3D *transparent_group,
+                                 std::shared_ptr<GL::Mesh> mesh, Shaders::PhongGL &shader)
+        : M_mesh{std::move(mesh)}, M_shader{&shader},
+          M_opaque_pass(new pass{parent, opaque_group, *this, pass::kind::opaque}),
+          M_transparent_pass(new pass{parent, transparent_group, *this, pass::kind::transparent})
+    {
+        // Two sub-drawables, one per render pass, sharing this instance list.
 
-        Containers::arrayResize(M_upload_scratch, M_opaque_indices.size());
-        for (std::size_t k = 0; k < M_opaque_indices.size(); ++k)
-            M_upload_scratch[k] = M_instances[M_opaque_indices[k]];
+        M_mesh->addVertexBufferInstanced(M_buffer, 1, 0, Shaders::PhongGL::TransformationMatrix{},
+                                         Shaders::PhongGL::NormalMatrix{},
+                                         Shaders::PhongGL::Color4{});
+    }
 
+    Containers::Array<instance_data> &instances() { return M_instances; }
+
+    void add_object(instanced_drawable &drawable)
+    {
+        Containers::arrayAppend(M_instances, instance_data{});
+        Containers::arrayAppend(M_objects, &drawable);
+    }
+
+    void remove_object(instanced_drawable &drawable)
+    {
+        auto *it = std::ranges::find(M_objects, &drawable);
+        if (it != M_objects.end())
+        {
+            auto index = std::distance(M_objects.begin(), it);
+            Containers::arrayRemove(M_instances, index);
+            Containers::arrayRemove(M_objects, index);
+        }
+    }
+
+private:
+    Containers::Array<instance_data> M_instances;
+    Containers::Array<instanced_drawable *> M_objects;
+    Containers::Array<std::size_t> M_opaque_indices;
+    Containers::Array<std::size_t> M_transparent_indices;
+    Containers::Array<instance_data> M_upload_scratch;
+    std::shared_ptr<GL::Mesh> M_mesh;
+    GL::Buffer M_buffer;
+    Shaders::PhongGL *M_shader;
+    pass *M_opaque_pass{};
+    pass *M_transparent_pass{};
+
+    void draw_opaque(const Matrix4 &transformation, SceneGraph::Camera3D &camera);
+    void draw_transparent(const Matrix4 &transformation, SceneGraph::Camera3D &camera);
+};
+
+class instanced_drawable : public SceneGraph::Drawable3D, public gfx_obj
+{
+public:
+    explicit instanced_drawable(std::derived_from<gfx_obj_base> auto &parent,
+                                instanced_drawables &group)
+        : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}, M_group{&group}
+    { group.add_object(*this); }
+
+    instanced_drawable(const instanced_drawable &) = delete;
+    instanced_drawable &operator=(const instanced_drawable &) = delete;
+    instanced_drawable(instanced_drawable &&) = delete;
+    instanced_drawable &operator=(instanced_drawable &&) = delete;
+
+    [[nodiscard]] virtual Color4 color() const { return Color4{1.0f, 1.0f, 1.0f, 1.0f}; }
+    [[nodiscard]] virtual const Matrix3x3 *normal_matrix() const { return nullptr; }
+
+    friend instanced_drawables;
+
+    virtual ~instanced_drawable()
+    {
+        if (M_group != nullptr)
+        {
+            M_group->remove_object(*this);
+            M_group = nullptr;
+        }
+    }
+
+private:
+    void draw(const Matrix4 &transformation, SceneGraph::Camera3D &camera) override {}
+
+    instanced_drawables *M_group;
+};
+
+inline void instanced_drawables::draw_opaque(const Matrix4 &transformation,
+                                             SceneGraph::Camera3D &camera)
+{
+    Containers::arrayResize(M_opaque_indices, 0);
+    Containers::arrayResize(M_transparent_indices, 0);
+    if (M_instances.isEmpty()) return;
+
+    for (std::size_t i = 0; i < M_instances.size(); ++i)
+    {
+        auto *obj = M_objects[i];
+        auto &instance = M_instances[i];
+        obj->draw(transformation, camera);
+        instance.transformation = transformation * (obj->absoluteTransformation());
+        instance.normal_matrix = instance.transformation.normalMatrix();
+        instance.color = obj->color();
+        obj->setClean();
+        if (instance.color.a() < 1.0f)
+            Containers::arrayAppend(M_transparent_indices, i);
+        else
+            Containers::arrayAppend(M_opaque_indices, i);
+    }
+
+    if (M_opaque_indices.isEmpty()) return;
+
+    Containers::arrayResize(M_upload_scratch, M_opaque_indices.size());
+    for (std::size_t k = 0; k < M_opaque_indices.size(); ++k)
+        M_upload_scratch[k] = M_instances[M_opaque_indices[k]];
+
+    M_buffer.setData(M_upload_scratch, GL::BufferUsage::DynamicDraw);
+    M_mesh->setInstanceCount(static_cast<int>(M_upload_scratch.size()));
+    M_shader->draw(*M_mesh);
+}
+
+inline void instanced_drawables::draw_transparent(const Matrix4 & /*transformation*/,
+                                                  SceneGraph::Camera3D & /*camera*/)
+{
+    if (M_transparent_indices.isEmpty()) return;
+
+    std::ranges::sort(M_transparent_indices,
+                      [this](std::size_t a, std::size_t b)
+                      {
+                          return M_instances[a].transformation.translation().z() <
+                                 M_instances[b].transformation.translation().z();
+                      });
+
+    GL::Renderer::setDepthMask(false);
+    Containers::arrayResize(M_upload_scratch, 1);
+    M_mesh->setInstanceCount(1);
+
+    for (const auto idx : M_transparent_indices)
+    {
+        M_upload_scratch[0] = M_instances[idx];
         M_buffer.setData(M_upload_scratch, GL::BufferUsage::DynamicDraw);
-        M_mesh->setInstanceCount(static_cast<int>(M_upload_scratch.size()));
+
+        GL::Renderer::setFaceCullingMode(GL::Renderer::PolygonFacing::Front);
+        M_shader->draw(*M_mesh);
+
+        GL::Renderer::setFaceCullingMode(GL::Renderer::PolygonFacing::Back);
         M_shader->draw(*M_mesh);
     }
 
-    inline void instanced_drawables::draw_transparent(const Matrix4 & /*transformation*/,
-                                                      SceneGraph::Camera3D & /*camera*/)
+    GL::Renderer::setDepthMask(true);
+    GL::Renderer::setFaceCullingMode(GL::Renderer::PolygonFacing::Back);
+}
+
+class colored_drawable : public instanced_drawable
+{
+public:
+    explicit colored_drawable(gfx_obj &object, const Color4 &color, instanced_drawables &group)
+        : instanced_drawable(object, group), M_color{color}
     {
-        if (M_transparent_indices.isEmpty()) return;
-
-        std::ranges::sort(M_transparent_indices,
-                          [this](std::size_t a, std::size_t b)
-                          {
-                              return M_instances[a].transformation.translation().z() <
-                                     M_instances[b].transformation.translation().z();
-                          });
-
-        GL::Renderer::setDepthMask(false);
-        Containers::arrayResize(M_upload_scratch, 1);
-        M_mesh->setInstanceCount(1);
-
-        for (const auto idx : M_transparent_indices)
-        {
-            M_upload_scratch[0] = M_instances[idx];
-            M_buffer.setData(M_upload_scratch, GL::BufferUsage::DynamicDraw);
-
-            GL::Renderer::setFaceCullingMode(GL::Renderer::PolygonFacing::Front);
-            M_shader->draw(*M_mesh);
-
-            GL::Renderer::setFaceCullingMode(GL::Renderer::PolygonFacing::Back);
-            M_shader->draw(*M_mesh);
-        }
-
-        GL::Renderer::setDepthMask(true);
-        GL::Renderer::setFaceCullingMode(GL::Renderer::PolygonFacing::Back);
     }
 
-    class colored_drawable : public instanced_drawable
+    [[nodiscard]] Color4 color() const override { return M_color; }
+    void color(const Color4 &color)
     {
-    public:
-        explicit colored_drawable(gfx_obj &object, const Color4 &color, instanced_drawables &group)
-            : instanced_drawable(object, group), M_color{color}
-        {
-        }
+        M_color = color;
+        setDirty();
+    }
 
-        [[nodiscard]] Color4 color() const override { return M_color; }
-        void color(const Color4 &color)
-        {
-            M_color = color;
-            setDirty();
-        }
-
-    private:
-        Color4 M_color;
-    };
+private:
+    Color4 M_color;
+};
 } // namespace graphics
 
 GRAPHICS_EXPORT
@@ -621,11 +714,10 @@ public:
     /// @return A shared pointer to the GL::Mesh corresponding to the given physkit::mesh.
     std::shared_ptr<GL::Mesh> get_mesh(const physkit::shape &phys_shape)
     {
-        auto shared = &phys_shape;
-        if (auto it = M_phys_shape_map.find(shared); it != M_phys_shape_map.end())
+        if (auto it = M_phys_shape_map.find(phys_shape); it != M_phys_shape_map.end())
             return it->second;
         auto mesh = std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape));
-        M_phys_shape_map[std::move(shared)] = mesh;
+        M_phys_shape_map[phys_shape] = mesh;
         return mesh;
     }
 
@@ -644,9 +736,8 @@ public:
             .transform(
                 [&](auto obj)
                 {
-                    if (auto it = M_phys_shape_map.find(obj->shape_ptr());
-                        it == M_phys_shape_map.end())
-                        M_phys_shape_map[obj->shape_ptr()] = mesh;
+                    if (auto it = M_phys_shape_map.find(obj->shape()); it == M_phys_shape_map.end())
+                        M_phys_shape_map[obj->shape()] = mesh;
                     else if (it->second != mesh)
                         throw std::runtime_error(
                             "graphics_app::add_object: provided mesh does not match "
@@ -1185,7 +1276,7 @@ private:
     std::unique_ptr<physkit::world_base> M_world;
     physkit::stepper M_stepper;
     camera M_cam;
-    std::unordered_map<const physkit::shape *, std::shared_ptr<GL::Mesh>> M_phys_shape_map;
+    std::unordered_map<physkit::shape, std::shared_ptr<GL::Mesh>> M_phys_shape_map;
     std::unordered_map<std::shared_ptr<GL::Mesh>, instanced_drawables *> M_mesh_drawables;
     std::vector<physics_obj *> M_physics_objs;
     std::unordered_map<Key, key_state> M_keys;

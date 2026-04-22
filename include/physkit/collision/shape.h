@@ -102,6 +102,8 @@ public:
 
     /// @brief - Add in support to return obb objects -> much more tedious, more research later.
 
+    bool operator==(const box &other) const { return M_half_extents == other.M_half_extents; }
+
 private:
     vec3<si::metre> M_half_extents;
     aabb M_aabb;
@@ -200,6 +202,8 @@ public:
 
     /// TODO: Add in support to return obb objects -> much more tedious, more research later.
 
+    bool operator==(const sphere &other) const { return M_radius == other.M_radius; }
+
 private:
     aabb M_aabb;
     bounding_sphere M_bsphere;
@@ -291,6 +295,9 @@ public:
 
     /// TODO: Add in support to return obb objects -> much more tedious, more research later.
 
+    bool operator==(const cylinder &other) const
+    { return M_radius == other.M_radius && M_height == other.M_height; }
+
 private:
     aabb M_aabb;
     bounding_sphere M_bsphere;
@@ -379,6 +386,9 @@ public:
                               const quat<one> &orientation = quat<one>::identity()) const;
 
     /// TODO: Add in support to return obb objects -> much more tedious, more research later.
+
+    bool operator==(const cone &other) const
+    { return M_radius == other.M_radius && M_height == other.M_height; }
 
 private:
     aabb M_aabb;
@@ -470,6 +480,9 @@ public:
                               const quat<one> &orientation = quat<one>::identity()) const;
 
     /// @brief - Add in support to return obb objects -> much more tedious, more research later.
+
+    bool operator==(const pyramid &other) const
+    { return M_base_half == other.M_base_half && M_height == other.M_height; }
 
 private:
     quantity<si::metre> M_base_half;
@@ -696,6 +709,28 @@ public:
 
     [[nodiscard]] instance at(const vec3<si::metre> &pos,
                               const quat<one> &orientation = quat<one>::identity()) const;
+
+    bool operator==(const shape &other) const
+    {
+        if (M_type != other.M_type) return false;
+        switch (M_type)
+        {
+        case type::mesh:
+            return M_storage.msh == other.M_storage.msh;
+        case type::sphere:
+            return M_storage.sph == other.M_storage.sph;
+        case type::box:
+            return M_storage.bx == other.M_storage.bx;
+        case type::cylinder:
+            return M_storage.cyl == other.M_storage.cyl;
+        case type::cone:
+            return M_storage.cn == other.M_storage.cn;
+        case type::pyramid:
+            return M_storage.pyr == other.M_storage.pyr;
+        default:
+            std::unreachable();
+        }
+    }
 
 private:
     union storage_t
