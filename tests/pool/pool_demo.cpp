@@ -75,7 +75,7 @@ private:
     void update_anchor(quantity<mp_units::si::second> dt, quantity<si::metre> shoot_offset,
                        object &stick, object &anchor)
     {
-        auto bounds = stick.mesh().bounds();
+        auto bounds = stick.shape().bounds();
         auto stick_half_len = (bounds.max.y() - bounds.min.y()) * 0.5f;
 
         auto fwd = cam().forward();
