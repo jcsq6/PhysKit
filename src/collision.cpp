@@ -5,9 +5,32 @@
 
 namespace physkit
 {
+struct support_pt
+{
+    vec3<si::metre> p;  // minkowski point
+    vec3<si::metre> pa; // point on A
+    vec3<si::metre> pb; // point on b
+};
+
+/// @brief - not a true convex check but just checking for valid furthest point
+template <typename T>
+concept SupportShape = requires(const T &shape, const vec3<one> &dir) {
+    { shape.support(dir) } -> std::same_as<vec3<si::metre>>;
+};
+
+/// @brief minkowski difference support for convex shapes
+template <typename ShapeA, typename ShapeB>
+    requires SupportShape<ShapeA> && SupportShape<ShapeB>
+inline support_pt minkowski_support(const ShapeA &a, const ShapeB &b, const vec3<one> &direction)
+{
+    auto pa = a.support(direction);
+    auto pb = b.support(-direction);
+    return support_pt{.p = pa - pb, .pa = pa, .pb = pb};
+}
+
 /// based off winter dev gjk algorithm implementation
 
-using simplex = absl::InlinedVector<detail::support_pt, 4>;
+using simplex = absl::InlinedVector<support_pt, 4>;
 
 inline bool handle_line(simplex &simplex, vec3<one> &direction)
 {
@@ -162,14 +185,13 @@ inline bool handle_simplex(simplex &simplex, vec3<one> &direction)
 }
 
 /// @brief modify collision loop to check on separation
-std::optional<simplex> gjk_collision(const detail::SupportShape auto &a,
-                                     const detail::SupportShape auto &b)
+std::optional<simplex> gjk_collision(const SupportShape auto &a, const SupportShape auto &b)
 {
     constexpr auto eps = 1e-12;
     simplex simplex;
     vec3<one> direction = {1.0, 0.0, 0.0};
 
-    auto point = detail::minkowski_support(a, b, direction);
+    auto point = minkowski_support(a, b, direction);
     simplex.push_back(point);
     if (point.p.squared_norm() < eps * pow<2>(si::metre)) return simplex;
     direction = -point.p.normalized();
@@ -177,7 +199,7 @@ std::optional<simplex> gjk_collision(const detail::SupportShape auto &a,
     constexpr int max_iterations = 100;
     for (int iter = 0; iter < max_iterations; ++iter)
     {
-        auto new_point = detail::minkowski_support(a, b, direction);
+        auto new_point = minkowski_support(a, b, direction);
         auto progress = new_point.p.dot(direction);
         if (progress <= 0 * si::metre) return std::nullopt;
 
@@ -188,8 +210,7 @@ std::optional<simplex> gjk_collision(const detail::SupportShape auto &a,
     return std::nullopt;
 }
 
-inline bool pad_simplex(const detail::SupportShape auto &a, const detail::SupportShape auto &b,
-                        simplex &simplex)
+inline bool pad_simplex(const SupportShape auto &a, const SupportShape auto &b, simplex &simplex)
 {
     using a_type = std::decay_t<decltype(a)>;
     using b_type = std::decay_t<decltype(b)>;
@@ -197,10 +218,10 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
     auto on_1 = [](const a_type &a, const b_type &b, physkit::simplex &simplex)
     {
         auto dir = vec3{1, 0, 0};
-        auto p2 = detail::minkowski_support(a, b, dir);
+        auto p2 = minkowski_support(a, b, dir);
 
         if ((p2.p - simplex[0].p).squared_norm() < 1e-6 * pow<2>(si::metre))
-            p2 = detail::minkowski_support(a, b, -dir);
+            p2 = minkowski_support(a, b, -dir);
         simplex.push_back(p2);
     };
     auto on_2 = [](const a_type &a, const b_type &b, physkit::simplex &simplex)
@@ -209,9 +230,9 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
         auto dir = line.normalized().cross(vec3<one>{0.0, 1.0, 0.0});
         if (dir.squared_norm() < 1e-6) dir = line.normalized().cross(vec3<one>{0.0, 0.0, 1.0});
         dir.normalize();
-        auto p3 = detail::minkowski_support(a, b, dir);
+        auto p3 = minkowski_support(a, b, dir);
         if (line.cross(p3.p - simplex[0].p).squared_norm() < 1e-6 * pow<4>(si::metre))
-            p3 = detail::minkowski_support(a, b, -dir);
+            p3 = minkowski_support(a, b, -dir);
         simplex.push_back(p3);
     };
     auto on_3 = [](const a_type &a, const b_type &b, physkit::simplex &simplex)
@@ -219,9 +240,9 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
         auto ab = simplex[1].p - simplex[0].p;
         auto ac = simplex[2].p - simplex[0].p;
         auto dir = ab.cross(ac).normalized();
-        auto p4 = detail::minkowski_support(a, b, dir);
+        auto p4 = minkowski_support(a, b, dir);
         if (abs((p4.p - simplex[0].p).dot(dir)) < 1e-6 * si::metre)
-            p4 = detail::minkowski_support(a, b, -dir);
+            p4 = minkowski_support(a, b, -dir);
         simplex.push_back(p4);
     };
 
@@ -413,8 +434,8 @@ struct epa_solver
     }
 
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    static std::optional<collision_info> solve(const detail::SupportShape auto &a,
-                                               const detail::SupportShape auto &b, simplex &simplex)
+    static std::optional<collision_info> solve(const SupportShape auto &a,
+                                               const SupportShape auto &b, simplex &simplex)
     {
         if (simplex.size() < 4 && !pad_simplex(a, b, simplex))
             return std::nullopt; // Degenerate case, treat as no collision
@@ -426,7 +447,7 @@ struct epa_solver
         constexpr int max_iterations = 64;
         constexpr auto tolerance = 1e-6 * si::metre;
 
-        auto get_barycentric = [&](const face &f, const detail::support_pt &p)
+        auto get_barycentric = [&](const face &f, const support_pt &p)
         {
             auto p0 = solver.polytope[f.vertices[0]];
             auto p1 = solver.polytope[f.vertices[1]];
@@ -465,7 +486,7 @@ struct epa_solver
 
             const auto &min_face = solver.faces[min_face_idx];
 
-            auto p = detail::minkowski_support(a, b, min_face.normal);
+            auto p = minkowski_support(a, b, min_face.normal);
             auto p_dist = min_face.normal.dot(p.p);
             if (p_dist - min_face.distance < tolerance) // convergence
                 return get_barycentric(min_face, p);
@@ -509,34 +530,16 @@ struct epa_solver
     }
 
     absl::InlinedVector<face, buffer_size> faces;
-    absl::InlinedVector<detail::support_pt, buffer_size> polytope;
+    absl::InlinedVector<support_pt, buffer_size> polytope;
     absl::InlinedVector<std::size_t, buffer_size> face_heap;
 };
 
-/// @brief return data for obb obb collision
-std::optional<collision_info> gjk_epa(detail::SupportShape auto const &a,
-                                      detail::SupportShape auto const &b)
+std::optional<collision_info> gjk_epa(const physkit::instance &a, const physkit::instance &b)
 {
     auto simplex = gjk_collision(a, b);
     if (simplex) return epa_solver::solve(a, b, *simplex);
     return std::nullopt;
 }
-
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define INSTANTIATE_GJK_EPA(ShapeA, ShapeB)                                                        \
-    template std::optional<collision_info> gjk_epa(const ShapeA &a, const ShapeB &b);
-
-INSTANTIATE_GJK_EPA(obb, obb)
-INSTANTIATE_GJK_EPA(aabb, aabb)
-INSTANTIATE_GJK_EPA(obb, aabb)
-INSTANTIATE_GJK_EPA(aabb, obb)
-INSTANTIATE_GJK_EPA(instance, instance)
-INSTANTIATE_GJK_EPA(aabb, instance)
-INSTANTIATE_GJK_EPA(instance, aabb)
-INSTANTIATE_GJK_EPA(obb, instance)
-INSTANTIATE_GJK_EPA(instance, obb)
-
-#undef INSTANTIATE_GJK_EPA
 
 // std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
 // {

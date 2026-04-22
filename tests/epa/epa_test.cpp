@@ -30,19 +30,11 @@ void check_unit_normal(const vec3<one> &normal)
 // Helper: verify the MTV separates two shapes.
 // Normal points from B toward A, so moving A by +normal * depth pushes A
 // away from B, separating the shapes.
-void check_mtv_separates(const aabb &a, const aabb &b, const collision_info &info)
+void check_mtv_separates(const instance &a, const instance &b, const collision_info &info)
 {
     constexpr auto nudge = 1e-3 * m;
     auto offset = info.normal * (info.depth + nudge);
-    aabb a_moved{.min = a.min + offset, .max = a.max + offset};
-    CHECK(!gjk_epa(a_moved, b).has_value());
-}
-
-void check_mtv_separates(const obb &a, const obb &b, const collision_info &info)
-{
-    constexpr auto nudge = 1e-3 * m;
-    auto offset = info.normal * (info.depth + nudge);
-    obb a_moved{a.center + offset, a.orientation, a.half_extents};
+    auto a_moved = a.geometry().at(a.position() + offset, a.orientation());
     CHECK(!gjk_epa(a_moved, b).has_value());
 }
 
@@ -58,8 +50,8 @@ void epa_aabb_depth_overlap_x()
 {
     // A: [-1,1]^3, B: [0.5, 2.5] x [-1,1]^2
     // D faces: +x: 1-0.5=0.5, -x: 1+1=2, y/z: 2 each. Min = 0.5m
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.5 * m, depth_tol);
@@ -69,8 +61,8 @@ void epa_aabb_depth_overlap_x()
 void epa_aabb_depth_overlap_y()
 {
     // D faces: y: 0.5m each (min), x/z: 2m. Min = 0.5m
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{-1.0, 0.5, -1.0} * m, .max = vec3{1.0, 2.5, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 1.5, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.5 * m, depth_tol);
@@ -79,8 +71,8 @@ void epa_aabb_depth_overlap_y()
 
 void epa_aabb_depth_overlap_z()
 {
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{-1.0, -1.0, 0.5} * m, .max = vec3{1.0, 1.0, 2.5} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 1.5} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.5 * m, depth_tol);
@@ -90,8 +82,8 @@ void epa_aabb_depth_overlap_z()
 void epa_aabb_depth_small_overlap()
 {
     // +x face: 1-0.9=0.1. Min = 0.1m
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{0.9, -1.0, -1.0} * m, .max = vec3{2.9, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.9, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.1 * m, depth_tol);
@@ -102,8 +94,8 @@ void epa_aabb_depth_large_overlap()
 {
     // A: [-1,1]^3, B: [-0.5,1.5]x[-1,1]^2
     // +x: 1-(-0.5)=1.5, -x: 1.5-(-1)=2.5, y/z: 2. Min = 1.5m
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{-0.5, -1.0, -1.0} * m, .max = vec3{1.5, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.5, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 1.5 * m, depth_tol);
@@ -115,8 +107,8 @@ void epa_aabb_depth_containment()
     // Outer: [-2,2]^3, Inner: [-0.5,0.5]^3
     // D = outer - inner. D_i: [outer.min_i - inner.max_i, outer.max_i - inner.min_i]
     // D = [-2.5, 2.5]^3. Distance from origin to each face = 2.5m
-    aabb outer{.min = vec3{-2.0, -2.0, -2.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
-    aabb inner{.min = vec3{-0.5, -0.5, -0.5} * m, .max = vec3{0.5, 0.5, 0.5} * m};
+    auto outer = box(vec3{2.0, 2.0, 2.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto inner = box(vec3{0.5, 0.5, 0.5} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto result = gjk_epa(outer, inner);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 2.5 * m, depth_tol);
@@ -126,7 +118,7 @@ void epa_aabb_depth_containment()
 void epa_aabb_depth_identical()
 {
     // D = A - A = [-2,2]^3. Distance from origin = 2.0m
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto result = gjk_epa(a, a);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 2.0 * m, depth_tol);
@@ -137,8 +129,8 @@ void epa_aabb_depth_asymmetric()
 {
     // A: [-1,1]^3, B: [-0.5,0.5]x[-1,1]^2
     // D: +x: 1-(-0.5)=1.5, -x: 0.5-(-1)=1.5, y/z: 2. Min = 1.5m
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{-0.5, -1.0, -1.0} * m, .max = vec3{0.5, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{0.5, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 1.5 * m, depth_tol);
@@ -149,8 +141,8 @@ void epa_aabb_depth_corner_overlap()
 {
     // A: [0,2]^3, B: [1,3]^3
     // D: +i: 2-1=1, -i: 3-0=3. Min = 1.0m
-    aabb a{.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
-    aabb b{.min = vec3{1.0, 1.0, 1.0} * m, .max = vec3{3.0, 3.0, 3.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 1.0, 1.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{2.0, 2.0, 2.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 1.0 * m, depth_tol);
@@ -164,8 +156,8 @@ void epa_aabb_depth_corner_overlap()
 void epa_aabb_normal_direction_x()
 {
     // Min depth is on X (0.5m vs 2.0m on Y,Z) → normal along ±X
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(std::abs(result->normal.x().numerical_value_in(one)) > 0.9);
@@ -175,8 +167,8 @@ void epa_aabb_normal_direction_x()
 
 void epa_aabb_normal_direction_y()
 {
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{-1.0, 0.5, -1.0} * m, .max = vec3{1.0, 2.5, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 1.5, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(std::abs(result->normal.x().numerical_value_in(one)) < 0.1);
@@ -186,8 +178,8 @@ void epa_aabb_normal_direction_y()
 
 void epa_aabb_normal_direction_z()
 {
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{-1.0, -1.0, 0.5} * m, .max = vec3{1.0, 1.0, 2.5} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 1.5} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(std::abs(result->normal.x().numerical_value_in(one)) < 0.1);
@@ -197,8 +189,8 @@ void epa_aabb_normal_direction_z()
 
 void epa_aabb_normal_is_unit_length()
 {
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{0.5, 0.3, -0.2} * m, .max = vec3{2.5, 2.3, 1.8} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 0.9999999999999999, 1.0} * m).at(vec3{1.5, 1.2999999999999998, 0.8} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     check_unit_normal(result->normal);
@@ -210,8 +202,8 @@ void epa_aabb_normal_is_unit_length()
 
 void epa_mtv_separates_aabb_x()
 {
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     check_mtv_separates(a, b, *result);
@@ -219,8 +211,8 @@ void epa_mtv_separates_aabb_x()
 
 void epa_mtv_separates_aabb_diagonal()
 {
-    aabb a{.min = vec3{0.0, 0.0, 0.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
-    aabb b{.min = vec3{1.0, 1.0, 1.0} * m, .max = vec3{3.0, 3.0, 3.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 1.0, 1.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{2.0, 2.0, 2.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     check_mtv_separates(a, b, *result);
@@ -228,8 +220,8 @@ void epa_mtv_separates_aabb_diagonal()
 
 void epa_mtv_separates_aabb_containment()
 {
-    aabb outer{.min = vec3{-3.0, -3.0, -3.0} * m, .max = vec3{3.0, 3.0, 3.0} * m};
-    aabb inner{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    auto outer = box(vec3{3.0, 3.0, 3.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto inner = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto result = gjk_epa(outer, inner);
     CHECK(result.has_value());
     check_mtv_separates(outer, inner, *result);
@@ -237,8 +229,8 @@ void epa_mtv_separates_aabb_containment()
 
 void epa_mtv_separates_obb_axis_aligned()
 {
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
-    obb b{vec3{1.5, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m, quat<one>::identity());
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     check_mtv_separates(a, b, *result);
@@ -246,10 +238,10 @@ void epa_mtv_separates_obb_axis_aligned()
 
 void epa_mtv_separates_obb_rotated()
 {
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    obb b{vec3{1.0, 0.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 0.0, 0.0} * m, rot);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     check_mtv_separates(a, b, *result);
@@ -257,10 +249,10 @@ void epa_mtv_separates_obb_rotated()
 
 void epa_mtv_separates_obb_cross()
 {
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{2.0, 0.2, 0.2} * m};
+    auto a = box(vec3{2.0, 0.2, 0.2} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    obb b{vec3{0.0, 0.0, 0.0} * m, rot, vec3{2.0, 0.2, 0.2} * m};
+    auto b = box(vec3{2.0, 0.2, 0.2} * m).at(vec3{0.0, 0.0, 0.0} * m, rot);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     check_mtv_separates(a, b, *result);
@@ -270,8 +262,8 @@ void epa_mtv_separates_obb_3d_rotation()
 {
     auto rot = quat<one>::from_angle_axis((std::numbers::pi / 6.0) * si::radian,
                                           vec3<one>{1.0, 1.0, 1.0}.normalized());
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
-    obb b{vec3{1.0, 0.5, 0.3} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 0.5, 0.3} * m, rot);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     check_mtv_separates(a, b, *result);
@@ -283,8 +275,8 @@ void epa_mtv_separates_obb_3d_rotation()
 
 void epa_symmetry_depth_aabb()
 {
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
     auto r1 = gjk_epa(a, b);
     auto r2 = gjk_epa(b, a);
     CHECK(r1.has_value());
@@ -295,8 +287,8 @@ void epa_symmetry_depth_aabb()
 void epa_symmetry_normal_aabb()
 {
     // Normals should be approximately opposite
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
     auto r1 = gjk_epa(a, b);
     auto r2 = gjk_epa(b, a);
     CHECK(r1.has_value());
@@ -307,10 +299,10 @@ void epa_symmetry_normal_aabb()
 
 void epa_symmetry_depth_obb()
 {
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    obb b{vec3{1.0, 0.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 0.0, 0.0} * m, rot);
     auto r1 = gjk_epa(a, b);
     auto r2 = gjk_epa(b, a);
     CHECK(r1.has_value());
@@ -321,10 +313,10 @@ void epa_symmetry_depth_obb()
 
 void epa_symmetry_normal_obb()
 {
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    obb b{vec3{1.0, 0.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 0.0, 0.0} * m, rot);
     auto r1 = gjk_epa(a, b);
     auto r2 = gjk_epa(b, a);
     CHECK(r1.has_value());
@@ -336,8 +328,8 @@ void epa_symmetry_normal_obb()
 
 void epa_symmetry_depth_containment()
 {
-    aabb outer{.min = vec3{-3.0, -3.0, -3.0} * m, .max = vec3{3.0, 3.0, 3.0} * m};
-    aabb inner{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
+    auto outer = box(vec3{3.0, 3.0, 3.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto inner = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto r1 = gjk_epa(outer, inner);
     auto r2 = gjk_epa(inner, outer);
     CHECK(r1.has_value());
@@ -352,8 +344,8 @@ void epa_symmetry_depth_containment()
 void epa_obb_axis_aligned_depth()
 {
     // Two unit cubes 1.5m apart on X. Same as AABB: depth = 0.5m
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
-    obb b{vec3{1.5, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m, quat<one>::identity());
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.5 * m, depth_tol);
@@ -363,7 +355,7 @@ void epa_obb_axis_aligned_depth()
 
 void epa_obb_identical_at_origin()
 {
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto result = gjk_epa(a, a);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 2.0 * m, depth_tol);
@@ -375,10 +367,10 @@ void epa_obb_cross_config_depth()
     // Beam A: [-2,2]x[-0.2,0.2]x[-0.2,0.2]
     // Beam B (rotated 90 Z): [-0.2,0.2]x[-2,2]x[-0.2,0.2]
     // D on z: [-0.4, 0.4]. Min face distance = 0.4m
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{2.0, 0.2, 0.2} * m};
+    auto a = box(vec3{2.0, 0.2, 0.2} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    obb b{vec3{0.0, 0.0, 0.0} * m, rot, vec3{2.0, 0.2, 0.2} * m};
+    auto b = box(vec3{2.0, 0.2, 0.2} * m).at(vec3{0.0, 0.0, 0.0} * m, rot);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.4 * m, 1e-2 * m);
@@ -388,10 +380,10 @@ void epa_obb_cross_config_depth()
 void epa_obb_rotated_45_depth()
 {
     // Verify depth > 0 and MTV separates. Exact depth hard to compute analytically.
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    obb b{vec3{1.0, 0.0, 0.0} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 0.0, 0.0} * m, rot);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(result->depth > 0.0 * m);
@@ -403,8 +395,8 @@ void epa_obb_non_uniform_slab_pillar()
 {
     // Slab: [-3,3]x[-0.3,0.3]x[-3,3], Pillar: [-0.3,0.3]x[-3,3]x[-0.3,0.3]
     // D = [-3.3,3.3]^3 (axis-aligned identity OBBs). Min face distance = 3.3m
-    obb slab{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{3.0, 0.3, 3.0} * m};
-    obb pillar{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{0.3, 3.0, 0.3} * m};
+    auto slab = box(vec3{3.0, 0.3, 3.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
+    auto pillar = box(vec3{0.3, 3.0, 0.3} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto result = gjk_epa(slab, pillar);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 3.3 * m, depth_tol);
@@ -413,10 +405,10 @@ void epa_obb_non_uniform_slab_pillar()
 
 void epa_obb_rotated_90_x()
 {
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3<one>{1.0, 0.0, 0.0});
-    obb b{vec3{0.5, 0.5, 0.5} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.5, 0.5, 0.5} * m, rot);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(result->depth > 0.0 * m);
@@ -430,8 +422,8 @@ void epa_obb_rotated_90_x()
 
 void epa_obb_aabb_axis_aligned_depth()
 {
-    obb o{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
-    aabb a{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
+    auto o = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
     auto r1 = gjk_epa(o, a);
     auto r2 = gjk_epa(a, o);
     CHECK(r1.has_value());
@@ -444,8 +436,8 @@ void epa_obb_aabb_containment_depth()
 {
     // OBB: [-0.5,0.5]^3, AABB: [-2,2]^3
     // D = OBB - AABB: [-0.5-2, 0.5+2]^3 = [-2.5, 2.5]^3. Depth = 2.5m
-    obb o{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{0.5, 0.5, 0.5} * m};
-    aabb a{.min = vec3{-2.0, -2.0, -2.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
+    auto o = box(vec3{0.5, 0.5, 0.5} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
+    auto a = box(vec3{2.0, 2.0, 2.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto result = gjk_epa(o, a);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 2.5 * m, depth_tol);
@@ -686,8 +678,8 @@ void epa_near_touching_aabb()
 {
     // A: [-1,1]^3, B: [0.99, 2.99]x[-1,1]^2
     // +x face: 1-0.99=0.01. Min = 0.01m
-    aabb a{.min = vec3{-1.0, -1.0, -1.0} * m, .max = vec3{1.0, 1.0, 1.0} * m};
-    aabb b{.min = vec3{0.99, -1.0, -1.0} * m, .max = vec3{2.99, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.9900000000000002, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.01 * m, 1e-2 * m);
@@ -698,8 +690,8 @@ void epa_very_deep_containment()
 {
     // Outer: [-100,100]^3, Inner: [-0.1,0.1]^3
     // D = [-100.1, 100.1]^3. Depth = 100.1m
-    aabb outer{.min = vec3{-100.0, -100.0, -100.0} * m, .max = vec3{100.0, 100.0, 100.0} * m};
-    aabb inner{.min = vec3{-0.1, -0.1, -0.1} * m, .max = vec3{0.1, 0.1, 0.1} * m};
+    auto outer = box(vec3{100.0, 100.0, 100.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto inner = box(vec3{0.1, 0.1, 0.1} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto result = gjk_epa(outer, inner);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 100.1 * m, 0.5 * m);
@@ -710,8 +702,8 @@ void epa_off_center_containment()
 {
     // Outer: [-3,3]^3. Inner: [1,2]^3
     // D: +i: 3-1=2, -i: 2+3=5. Min = 2.0m
-    aabb outer{.min = vec3{-3.0, -3.0, -3.0} * m, .max = vec3{3.0, 3.0, 3.0} * m};
-    aabb inner{.min = vec3{1.0, 1.0, 1.0} * m, .max = vec3{2.0, 2.0, 2.0} * m};
+    auto outer = box(vec3{3.0, 3.0, 3.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto inner = box(vec3{0.5, 0.5, 0.5} * m).at(vec3{1.5, 1.5, 1.5} * m);
     auto result = gjk_epa(outer, inner);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 2.0 * m, depth_tol);
@@ -722,8 +714,8 @@ void epa_flat_slab_overlap()
 {
     // Two flat slabs at 0.15m apart on Y
     // D on Y: (0.1+0.1) - 0.15 = 0.05m face distance. Min = 0.05m
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{5.0, 0.1, 5.0} * m};
-    obb b{vec3{0.0, 0.15, 0.0} * m, quat<one>::identity(), vec3{5.0, 0.1, 5.0} * m};
+    auto a = box(vec3{5.0, 0.1, 5.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
+    auto b = box(vec3{5.0, 0.1, 5.0} * m).at(vec3{0.0, 0.15, 0.0} * m, quat<one>::identity());
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.05 * m, depth_tol);
@@ -735,8 +727,8 @@ void epa_multiple_rotation_axes()
 {
     auto rot = quat<one>::from_angle_axis((std::numbers::pi / 3.0) * si::radian,
                                           vec3<one>{1.0, 2.0, 3.0}.normalized());
-    obb a{vec3{0.0, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
-    obb b{vec3{0.5, 0.5, 0.5} * m, rot, vec3{1.0, 1.0, 1.0} * m};
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.5, 0.5, 0.5} * m, rot);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(result->depth > 0.0 * m);
@@ -748,8 +740,8 @@ void epa_mixed_mesh_aabb_mtv()
 {
     auto msh = box(vec3{1.0, 1.0, 1.0} * m);
     auto inst = msh.at(vec3{0.0, 0.0, 0.0} * m);
-    aabb box{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
-    auto result = gjk_epa(inst, box);
+    auto aabb_box = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
+    auto result = gjk_epa(inst, aabb_box);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.5 * m, depth_tol);
     check_unit_normal(result->normal);
@@ -759,7 +751,7 @@ void epa_mixed_mesh_obb_mtv()
 {
     auto msh = box(vec3{1.0, 1.0, 1.0} * m);
     auto inst = msh.at(vec3{0.0, 0.0, 0.0} * m);
-    obb o{vec3{1.5, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
+    auto o = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m, quat<one>::identity());
     auto result = gjk_epa(inst, o);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.5 * m, depth_tol);
