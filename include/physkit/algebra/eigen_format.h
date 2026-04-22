@@ -12,47 +12,27 @@ import std;
 
 #include "lin_alg.h"
 
-template <class Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
-struct std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
+namespace physkit::detail
 {
-    constexpr auto parse(std::format_parse_context &pc)
+template <typename T>
+using row_wise_range = std::ranges::subrange<decltype(std::declval<T>().rowwise().begin()),
+                                             decltype(std::declval<T>().rowwise().end())>;
+} // namespace physkit::detail
+
+template <class Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
+    requires(Rows != 1 && Cols != 1)
+struct std::formatter<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
+    : public std::formatter<physkit::detail::row_wise_range<
+          const Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>>
+{
+    template <typename FormatContext>
+    auto format(const Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols> &matrix,
+                FormatContext &ctx) const
     {
-        const auto *it = pc.begin();
-        if ((it != pc.end()) && (*it != '}')) throw std::format_error("invalid format");
-        return it;
-    }
-
-    template <class FormatContext>
-    constexpr auto format(const Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols> &m,
-                          FormatContext &ctx) const
-    {
-        if ((m.rows() == 1) || (m.cols() == 1))
-        {
-            if (m.rows() == 1)
-            {
-                auto row_range = std::views::iota(Eigen::Index{0}, m.cols()) |
-                                 std::views::transform([&m](Eigen::Index col) -> const Scalar &
-                                                       { return m(0, col); });
-                return std::format_to(ctx.out(), "{}", row_range);
-            }
-
-            auto col_range = std::views::iota(Eigen::Index{0}, m.rows()) |
-                             std::views::transform([&m](Eigen::Index row) -> const Scalar &
-                                                   { return m(row, 0); });
-            return std::format_to(ctx.out(), "{}", col_range);
-        }
-
-        auto mat_range =
-            std::views::iota(Eigen::Index{0}, m.rows()) |
-            std::views::transform(
-                [&m](Eigen::Index row)
-                {
-                    return std::views::iota(Eigen::Index{0}, m.cols()) |
-                           std::views::transform([&m, row](Eigen::Index col) -> const Scalar &
-                                                 { return m(row, col); });
-                });
-
-        return std::format_to(ctx.out(), "{}", mat_range);
+        auto rowwise = matrix.rowwise();
+        return std::formatter<physkit::detail::row_wise_range<
+            const Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>>::
+            format(std::ranges::subrange{rowwise.begin(), rowwise.end()}, ctx);
     }
 };
 

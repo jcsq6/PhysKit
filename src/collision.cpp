@@ -281,19 +281,24 @@ struct epa_solver
         auto ac = polytope[k].p - polytope[i].p;
         face.normal = ab.cross(ac) / pow<2>(si::metre);
 
-        if (face.normal.squared_norm() < 1e-12)
+        if (face.normal.squared_norm() < 1e-24)
+        {
             face.normal = vec3<one>::zero();
+            face.distance = quantity<si::metre>::max();
+        }
         else
+        {
             face.normal.normalize();
 
-        if (opposite_index != null_index &&
-            face.normal.dot(polytope[opposite_index].p - polytope[i].p) > 0.0 * si::metre)
-        {
-            std::swap(face.vertices[1], face.vertices[2]);
-            face.normal = -face.normal;
-        }
+            if (opposite_index != null_index &&
+                face.normal.dot(polytope[opposite_index].p - polytope[i].p) > 0.0 * si::metre)
+            {
+                std::swap(face.vertices[1], face.vertices[2]);
+                face.normal = -face.normal;
+            }
 
-        face.distance = face.normal.dot(polytope[i].p);
+            face.distance = face.normal.dot(polytope[i].p);
+        }
     }
 
     std::size_t allocate_face()
