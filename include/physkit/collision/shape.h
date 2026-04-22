@@ -26,6 +26,7 @@ PHYSKIT_EXPORT
 namespace physkit
 {
 
+class instance;
 class box
 {
 public:
@@ -95,6 +96,9 @@ public:
                 direction.y() >= 0.0 ? M_half_extents.y() : -M_half_extents.y(),
                 direction.z() >= 0.0 ? M_half_extents.z() : -M_half_extents.z()};
     }
+
+    [[nodiscard]] instance at(const vec3<si::metre> &pos,
+                              const quat<one> &orientation = quat<one>::identity()) const;
 
     /// @brief - Add in support to return obb objects -> much more tedious, more research later.
 
@@ -191,6 +195,9 @@ public:
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
     { return direction.normalized() * M_radius; }
 
+    [[nodiscard]] instance at(const vec3<si::metre> &pos,
+                              const quat<one> &orientation = quat<one>::identity()) const;
+
     /// TODO: Add in support to return obb objects -> much more tedious, more research later.
 
 private:
@@ -279,6 +286,9 @@ public:
         return vec3{sx, y, sz};
     }
 
+    [[nodiscard]] instance at(const vec3<si::metre> &pos,
+                              const quat<one> &orientation = quat<one>::identity()) const;
+
     /// TODO: Add in support to return obb objects -> much more tedious, more research later.
 
 private:
@@ -364,6 +374,9 @@ public:
         // Pure downward direction with zero horizontal component
         return vec3{M_radius, 0.0 * m, 0.0 * m};
     }
+
+    [[nodiscard]] instance at(const vec3<si::metre> &pos,
+                              const quat<one> &orientation = quat<one>::identity()) const;
 
     /// TODO: Add in support to return obb objects -> much more tedious, more research later.
 
@@ -452,6 +465,9 @@ public:
         vec3<m> ret = (a.dot(direction) > b.dot(direction)) ? a : b;
         return ret;
     }
+
+    [[nodiscard]] instance at(const vec3<si::metre> &pos,
+                              const quat<one> &orientation = quat<one>::identity()) const;
 
     /// @brief - Add in support to return obb objects -> much more tedious, more research later.
 
@@ -678,6 +694,9 @@ public:
         return msh->vertices()[index];
     }
 
+    [[nodiscard]] instance at(const vec3<si::metre> &pos,
+                              const quat<one> &orientation = quat<one>::identity()) const;
+
 private:
     union storage_t
     {
@@ -803,31 +822,31 @@ private:
 class instance
 {
 public:
-    instance(const shape &shp, const vec3<si::metre> &position,
+    instance(shape shp, const vec3<si::metre> &position,
              const quat<one> &orientation = quat<one>::identity())
-        : M_shape{&shp}, M_position{position}, M_orientation{orientation}
+        : M_shape{std::move(shp)}, M_position{position}, M_orientation{orientation}
     {
     }
 
-    [[nodiscard]] const shape &geometry() const { return *M_shape; }
+    [[nodiscard]] const shape &geometry() const { return M_shape; }
     [[nodiscard]] const vec3<si::metre> &position() const { return M_position; }
     [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
 
     [[nodiscard]] vec3<si::metre> vertex(unsigned int index) const
     {
-        assert(M_shape->type() == shape::type::mesh);
-        assert(index < M_shape->vertices().size());
-        return M_orientation * M_shape->vertices()[index] + M_position;
+        assert(M_shape.type() == shape::type::mesh);
+        assert(index < M_shape.vertices().size());
+        return M_orientation * M_shape.vertices()[index] + M_position;
     }
 
     /// @brief Compute the world-space AABB by rotating the local AABB and translating.
-    [[nodiscard]] aabb bounds() const { return M_shape->bounds() * M_orientation + M_position; }
+    [[nodiscard]] aabb bounds() const { return M_shape.bounds() * M_orientation + M_position; }
 
     /// @brief Compute the world-space bounding sphere. Rotation-invariant - only the
     /// center is translated.
     [[nodiscard]] bounding_sphere bsphere() const
     {
-        auto local = M_shape->bsphere();
+        auto local = M_shape.bsphere();
         return {.center = M_orientation * local.center + M_position, .radius = local.radius};
     }
 
@@ -843,7 +862,7 @@ public:
         auto local_dir = inv_orient * r.direction();
         ray local_ray{local_origin, local_dir};
 
-        auto hit = M_shape->ray_intersect(local_ray, max_distance);
+        auto hit = M_shape.ray_intersect(local_ray, max_distance);
         if (hit)
         {
             hit->pos = M_orientation * hit->pos + M_position;
@@ -856,14 +875,14 @@ public:
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const
     {
         auto local_point = M_orientation.conjugate() * (point - M_position);
-        return M_orientation * M_shape->closest_point(local_point) + M_position;
+        return M_orientation * M_shape.closest_point(local_point) + M_position;
     }
 
     /// @brief Point containment test in world space.
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const
     {
         auto local_point = M_orientation.conjugate() * (point - M_position);
-        return M_shape->contains(local_point);
+        return M_shape.contains(local_point);
     }
 
     /// @brief Gathers indices of triangles whose vertices overlap the given world-space sphere.
@@ -873,7 +892,7 @@ public:
             .center = M_orientation.conjugate() * (sphere.center - M_position),
             .radius = sphere.radius,
         };
-        return M_shape->overlap_sphere(local_sphere);
+        return M_shape.overlap_sphere(local_sphere);
     }
 
     /// @brief GJK support function in world space. Rotates the direction into
@@ -881,7 +900,7 @@ public:
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
     {
         auto local_dir = M_orientation.conjugate() * direction;
-        return M_orientation * M_shape->support(local_dir) + M_position;
+        return M_orientation * M_shape.support(local_dir) + M_position;
     }
 
     /// @brief Rotate the local-frame inertia tensor into the world frame: I_world = R I_local R^T.
@@ -889,13 +908,31 @@ public:
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
     {
         auto R = M_orientation.to_rotation_matrix(); // NOLINT
-        return R * M_shape->inertia_tensor(density) * R.transpose();
+        return R * M_shape.inertia_tensor(density) * R.transpose();
     }
 
 private:
-    const shape *M_shape; // NOLINT
+    shape M_shape;
     vec3<si::metre> M_position;
     quat<one> M_orientation;
 };
+
+/// @brief Create an instance view of this mesh at the given position and orientation.
+inline instance mesh::at(const vec3<si::metre> &position, const quat<one> &orientation) const
+{ return {ptr(), position, orientation}; }
+
+inline instance box::at(const vec3<si::metre> &position, const quat<one> &orientation) const
+{ return {*this, position, orientation}; }
+inline instance sphere::at(const vec3<si::metre> &position, const quat<one> &orientation) const
+{ return {*this, position, orientation}; }
+inline instance cylinder::at(const vec3<si::metre> &position, const quat<one> &orientation) const
+{ return {*this, position, orientation}; }
+inline instance cone::at(const vec3<si::metre> &position, const quat<one> &orientation) const
+{ return {*this, position, orientation}; }
+inline instance pyramid::at(const vec3<si::metre> &position, const quat<one> &orientation) const
+{ return {*this, position, orientation}; }
+
+inline instance shape::at(const vec3<si::metre> &pos, const quat<one> &orientation) const
+{ return {*this, pos, orientation}; }
 
 } // namespace physkit

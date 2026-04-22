@@ -622,7 +622,8 @@ public:
     std::shared_ptr<GL::Mesh> get_mesh(const physkit::shape &phys_shape)
     {
         auto shared = &phys_shape;
-        if (auto it = M_phys_shape_map.find(shared); it != M_phys_shape_map.end()) return it->second;
+        if (auto it = M_phys_shape_map.find(shared); it != M_phys_shape_map.end())
+            return it->second;
         auto mesh = std::make_shared<GL::Mesh>(to_magnum_mesh(phys_shape));
         M_phys_shape_map[std::move(shared)] = mesh;
         return mesh;
@@ -1184,8 +1185,7 @@ private:
     std::unique_ptr<physkit::world_base> M_world;
     physkit::stepper M_stepper;
     camera M_cam;
-    std::unordered_map<const physkit::shape *, std::shared_ptr<GL::Mesh>>
-        M_phys_shape_map;
+    std::unordered_map<const physkit::shape *, std::shared_ptr<GL::Mesh>> M_phys_shape_map;
     std::unordered_map<std::shared_ptr<GL::Mesh>, instanced_drawables *> M_mesh_drawables;
     std::vector<physics_obj *> M_physics_objs;
     std::unordered_map<Key, key_state> M_keys;
@@ -1238,21 +1238,21 @@ inline auto cube()
 inline auto sphere(unsigned int subdivisions = 3)
 { return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions))); }
 
-    inline auto cylinder(unsigned int rings, unsigned int segments, float half_length,
-                         bool include_caps = true)
-    {
-        return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cylinderSolid(
-            rings, segments, half_length,
-            include_caps ? Primitives::CylinderFlag::CapEnds : Primitives::CylinderFlag{})));
-    }
+inline auto cylinder(unsigned int rings, unsigned int segments, float half_length,
+                     bool include_caps = true)
+{
+    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cylinderSolid(
+        rings, segments, half_length,
+        include_caps ? Primitives::CylinderFlag::CapEnds : Primitives::CylinderFlag{})));
+}
 
-    inline auto cone(unsigned int rings, unsigned int segments, float half_length)
-    {
-        return std::make_shared<GL::Mesh>(
-            MeshTools::compile(Primitives::coneSolid(rings, segments, half_length)));
-    }
+inline auto cone(unsigned int rings, unsigned int segments, float half_length)
+{
+    return std::make_shared<GL::Mesh>(
+        MeshTools::compile(Primitives::coneSolid(rings, segments, half_length)));
+}
 
-    inline auto plane()
-    { return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
-    }; // namespace mesh_objs
+inline auto plane()
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
+}; // namespace mesh_objs
 } // namespace graphics

@@ -17,7 +17,7 @@ static constexpr auto frame_ds = 5.0 * ms;
 
 static auto no_gravity() { return world_desc::make().with_gravity(vec3{0, 0, 0} * m / s / s); }
 
-const auto box_mesh = mesh::box(vec3{1, 1, 1} * m);
+const auto box_mesh = box(vec3{1, 1, 1} * m);
 
 // =====================================================================
 // Temporal awaitables
@@ -361,11 +361,11 @@ void collision()
     auto a = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{1, 0, 0} * m / s)
                                 .with_pos(vec3{-1, 0, 0} * m)
-                                .with_mesh(box_mesh));
+                                .with_shape(box_mesh));
     auto b = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{-1, 0, 0} * m / s)
                                 .with_pos(vec3{1, 0, 0} * m)
-                                .with_mesh(box_mesh));
+                                .with_shape(box_mesh));
     auto t = [](object_handle a, object_handle b) -> task<>
     {
         auto col = *co_await wait_for_collision(a);
@@ -386,15 +386,15 @@ void collision_with_specific_object()
     auto a = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{1, 0, 0} * m / s)
                                 .with_pos(vec3{-1, 0, 0} * m)
-                                .with_mesh(box_mesh));
+                                .with_shape(box_mesh));
     auto b = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{-1, 0, 0} * m / s)
                                 .with_pos(vec3{1, 0, 0} * m)
-                                .with_mesh(box_mesh));
+                                .with_shape(box_mesh));
     auto c = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{0, 0, 0} * m / s)
                                 .with_pos(vec3{0, 10, 0} * m) // Far away
-                                .with_mesh(box_mesh));
+                                .with_shape(box_mesh));
 
     static bool completed_ab = false;
     static bool completed_ac = false;
@@ -435,7 +435,7 @@ void collision_stale_handle()
 
     // Create then destroy to get a stale (generation-mismatched) handle
     auto stale =
-        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
+        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_shape(box_mesh));
     w.remove_rigid(stale);
 
     static bool caught = false;
@@ -460,7 +460,7 @@ void separation_stale_handle()
     world w(no_gravity());
 
     auto stale =
-        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
+        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_shape(box_mesh));
     w.remove_rigid(stale);
 
     static bool caught = false;
@@ -488,7 +488,8 @@ void destroyed_awaitable()
 {
     world w(no_gravity());
 
-    auto obj = w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
+    auto obj =
+        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_shape(box_mesh));
 
     static bool completed = false;
     completed = false;
@@ -518,7 +519,7 @@ void destroyed_stale_handle()
     world w(no_gravity());
 
     auto stale =
-        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
+        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_shape(box_mesh));
     w.remove_rigid(stale);
 
     static bool caught = false;
@@ -718,7 +719,7 @@ void wait_for_any_collision_or_timeout()
 
     // Objects far apart — they won't collide within the timeout
     auto a =
-        w.create_rigid(object_desc::dynam().with_pos(vec3{-100, 0, 0} * m).with_mesh(box_mesh));
+        w.create_rigid(object_desc::dynam().with_pos(vec3{-100, 0, 0} * m).with_shape(box_mesh));
 
     static bool completed = false;
     completed = false;
@@ -751,7 +752,7 @@ void create_rigid_command()
     auto t = []() -> task<>
     {
         auto h = *co_await create_rigid(
-            object_desc::dynam().with_pos(vec3{5, 5, 5} * m).with_mesh(box_mesh));
+            object_desc::dynam().with_pos(vec3{5, 5, 5} * m).with_shape(box_mesh));
         auto *obj = *co_await get_rigid(h);
         CHECK_APPROX(obj->pos().x(), 5.0 * m);
         CHECK_APPROX(obj->pos().y(), 5.0 * m);
@@ -769,7 +770,8 @@ void destroy_rigid_command()
 {
     world w(no_gravity());
 
-    auto obj = w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
+    auto obj =
+        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_shape(box_mesh));
 
     static bool completed = false;
     completed = false;
@@ -796,7 +798,7 @@ void get_rigid_stale()
     world w(no_gravity());
 
     auto stale =
-        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_mesh(box_mesh));
+        w.create_rigid(object_desc::dynam().with_pos(vec3{0, 0, 0} * m).with_shape(box_mesh));
     w.remove_rigid(stale);
 
     static bool completed = false;
@@ -827,7 +829,7 @@ void create_and_destroy_in_coroutine()
     {
         // Create, verify, destroy, verify gone — full lifecycle
         auto h = *co_await create_rigid(
-            object_desc::dynam().with_pos(vec3{1, 2, 3} * m).with_mesh(box_mesh));
+            object_desc::dynam().with_pos(vec3{1, 2, 3} * m).with_shape(box_mesh));
         CHECK((co_await get_rigid(h)).has_value());
 
         co_await destroy_rigid(h);
@@ -1000,11 +1002,11 @@ void destroyed_triggers_during_collision()
     auto a = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{1, 0, 0} * m / s)
                                 .with_pos(vec3{-1, 0, 0} * m)
-                                .with_mesh(box_mesh));
+                                .with_shape(box_mesh));
     auto b = w.create_rigid(object_desc::dynam()
                                 .with_vel(vec3{-1, 0, 0} * m / s)
                                 .with_pos(vec3{1, 0, 0} * m)
-                                .with_mesh(box_mesh));
+                                .with_shape(box_mesh));
 
     static bool collided = false;
     collided = false;

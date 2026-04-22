@@ -93,22 +93,22 @@ private:
         anchor.orientation(target_rot);
     }
 
-    task<> make_rail(std::shared_ptr<physkit::mesh> msh, vec3<si::metre> pos, Color3 color)
+    task<> make_rail(physkit::shape msh, vec3<si::metre> pos, Color3 color)
     {
         co_await add_rigid(object_desc::stat()
-                               .with_mesh(std::move(msh))
+                               .with_shape(std::move(msh))
                                .with_pos(pos)
                                .with_restitution(0.75)
                                .with_friction(0.3),
                            color);
     }
 
-    task<world_base::handle> make_ball(std::shared_ptr<physkit::mesh> ball,
+    task<world_base::handle> make_ball(physkit::shape ball,
                                        physkit::quantity<si::kilogram, double> ball_mass,
                                        vec3<si::metre> pos, Color3 color)
     {
         co_return (*co_await add_rigid(object_desc::dynam()
-                                           .with_mesh(std::move(ball))
+                                           .with_shape(std::move(ball))
                                            .with_pos(pos)
                                            .with_mass(ball_mass)
                                            .with_restitution(0.9)
@@ -123,19 +123,18 @@ private:
         auto initial_pos = vec3{0.0, 5.0, 0.0} * m;
         auto anchor_handle =
             *co_await create_rigid(object_desc::stat()
-                                       .with_mesh(mesh::box(vec3{0.001, 0.001, 0.001} * m))
+                                       .with_shape(box(vec3{0.001, 0.001, 0.001} * m))
                                        .with_pos(initial_pos));
 
         // --- Stick ---
-        auto stick_handle =
-            (*co_await add_rigid(object_desc::dynam()
-                                     .with_mesh(mesh::box(vec3{0.005, 0.75, 0.005} * m))
-                                     .with_pos(initial_pos)
-                                     .with_mass(.5 * kg)
-                                     .with_restitution(1)
-                                     .with_friction(0.05),
-                                 Color3{0.72f, 0.53f, 0.2f}))
-                ->handle();
+        auto stick_handle = (*co_await add_rigid(object_desc::dynam()
+                                                     .with_shape(box(vec3{0.005, 0.75, 0.005} * m))
+                                                     .with_pos(initial_pos)
+                                                     .with_mass(.5 * kg)
+                                                     .with_restitution(1)
+                                                     .with_friction(0.05),
+                                                 Color3{0.72f, 0.53f, 0.2f}))
+                                ->handle();
 
         // --- Constraint ---
         auto &anchor_obj = **co_await get_rigid(anchor_handle);
@@ -157,17 +156,17 @@ private:
                 .with_damping(15.0 * kg / s)};
 
         // --- Table ---
-        auto felt_mesh = mesh::box(vec3{0.8, 0.1, 1.6} * m);
+        auto felt_mesh = box(vec3{0.8, 0.1, 1.6} * m);
         auto felt_pos = vec3{0.0, -0.1, 0.0} * m;
 
         co_await add_rigid(object_desc::stat()
-                               .with_mesh(felt_mesh)
+                               .with_shape(felt_mesh)
                                .with_pos(felt_pos)
                                .with_restitution(0.3)
                                .with_friction(0.6),
                            Color3{0.1f, 0.45f, 0.15f});
 
-        auto felt_bounds = felt_mesh->bounds();
+        auto felt_bounds = felt_mesh.bounds();
         auto felt_hx = (felt_bounds.max.x() - felt_bounds.min.x()) * 0.5;
         auto felt_hz = (felt_bounds.max.z() - felt_bounds.min.z()) * 0.5;
 
@@ -178,10 +177,10 @@ private:
         // Top of felt is at y = 0.0m
         // We center rails at y = 0.0m so their tops are at 0.05m
         auto rail_fb_hx = felt_hx - pocket_r;
-        auto rail_fb = mesh::box(vec3{rail_fb_hx, rail_h, rail_t});
+        auto rail_fb = box(vec3{rail_fb_hx, rail_h, rail_t});
 
         auto rail_lr_hz = (felt_hz - 2.0 * pocket_r) * 0.5;
-        auto rail_lr = mesh::box(vec3{rail_t, rail_h, rail_lr_hz});
+        auto rail_lr = box(vec3{rail_t, rail_h, rail_lr_hz});
         auto lr_z_offset = pocket_r + rail_lr_hz;
 
         Color3 wood{0.45f, 0.25f, 0.1f};
@@ -195,11 +194,11 @@ private:
         co_await make_rail(rail_lr, vec3{felt_hx + rail_t, 0.0 * m, lr_z_offset}, wood);
 
         // --- Balls ---
-        auto ball = mesh::sphere(0.0285 * m, 16, 24);
+        auto ball = sphere(0.0285 * m);
         auto ball_mass = 0.17 * kg;
 
         // Cue ball
-        auto ball_bounds = ball->bounds();
+        auto ball_bounds = ball.bounds();
         auto ball_radius = (ball_bounds.max.x() - ball_bounds.min.x()) * 0.5;
         double sp = (ball_bounds.max.x() - ball_bounds.min.x()).numerical_value_in(m) +
                     0.001; // just over diameter

@@ -60,5 +60,5 @@ public:
 
 std::optional<collision_info> gjk_epa(detail::SupportShape auto const &a,
                                       detail::SupportShape auto const &b);
-std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b);
+// std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b);
 } // namespace physkit

@@ -525,155 +525,157 @@ INSTANTIATE_GJK_EPA(obb, obb)
 INSTANTIATE_GJK_EPA(aabb, aabb)
 INSTANTIATE_GJK_EPA(obb, aabb)
 INSTANTIATE_GJK_EPA(aabb, obb)
-INSTANTIATE_GJK_EPA(mesh::instance, mesh::instance)
-INSTANTIATE_GJK_EPA(physkit::instance, physkit::instance)
-INSTANTIATE_GJK_EPA(aabb, mesh::instance)
-INSTANTIATE_GJK_EPA(mesh::instance, aabb)
-INSTANTIATE_GJK_EPA(obb, mesh::instance)
-INSTANTIATE_GJK_EPA(mesh::instance, obb)
+INSTANTIATE_GJK_EPA(instance, instance)
+INSTANTIATE_GJK_EPA(aabb, instance)
+INSTANTIATE_GJK_EPA(instance, aabb)
+INSTANTIATE_GJK_EPA(obb, instance)
+INSTANTIATE_GJK_EPA(instance, obb)
 
 #undef INSTANTIATE_GJK_EPA
 
-std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
-{
-    // could be made faster if unique edges were stored in mesh.
-    // SAT must be performed on 2 convex meshes.
+// std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
+// {
+//     // could be made faster if unique edges were stored in mesh.
+//     // SAT must be performed on 2 convex meshes.
 
-    // need to compare projected intersection across every axis of the follosing types
-    // 1. The normal of every face from both meshes.
-    // 2. The cross product of every edge from mesh A with every edge from mesh B
+//     // need to compare projected intersection across every axis of the follosing types
+//     // 1. The normal of every face from both meshes.
+//     // 2. The cross product of every edge from mesh A with every edge from mesh B
 
-    // can optimize by removing parallel axes
+//     // can optimize by removing parallel axes
 
-    constexpr auto eps = 1e-12;
+//     constexpr auto eps = 1e-12;
 
-    auto a_tris = a.geometry().triangles();
-    auto b_tris = b.geometry().triangles();
-    auto sum_triangle_count = a_tris.size() + b_tris.size();
+//     auto a_tris = a.geometry().triangles();
+//     auto b_tris = b.geometry().triangles();
+//     auto sum_triangle_count = a_tris.size() + b_tris.size();
 
-    // the variables related to edge count assume the following:
-    //  Polyhedra are convex
-    //  All faces are triangles
-    //  Edges are manifold (each edge belongs to exactly 2 faces)
-    //  all verticies of every triangle are ordered CCW such that the norm generated using vertex 0
-    //      as the base points away from the center
+//     // the variables related to edge count assume the following:
+//     //  Polyhedra are convex
+//     //  All faces are triangles
+//     //  Edges are manifold (each edge belongs to exactly 2 faces)
+//     //  all verticies of every triangle are ordered CCW such that the norm generated using vertex
+//     0
+//     //      as the base points away from the center
 
-    // The edge count for mesh A
-    auto a_edge_count = (a_tris.size() * 3) / 2;
-    // The edge count for mesh B
-    auto b_edge_count = (b_tris.size() * 3) / 2;
-    // The total number of unique edges in both meshes.
-    auto sum_edge_count = ((sum_triangle_count * 3) / 2);
-    auto sum_vertex_count = ((sum_triangle_count * 3) / 2);
-    // The maximum possible number of separating axes.
-    auto max_axes = (a_edge_count * b_edge_count) + sum_triangle_count;
+//     // The edge count for mesh A
+//     auto a_edge_count = (a_tris.size() * 3) / 2;
+//     // The edge count for mesh B
+//     auto b_edge_count = (b_tris.size() * 3) / 2;
+//     // The total number of unique edges in both meshes.
+//     auto sum_edge_count = ((sum_triangle_count * 3) / 2);
+//     auto sum_vertex_count = ((sum_triangle_count * 3) / 2);
+//     // The maximum possible number of separating axes.
+//     auto max_axes = (a_edge_count * b_edge_count) + sum_triangle_count;
 
-    auto a_vertices = a.geometry().vertices(); // std::span<const vec3<si::metre>>
-    auto b_vertices = b.geometry().vertices();
+//     auto a_vertices = a.geometry().vertices(); // std::span<const vec3<si::metre>>
+//     auto b_vertices = b.geometry().vertices();
 
-    // extra collision info
-    auto info = collision_info();
-    info.depth = quantity<si::metre>::max();
+//     // extra collision info
+//     auto info = collision_info();
+//     info.depth = quantity<si::metre>::max();
 
-    // returns a pair of the min and max value of a a set of verticies projected along an axis.
-    auto project_mesh = [](auto const &axis, auto const &vertices)
-    {
-        // the divide by |axis| can be omitted from the difference
-        // the axis's units are si::metre^2
-        auto minv = vertices[0];
-        auto maxv = minv;
-        auto minc = axis.dot(minv);
-        auto maxc = minc;
-        for (size_t i = 1; i < vertices.size(); ++i)
-        {
-            auto p = axis.dot(vertices[i]);
-            if (p < minc)
-            {
-                minv = vertices[i];
-                minc = p;
-            }
-            else if (p > maxc)
-            {
-                maxv = vertices[i];
-                maxc = p;
-            }
-        }
-        return std::tuple{minv, maxv, minc, maxc};
-    };
+//     // returns a pair of the min and max value of a a set of verticies projected along an axis.
+//     auto project_mesh = [](auto const &axis, auto const &vertices)
+//     {
+//         // the divide by |axis| can be omitted from the difference
+//         // the axis's units are si::metre^2
+//         auto minv = vertices[0];
+//         auto maxv = minv;
+//         auto minc = axis.dot(minv);
+//         auto maxc = minc;
+//         for (size_t i = 1; i < vertices.size(); ++i)
+//         {
+//             auto p = axis.dot(vertices[i]);
+//             if (p < minc)
+//             {
+//                 minv = vertices[i];
+//                 minc = p;
+//             }
+//             else if (p > maxc)
+//             {
+//                 maxv = vertices[i];
+//                 maxc = p;
+//             }
+//         }
+//         return std::tuple{minv, maxv, minc, maxc};
+//     };
 
-    auto test_axis = [&](const vec3<one> &axis)
-    {
-        auto [a_minv, a_maxv, a_minc, a_maxc] = project_mesh(axis, a_vertices);
-        auto [b_minv, b_maxv, b_minc, b_maxc] = project_mesh(axis, b_vertices);
+//     auto test_axis = [&](const vec3<one> &axis)
+//     {
+//         auto [a_minv, a_maxv, a_minc, a_maxc] = project_mesh(axis, a_vertices);
+//         auto [b_minv, b_maxv, b_minc, b_maxc] = project_mesh(axis, b_vertices);
 
-        // checks if the axes have collision
-        auto overlap_unnormal = (std::min(a_maxc, b_maxc) - std::max(a_minc, b_minc));
+//         // checks if the axes have collision
+//         auto overlap_unnormal = (std::min(a_maxc, b_maxc) - std::max(a_minc, b_minc));
 
-        if (overlap_unnormal <= 0 * si::metre) return false; // no collision
+//         if (overlap_unnormal <= 0 * si::metre) return false; // no collision
 
-        if (overlap_unnormal < info.depth)
-        {
-            // new minimum overlap
-            info.depth = overlap_unnormal; // this is not the actual depth until it is normalized at
-                                           // the end. lazy normalization.
-            info.normal = axis;            // this is not the actual normal yet either
-            if (a_maxc > b_maxc)
-            {
-                info.world_a = a_minv;
-                info.world_b = b_maxv;
-            }
-            else
-            {
-                info.world_a = a_maxv;
-                info.world_b = b_minv;
-            }
-        };
-        return true;
-    };
+//         if (overlap_unnormal < info.depth)
+//         {
+//             // new minimum overlap
+//             info.depth = overlap_unnormal; // this is not the actual depth until it is normalized
+//             at
+//                                            // the end. lazy normalization.
+//             info.normal = axis;            // this is not the actual normal yet either
+//             if (a_maxc > b_maxc)
+//             {
+//                 info.world_a = a_minv;
+//                 info.world_b = b_maxv;
+//             }
+//             else
+//             {
+//                 info.world_a = a_maxv;
+//                 info.world_b = b_minv;
+//             }
+//         };
+//         return true;
+//     };
 
-    // if unique edges were stored in mesh this would be 4 times more efficient.
-    for (const auto &a_tri : a_tris)
-    {
-        auto a_ver = a_tri.vertices(a);
-        std::array<vec3<si::metre>, 3> a_edges = {(a_ver[1] - a_ver[0]), (a_ver[2] - a_ver[1]),
-                                                  (a_ver[0] - a_ver[2])};
+//     // if unique edges were stored in mesh this would be 4 times more efficient.
+//     for (const auto &a_tri : a_tris)
+//     {
+//         auto a_ver = a_tri.vertices(a);
+//         std::array<vec3<si::metre>, 3> a_edges = {(a_ver[1] - a_ver[0]), (a_ver[2] - a_ver[1]),
+//                                                   (a_ver[0] - a_ver[2])};
 
-        // Face axis
-        auto n = (a_edges[0]).cross(a_edges[1]) *
-                 (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
-        if (!test_axis(n)) return std::nullopt;
+//         // Face axis
+//         auto n = (a_edges[0]).cross(a_edges[1]) *
+//                  (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+//         if (!test_axis(n)) return std::nullopt;
 
-        for (const auto &b_tri : b_tris)
-        {
-            auto b_ver = b_tri.vertices(b);
-            std::array<vec3<si::metre>, 3> b_edges = {(b_ver[1] - b_ver[0]), (b_ver[2] - b_ver[1]),
-                                                      (b_ver[0] - b_ver[2])};
+//         for (const auto &b_tri : b_tris)
+//         {
+//             auto b_ver = b_tri.vertices(b);
+//             std::array<vec3<si::metre>, 3> b_edges = {(b_ver[1] - b_ver[0]), (b_ver[2] -
+//             b_ver[1]),
+//                                                       (b_ver[0] - b_ver[2])};
 
-            // Face axis
-            if (a_tri == a_tris.front())
-            { // once per tri
-                n = (b_edges[0]).cross(b_edges[1]) *
-                    (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
-                if (!test_axis(n)) return std::nullopt;
-            }
+//             // Face axis
+//             if (a_tri == a_tris.front())
+//             { // once per tri
+//                 n = (b_edges[0]).cross(b_edges[1]) *
+//                     (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+//                 if (!test_axis(n)) return std::nullopt;
+//             }
 
-            // edge cross axes
-            for (size_t i = 0; i < 3; i++)
-            {
-                for (size_t j = 0; j < 3; j++)
-                {
-                    n = (a_edges[i]).cross(b_edges[j]) *
-                        (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+//             // edge cross axes
+//             for (size_t i = 0; i < 3; i++)
+//             {
+//                 for (size_t j = 0; j < 3; j++)
+//                 {
+//                     n = (a_edges[i]).cross(b_edges[j]) *
+//                         (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
 
-                    if (n.squared_norm() < eps) continue; // near 0 axis.
-                    if (!test_axis(n)) return std::nullopt;
-                }
-            }
-        }
-    }
+//                     if (n.squared_norm() < eps) continue; // near 0 axis.
+//                     if (!test_axis(n)) return std::nullopt;
+//                 }
+//             }
+//         }
+//     }
 
-    info.depth /= info.normal.norm();
-    info.normal = info.normal.normalized();
-    return info;
-}
+//     info.depth /= info.normal.norm();
+//     info.normal = info.normal.normalized();
+//     return info;
+// }
 } // namespace physkit

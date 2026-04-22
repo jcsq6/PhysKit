@@ -21,10 +21,10 @@
 #include <Magnum/Math/Vector.h>
 #include <Magnum/Math/Vector3.h>
 #include <Magnum/MeshTools/Compile.h>
-#include <Magnum/PixelFormat.h>
 #include <Magnum/MeshTools/Concatenate.h>
 #include <Magnum/MeshTools/Copy.h>
 #include <Magnum/MeshTools/Transform.h>
+#include <Magnum/PixelFormat.h>
 #include <Magnum/Platform/GlfwApplication.h>
 #include <Magnum/Primitives/Circle.h>
 #include <Magnum/Primitives/Cone.h>

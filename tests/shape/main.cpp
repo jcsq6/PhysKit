@@ -2359,7 +2359,8 @@ void test_shape_from_box()
 
 void test_shape_from_mesh()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
+    auto msh = mesh::make(
+        {vec3{1.0, 1.0, 1.0} * m, vec3{1.0, 1.0, -1.0} * m, vec3{1.0, -1.0, 1.0} * m}, {{0, 1, 2}});
     shape s(msh);
     CHECK(s.type() == shape::type::mesh);
     CHECK_APPROX(s.volume(), msh->volume());

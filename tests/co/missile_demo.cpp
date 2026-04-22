@@ -48,28 +48,28 @@ public:
         using namespace mp_units::si::unit_symbols;
 
         // Ground
-        auto ground_mesh = mesh::box(vec3{50, 0.5, 30} * m);
+        auto ground_mesh = box(vec3{50, 0.5, 30} * m);
         auto ground = world().create_rigid(object_desc::stat()
                                                .with_pos(vec3{0, -0.5, 0} * m)
-                                               .with_mesh(ground_mesh)
+                                               .with_shape(ground_mesh)
                                                .with_restitution(0.3)
                                                .with_friction(0.8));
         add_object(ground, {0.3f, 0.4f, 0.3f});
 
         // Target wall on the right side
-        auto wall_mesh = mesh::box(vec3{1, 3, 4} * m);
+        auto wall_mesh = box(vec3{1, 3, 4} * m);
         auto wall = world().create_rigid(object_desc::stat()
                                              .with_pos(vec3{12, 3, 0} * m)
-                                             .with_mesh(wall_mesh)
+                                             .with_shape(wall_mesh)
                                              .with_restitution(0.2)
                                              .with_friction(0.7));
         add_object(wall, {0.55f, 0.5f, 0.45f});
 
         // Small bunker on the left
-        auto bunker_mesh = mesh::box(vec3{2, 1.5, 3} * m);
+        auto bunker_mesh = box(vec3{2, 1.5, 3} * m);
         auto bunker = world().create_rigid(object_desc::stat()
                                                .with_pos(vec3{-10, 1.5, 0} * m)
-                                               .with_mesh(bunker_mesh)
+                                               .with_shape(bunker_mesh)
                                                .with_restitution(0.2)
                                                .with_friction(0.7));
         add_object(bunker, {0.5f, 0.45f, 0.4f});
@@ -89,7 +89,7 @@ private:
                                    double up_speed, float debris_size, Color3 base_color)
     {
         using namespace mp_units::si::unit_symbols;
-        auto dmesh = mesh::box(vec3{1, 1, 1} * debris_size * m);
+        auto dmesh = box(vec3{1, 1, 1} * debris_size * m);
 
         std::vector<physics_obj *> debris_handles;
         debris_handles.reserve(count);
@@ -107,7 +107,7 @@ private:
                     .with_ang_vel(vec3{10.0 * std::sin(angle), 5.0, 10.0 * std::cos(angle)} * rad /
                                   s)
                     .with_mass(0.05 * kg)
-                    .with_mesh(dmesh)
+                    .with_shape(dmesh)
                     .with_restitution(0.5)
                     .with_friction(0.4));
 
@@ -133,13 +133,13 @@ private:
     {
         using namespace mp_units::si::unit_symbols;
 
-        auto gmesh = mesh::sphere(0.3 * m, 8, 16);
+        auto gmesh = sphere(0.3 * m);
         auto gh = *co_await create_rigid(object_desc::dynam()
                                              .with_pos(origin)
                                              .with_vel(velocity)
                                              .with_ang_vel(vec3{5, 2, 3} * rad / s)
                                              .with_mass(0.5 * kg)
-                                             .with_mesh(gmesh)
+                                             .with_shape(gmesh)
                                              .with_restitution(0.4)
                                              .with_friction(0.5));
         auto *gfx = self->add_object(gh, {0.2f, 0.35f, 0.15f});
@@ -206,13 +206,13 @@ private:
                   bool explode_on_impact = false)
     {
         using namespace mp_units::si::unit_symbols;
-        auto mmesh = mesh::box(vec3{0.6, 0.15, 0.15} * m);
+        auto mmesh = box(vec3{0.6, 0.15, 0.15} * m);
 
         auto mh = *co_await create_rigid(object_desc::dynam()
                                              .with_pos(origin)
                                              .with_vel(initial_vel)
                                              .with_mass(2.0 * kg)
-                                             .with_mesh(mmesh)
+                                             .with_shape(mmesh)
                                              .with_restitution(0.1)
                                              .with_friction(0.3));
         auto *gfx = self->add_object(mh, {0.8f, 0.3f, 0.1f});
@@ -226,13 +226,13 @@ private:
                               vec3<si::metre / si::second> initial_vel, Color3 body_color)
     {
         using namespace mp_units::si::unit_symbols;
-        auto mmesh = mesh::box(vec3{0.4, 0.1, 0.1} * m);
+        auto mmesh = box(vec3{0.4, 0.1, 0.1} * m);
 
         auto mh = *co_await create_rigid(object_desc::dynam()
                                              .with_pos(origin)
                                              .with_vel(initial_vel)
                                              .with_mass(1.0 * kg)
-                                             .with_mesh(mmesh)
+                                             .with_shape(mmesh)
                                              .with_restitution(0.1)
                                              .with_friction(0.3));
         auto *gfx = self->add_object(mh, body_color);
@@ -249,12 +249,12 @@ private:
         using namespace mp_units::si::unit_symbols;
 
         // Launch carrier rocket upward
-        auto carrier_mesh = mesh::box(vec3{0.25, .75, 0.25} * m);
+        auto carrier_mesh = box(vec3{0.25, .75, 0.25} * m);
         auto carrier_h = *co_await create_rigid(object_desc::dynam()
                                                     .with_pos(launch_pos)
                                                     .with_vel(vec3{0, 20, 0} * m / s)
                                                     .with_mass(5.0 * kg)
-                                                    .with_mesh(carrier_mesh)
+                                                    .with_shape(carrier_mesh)
                                                     .with_restitution(0.1)
                                                     .with_friction(0.3));
         auto *carrier_gfx = self->add_object(carrier_h, {0.4f, 0.4f, 0.5f});

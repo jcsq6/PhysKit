@@ -459,9 +459,9 @@ void epa_obb_aabb_containment_depth()
 void epa_mesh_box_box_depth()
 {
     // Two box meshes (half-extents 1m), 1.5m apart on X → depth 0.5m
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{1.5, 0.0, 0.0} * m);
+    auto msh = box(vec3{1.0, 1.0, 1.0} * m);
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{1.5, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.5 * m, depth_tol);
@@ -472,10 +472,10 @@ void epa_mesh_box_box_containment_depth()
 {
     // outer half=3, inner half=0.5, both at origin
     // D = [-3.5, 3.5]^3. Depth = 3.5m
-    auto outer = mesh::box(vec3{3.0, 3.0, 3.0} * m);
-    auto inner = mesh::box(vec3{0.5, 0.5, 0.5} * m);
-    auto a = outer->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = inner->at(vec3{0.0, 0.0, 0.0} * m);
+    auto outer = box(vec3{3.0, 3.0, 3.0} * m);
+    auto inner = box(vec3{0.5, 0.5, 0.5} * m);
+    auto a = outer.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = inner.at(vec3{0.0, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 3.5 * m, depth_tol);
@@ -484,8 +484,8 @@ void epa_mesh_box_box_containment_depth()
 
 void epa_mesh_box_box_identical_depth()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
+    auto msh = box(vec3{1.0, 1.0, 1.0} * m);
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto result = gjk_epa(a, a);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 2.0 * m, depth_tol);
@@ -494,9 +494,9 @@ void epa_mesh_box_box_identical_depth()
 
 void epa_mesh_box_box_normal_direction()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{1.5, 0.0, 0.0} * m);
+    auto msh = box(vec3{1.0, 1.0, 1.0} * m);
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{1.5, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(std::abs(result->normal.x().numerical_value_in(one)) > 0.9);
@@ -504,9 +504,9 @@ void epa_mesh_box_box_normal_direction()
 
 void epa_mesh_box_box_symmetry()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{1.5, 0.0, 0.0} * m);
+    auto msh = box(vec3{1.0, 1.0, 1.0} * m);
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{1.5, 0.0, 0.0} * m);
     auto r1 = gjk_epa(a, b);
     auto r2 = gjk_epa(b, a);
     CHECK(r1.has_value());
@@ -516,11 +516,11 @@ void epa_mesh_box_box_symmetry()
 
 void epa_mesh_box_box_rotated_mtv()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
+    auto msh = box(vec3{1.0, 1.0, 1.0} * m);
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{1.0, 0.0, 0.0} * m, rot);
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{1.0, 0.0, 0.0} * m, rot);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(result->depth > 0.0 * m);
@@ -528,16 +528,16 @@ void epa_mesh_box_box_rotated_mtv()
     // Verify MTV separates: normal points B→A, so move A by +normal * depth
     constexpr auto nudge = 1e-3 * m;
     auto offset = result->normal * (result->depth + nudge);
-    auto a_moved = msh->at(offset);
+    auto a_moved = msh.at(offset);
     CHECK(!gjk_epa(a_moved, b).has_value());
 }
 
 void epa_mesh_sphere_sphere_depth()
 {
     // Two unit spheres 1.5m apart → expected depth ~0.5m
-    auto sph = mesh::sphere(1.0 * m);
-    auto a = sph->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph->at(vec3{1.5, 0.0, 0.0} * m);
+    auto sph = sphere(1.0 * m);
+    auto a = sph.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph.at(vec3{1.5, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.5 * m, mesh_tol);
@@ -546,9 +546,9 @@ void epa_mesh_sphere_sphere_depth()
 
 void epa_mesh_sphere_sphere_normal()
 {
-    auto sph = mesh::sphere(1.0 * m);
-    auto a = sph->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph->at(vec3{1.5, 0.0, 0.0} * m);
+    auto sph = shape(sphere(1.0 * m));
+    auto a = sph.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph.at(vec3{1.5, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(std::abs(result->normal.x().numerical_value_in(one)) > 0.8);
@@ -558,9 +558,9 @@ void epa_mesh_sphere_sphere_diagonal()
 {
     // Two unit spheres along (1,1,0), distance sqrt(2)
     // depth ≈ 2 - sqrt(2) ≈ 0.586m
-    auto sph = mesh::sphere(1.0 * m);
-    auto a = sph->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph->at(vec3{1.0, 1.0, 0.0} * m);
+    auto sph = shape(sphere(1.0 * m));
+    auto a = sph.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph.at(vec3{1.0, 1.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     auto expected_depth = (2.0 - std::numbers::sqrt2) * m;
@@ -571,10 +571,10 @@ void epa_mesh_sphere_sphere_diagonal()
 void epa_mesh_box_sphere_depth()
 {
     // Unit box at origin, unit sphere at (1.5, 0, 0)
-    auto box_msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto sph_msh = mesh::sphere(1.0 * m);
-    auto a = box_msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph_msh->at(vec3{1.5, 0.0, 0.0} * m);
+    auto box_msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto sph_msh = shape(sphere(1.0 * m));
+    auto a = box_msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph_msh.at(vec3{1.5, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK_APPROX(result->depth, 0.5 * m, mesh_tol);
@@ -582,14 +582,14 @@ void epa_mesh_box_sphere_depth()
 }
 
 // ============================================================
-// EPA with mesh::pyramid
+// EPA with pyramid
 // ============================================================
 
 void epa_pyramid_depth_overlap()
 {
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = pyr->at(vec3{0.0, 1.5, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{0.0, 1.5, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(result->depth > 0.0 * m);
@@ -598,39 +598,39 @@ void epa_pyramid_depth_overlap()
 
 void epa_pyramid_mtv_separates()
 {
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = pyr->at(vec3{0.0, 1.5, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{0.0, 1.5, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     constexpr auto nudge = 1e-3 * m;
     auto offset = result->normal * (result->depth + nudge);
-    auto a_moved = pyr->at(offset);
+    auto a_moved = pyr.at(offset);
     CHECK(!gjk_epa(a_moved, b).has_value());
 }
 
 void epa_pyramid_box_mtv()
 {
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto box_msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = box_msh->at(vec3{0.0, 0.0, 0.0} * m);
+    auto pyr = shape(pyramid(1.0 * m, 2.0 * m));
+    auto box_msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box_msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(result->depth > 0.0 * m);
     check_unit_normal(result->normal);
     constexpr auto nudge = 1e-3 * m;
     auto offset = result->normal * (result->depth + nudge);
-    auto a_moved = pyr->at(offset);
+    auto a_moved = pyr.at(offset);
     CHECK(!gjk_epa(a_moved, b).has_value());
 }
 
 void epa_pyramid_flipped_depth()
 {
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
     auto rot = quat<one>::from_angle_axis(std::numbers::pi * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = pyr->at(vec3{0.0, 3.0, 0.0} * m, rot);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{0.0, 3.0, 0.0} * m, rot);
     auto result = gjk_epa(a, b);
     CHECK(result.has_value());
     CHECK(result->depth > 0.0 * m);
@@ -643,7 +643,7 @@ void epa_pyramid_flipped_depth()
 
 void epa_depth_always_positive()
 {
-    auto box_msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
+    auto box_msh = box(vec3{1.0, 1.0, 1.0} * m);
 
     struct config
     {
@@ -667,8 +667,8 @@ void epa_depth_always_positive()
 
     for (const auto &[pos_a, pos_b, rot_b] : configs)
     {
-        auto a = box_msh->at(pos_a);
-        auto b = box_msh->at(pos_b, rot_b);
+        auto a = box_msh.at(pos_a);
+        auto b = box_msh.at(pos_b, rot_b);
         auto result = gjk_epa(a, b);
         if (result.has_value())
         {
@@ -746,8 +746,8 @@ void epa_multiple_rotation_axes()
 
 void epa_mixed_mesh_aabb_mtv()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto inst = msh->at(vec3{0.0, 0.0, 0.0} * m);
+    auto msh = box(vec3{1.0, 1.0, 1.0} * m);
+    auto inst = msh.at(vec3{0.0, 0.0, 0.0} * m);
     aabb box{.min = vec3{0.5, -1.0, -1.0} * m, .max = vec3{2.5, 1.0, 1.0} * m};
     auto result = gjk_epa(inst, box);
     CHECK(result.has_value());
@@ -757,8 +757,8 @@ void epa_mixed_mesh_aabb_mtv()
 
 void epa_mixed_mesh_obb_mtv()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto inst = msh->at(vec3{0.0, 0.0, 0.0} * m);
+    auto msh = box(vec3{1.0, 1.0, 1.0} * m);
+    auto inst = msh.at(vec3{0.0, 0.0, 0.0} * m);
     obb o{vec3{1.5, 0.0, 0.0} * m, quat<one>::identity(), vec3{1.0, 1.0, 1.0} * m};
     auto result = gjk_epa(inst, o);
     CHECK(result.has_value());
@@ -829,7 +829,7 @@ int main()
         .test("sphere-sphere diagonal", epa_mesh_sphere_sphere_diagonal)
         .test("box-sphere depth", epa_mesh_box_sphere_depth);
 
-    s.group("EPA mesh::pyramid")
+    s.group("EPA pyramid")
         .test("overlap depth", epa_pyramid_depth_overlap)
         .test("MTV separates", epa_pyramid_mtv_separates)
         .test("pyramid-box MTV", epa_pyramid_box_mtv)

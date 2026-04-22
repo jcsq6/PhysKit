@@ -306,28 +306,28 @@ void collision_info_nullopt_when_separated()
 void mesh_instance_box_box_overlap()
 {
     // Two unit boxes (half-extents 1m), centers 1.5m apart on X → 0.5m overlap
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{1.5, 0.0, 0.0} * m);
+    auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{1.5, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value());
 }
 
 void mesh_instance_box_box_separated()
 {
     // Two unit boxes, centers 3m apart on X → 1m gap
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{3.0, 0.0, 0.0} * m);
+    auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{3.0, 0.0, 0.0} * m);
     CHECK(!gjk_epa(a, b).has_value());
 }
 
 void mesh_instance_box_box_containment()
 {
     // Small box fully inside larger box
-    auto outer = mesh::box(vec3{3.0, 3.0, 3.0} * m);
-    auto inner = mesh::box(vec3{0.5, 0.5, 0.5} * m);
-    auto a = outer->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = inner->at(vec3{0.0, 0.0, 0.0} * m);
+    auto outer = shape(box(vec3{3.0, 3.0, 3.0} * m));
+    auto inner = shape(box(vec3{0.5, 0.5, 0.5} * m));
+    auto a = outer.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = inner.at(vec3{0.0, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value());
     CHECK(gjk_epa(b, a).has_value());
 }
@@ -335,58 +335,58 @@ void mesh_instance_box_box_containment()
 void mesh_instance_box_box_same_instance()
 {
     // Same instance at same position: Minkowski difference contains origin
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
+    auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, a).has_value());
 }
 
 void mesh_instance_box_box_rotated_overlap()
 {
     // B rotated 45° around Z at (1,0,0): support in -x ≈ 1 - sqrt(2) ≈ -0.414 < 1 → overlap
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
+    auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{1.0, 0.0, 0.0} * m, rot);
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{1.0, 0.0, 0.0} * m, rot);
     CHECK(gjk_epa(a, b).has_value());
 }
 
 void mesh_instance_box_box_rotated_separated()
 {
     // B rotated 45° around Z at (3,0,0): support in -x ≈ 3 - sqrt(2) ≈ 1.586 > 1 → gap
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
+    auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{3.0, 0.0, 0.0} * m, rot);
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{3.0, 0.0, 0.0} * m, rot);
     CHECK(!gjk_epa(a, b).has_value());
 }
 
 void mesh_instance_sphere_sphere_overlap()
 {
     // Two unit spheres, centers 1.5m apart → 0.5m overlap (well within discretization error)
-    auto sph = mesh::sphere(1.0 * m);
-    auto a = sph->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph->at(vec3{1.5, 0.0, 0.0} * m);
+    auto sph = shape(sphere(1.0 * m));
+    auto a = sph.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph.at(vec3{1.5, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value());
 }
 
 void mesh_instance_sphere_sphere_separated()
 {
     // Two unit spheres, centers 3m apart → 1m gap
-    auto sph = mesh::sphere(1.0 * m);
-    auto a = sph->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph->at(vec3{3.0, 0.0, 0.0} * m);
+    auto sph = shape(sphere(1.0 * m));
+    auto a = sph.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph.at(vec3{3.0, 0.0, 0.0} * m);
     CHECK(!gjk_epa(a, b).has_value());
 }
 
 void mesh_instance_box_sphere_overlap()
 {
     // Unit box at origin, unit sphere center at (1.5,0,0): sphere reaches x=0.5 → 0.5m overlap
-    auto box_msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto sph_msh = mesh::sphere(1.0 * m);
-    auto a = box_msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph_msh->at(vec3{1.5, 0.0, 0.0} * m);
+    auto box_msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto sph_msh = shape(sphere(1.0 * m));
+    auto a = box_msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph_msh.at(vec3{1.5, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value());
     CHECK(gjk_epa(b, a).has_value());
 }
@@ -394,75 +394,75 @@ void mesh_instance_box_sphere_overlap()
 void mesh_instance_box_sphere_separated()
 {
     // Unit box at origin, unit sphere center at (3,0,0): sphere reaches x=2 → 1m gap
-    auto box_msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto sph_msh = mesh::sphere(1.0 * m);
-    auto a = box_msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph_msh->at(vec3{3.0, 0.0, 0.0} * m);
+    auto box_msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto sph_msh = shape(sphere(1.0 * m));
+    auto a = box_msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph_msh.at(vec3{3.0, 0.0, 0.0} * m);
     CHECK(!gjk_epa(a, b).has_value());
     CHECK(!gjk_epa(b, a).has_value());
 }
 
 void mesh_instance_symmetry_colliding()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{1.5, 0.0, 0.0} * m);
+    auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{1.5, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
 }
 
 void mesh_instance_symmetry_separated()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{4.0, 0.0, 0.0} * m);
+    auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{4.0, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
 }
 
 void mesh_instance_collision_info_nullopt_when_separated()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = msh->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = msh->at(vec3{4.0, 0.0, 0.0} * m);
+    auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
+    auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = msh.at(vec3{4.0, 0.0, 0.0} * m);
     CHECK(!gjk_epa(a, b).has_value());
 }
 
 // ============================================================
-// mesh::pyramid tests
+// pyramid tests
 // pyramid(base_half, height): base corners at (±base_half, 0, ±base_half), apex at (0, height, 0)
 // ============================================================
 
 void pyramid_pyramid_same_pos()
 {
     // Minkowski difference of a shape with itself contains the origin
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, a).has_value());
 }
 
 void pyramid_pyramid_overlap_y()
 {
     // A: base y=0, apex y=2. B shifted 1.5m up: base y=1.5, apex y=3.5 → 0.5m overlap in y
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = pyr->at(vec3{0.0, 1.5, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{0.0, 1.5, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value());
 }
 
 void pyramid_pyramid_separated_y()
 {
     // A: base y=0, apex y=2. B at y=4: base y=4, apex y=6 → 2m gap
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = pyr->at(vec3{0.0, 4.0, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{0.0, 4.0, 0.0} * m);
     CHECK(!gjk_epa(a, b).has_value());
 }
 
 void pyramid_pyramid_separated_x()
 {
     // A: base x∈[-1,1]. B at x=4: base x∈[3,5] → 2m gap in x
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = pyr->at(vec3{4.0, 0.0, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{4.0, 0.0, 0.0} * m);
     CHECK(!gjk_epa(a, b).has_value());
 }
 
@@ -471,30 +471,30 @@ void pyramid_pyramid_flipped_overlap()
     // B rotated 180° around Z: apex maps to y=-2 in local space.
     // Placed at (0,3,0): world apex at y=1, world base at y=3.
     // A has apex at y=2 → overlap in y∈[1,2]
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
     auto rot = quat<one>::from_angle_axis(std::numbers::pi * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = pyr->at(vec3{0.0, 3.0, 0.0} * m, rot);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{0.0, 3.0, 0.0} * m, rot);
     CHECK(gjk_epa(a, b).has_value());
 }
 
 void pyramid_pyramid_flipped_separated()
 {
     // Same flip but B at (0,6,0): world apex at y=4, A apex at y=2 → 2m gap
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
     auto rot = quat<one>::from_angle_axis(std::numbers::pi * si::radian, vec3<one>{0.0, 0.0, 1.0});
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = pyr->at(vec3{0.0, 6.0, 0.0} * m, rot);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{0.0, 6.0, 0.0} * m, rot);
     CHECK(!gjk_epa(a, b).has_value());
 }
 
 void pyramid_box_overlap()
 {
     // Pyramid y∈[0,2], unit box centered at origin y∈[-1,1] → shared region y∈[0,1]
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto box = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = box->at(vec3{0.0, 0.0, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    box box(vec3{1.0, 1.0, 1.0} * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box.at(vec3{0.0, 0.0, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value());
     CHECK(gjk_epa(b, a).has_value());
 }
@@ -502,10 +502,10 @@ void pyramid_box_overlap()
 void pyramid_box_separated()
 {
     // Pyramid base at y=0, box centered at y=-3 (y∈[-4,-2]) → 2m gap below the base
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto box = mesh::box(vec3{1.0, 1.0, 1.0} * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = box->at(vec3{0.0, -3.0, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    box box(vec3{1.0, 1.0, 1.0} * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box.at(vec3{0.0, -3.0, 0.0} * m);
     CHECK(!gjk_epa(a, b).has_value());
     CHECK(!gjk_epa(b, a).has_value());
 }
@@ -513,10 +513,10 @@ void pyramid_box_separated()
 void pyramid_sphere_overlap()
 {
     // Pyramid y∈[0,2], unit sphere centered at (0,1,0) y∈[0,2] → overlap
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto sph = mesh::sphere(1.0 * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph->at(vec3{0.0, 1.0, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto sph = sphere(1.0 * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph.at(vec3{0.0, 1.0, 0.0} * m);
     CHECK(gjk_epa(a, b).has_value());
     CHECK(gjk_epa(b, a).has_value());
 }
@@ -524,10 +524,10 @@ void pyramid_sphere_overlap()
 void pyramid_sphere_separated()
 {
     // Pyramid apex at y=2, unit sphere centered at y=5 (y∈[4,6]) → 2m gap
-    auto pyr = mesh::pyramid(1.0 * m, 2.0 * m);
-    auto sph = mesh::sphere(1.0 * m);
-    auto a = pyr->at(vec3{0.0, 0.0, 0.0} * m);
-    auto b = sph->at(vec3{0.0, 5.0, 0.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto sph = sphere(1.0 * m);
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = sph.at(vec3{0.0, 5.0, 0.0} * m);
     CHECK(!gjk_epa(a, b).has_value());
     CHECK(!gjk_epa(b, a).has_value());
 }
@@ -591,7 +591,7 @@ int main()
         .test("symmetry separated", mesh_instance_symmetry_separated)
         .test("nullopt when separated", mesh_instance_collision_info_nullopt_when_separated);
 
-    s.group("mesh::pyramid")
+    s.group("pyramid")
         .test("same pos", pyramid_pyramid_same_pos)
         .test("pyramid-pyramid overlap Y", pyramid_pyramid_overlap_y)
         .test("pyramid-pyramid separated Y", pyramid_pyramid_separated_y)

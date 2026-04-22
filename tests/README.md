@@ -541,7 +541,7 @@ auto pl     = mesh_objs::plane();                   // unit plane
 Use `get_mesh(physkit_mesh)` to create a GPU mesh from a physics mesh:
 
 ```cpp
-auto phys_mesh = physkit::mesh::box(vec3{1, 1, 1} * m);
+auto phys_mesh = physkit::box(vec3{1, 1, 1} * m);
 auto gl_mesh = get_mesh(*phys_mesh);
 ```
 
