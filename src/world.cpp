@@ -14,7 +14,9 @@ task_handler &awaiter::handler() const
 }
 
 has_waiter_field *task_handler::get_waiter_fields(handle_id_t object_id)
-{ return M_world->get_waiter_fields(object_id, {}); }
+{
+    return M_world->get_waiter_fields(object_id, {});
+}
 } // namespace detail
 
 void world::step_impl(const quantity<si::second> dt)

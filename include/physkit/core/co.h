@@ -220,7 +220,9 @@ struct task_promise_base
 
     template <awaitable Awaitable>
     detail::awaitable_awaiter_t<Awaitable> await_transform(Awaitable &&request)
-    { return {*this, std::forward<Awaitable>(request)}; }
+    {
+        return {*this, std::forward<Awaitable>(request)};
+    }
 
     auto await_transform(auto &&other) = delete;
 
@@ -292,11 +294,17 @@ public:
     }
 
     void set_world(world_base &w, detail::passkey<detail::task_handler> /*key*/) const
-    { M_handle.promise().world = &w; }
+    {
+        M_handle.promise().world = &w;
+    }
     void set_id(detail::handle_id_t id, detail::passkey<detail::task_handler> /*key*/) const
-    { M_handle.promise().id = id; }
+    {
+        M_handle.promise().id = id;
+    }
     void set_error(auto &&e, detail::passkey<detail::task_handler> /*key*/)
-    { M_handle.promise().set_error(std::forward<decltype(e)>(e)); }
+    {
+        M_handle.promise().set_error(std::forward<decltype(e)>(e));
+    }
 
     [[nodiscard]] bool done() const { return !M_handle || M_handle.done(); }
 
@@ -314,7 +322,9 @@ public:
     }
 
     [[nodiscard]] auto handle(detail::passkey<detail::task_handler> /*key*/) const
-    { return M_handle; }
+    {
+        return M_handle;
+    }
 
 private:
     [[nodiscard]] detail::task_promise_base &promise_base() const { return M_handle.promise(); }
@@ -374,10 +384,14 @@ template <typename T> struct task_awaiter
 };
 
 template <typename T> task<T> task_promise<T>::get_return_object()
-{ return task<T>{std::coroutine_handle<task_promise<T>>::from_promise(*this)}; }
+{
+    return task<T>{std::coroutine_handle<task_promise<T>>::from_promise(*this)};
+}
 
 inline task<void> task_promise<void>::get_return_object()
-{ return task<void>{std::coroutine_handle<task_promise<void>>::from_promise(*this)}; }
+{
+    return task<void>{std::coroutine_handle<task_promise<void>>::from_promise(*this)};
+}
 
 struct has_waiter_field
 {
@@ -401,7 +415,9 @@ public:
     }
 
     void schedule_task_after(const task_id id, const mp_units::quantity<mp_units::si::second> delay)
-    { schedule_task_at(id, M_current_time + delay); }
+    {
+        schedule_task_at(id, M_current_time + delay);
+    }
 
     // Queue task for execution in beginning of the frame, before physics
     void queue_pre_task(const task_id id) { M_pre_queue.push(id); }
@@ -421,7 +437,9 @@ public:
     [[nodiscard]] auto time() const { return M_current_time; }
 
     void increment(const mp_units::quantity<mp_units::si::second> dt, passkey<world_base> /*key*/)
-    { M_current_time += dt; }
+    {
+        M_current_time += dt;
+    }
 
     task_handle add_task(task<> t, passkey<world_base, detail::awaiter> /*key*/)
     {
@@ -621,13 +639,19 @@ public:
     }
 
     void remove_collision_waiter(handle_id_t object_id, handle_id_t task_id)
-    { remove_waiter<object_waiter::type::collision_enter>(object_id, task_id); }
+    {
+        remove_waiter<object_waiter::type::collision_enter>(object_id, task_id);
+    }
 
     void remove_collision_exit_waiter(handle_id_t object_id, handle_id_t task_id)
-    { remove_waiter<object_waiter::type::collision_exit>(object_id, task_id); }
+    {
+        remove_waiter<object_waiter::type::collision_exit>(object_id, task_id);
+    }
 
     void remove_destruction_waiter(handle_id_t object_id, handle_id_t task_id)
-    { remove_waiter<object_waiter::type::destruction>(object_id, task_id); }
+    {
+        remove_waiter<object_waiter::type::destruction>(object_id, task_id);
+    }
 
 private:
     struct object_waiter
@@ -681,7 +705,9 @@ private:
         }
 
         [[nodiscard]] bool empty() const
-        { return coll_enter.empty() && coll_exit.empty() && destructions.empty(); }
+        {
+            return coll_enter.empty() && coll_exit.empty() && destructions.empty();
+        }
     };
 
     struct dependency
@@ -766,7 +792,9 @@ private:
 
 inline task_id awaiter::add_task(task<> t) { return handler().add_task(std::move(t), {}).id(); }
 inline task_id awaiter::add_task_eager(task<> t)
-{ return handler().add_task_eager(std::move(t), {}).id(); }
+{
+    return handler().add_task_eager(std::move(t), {}).id();
+}
 inline void awaiter::cancel_task(task_id id) { handler().cancel_task(id, {}); }
 
 } // namespace detail

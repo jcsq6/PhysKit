@@ -53,7 +53,9 @@ template <typename T> struct arena
         [[nodiscard]] constexpr auto generation() const { return M_gen; }
 
         bool operator==(const handle &other) const
-        { return M_idx == other.M_idx && M_gen == other.M_gen; }
+        {
+            return M_idx == other.M_idx && M_gen == other.M_gen;
+        }
 
     private:
         std::uint32_t M_idx;

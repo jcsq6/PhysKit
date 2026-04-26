@@ -123,7 +123,9 @@ public:
         requires(std::derived_from<std::remove_cvref_t<Derived>, constraint_base>)
     void build_jacobian(this Derived &&self, quantity<si::second> dt,
                         std::vector<jacobian_row> &rows)
-    { std::forward<Derived>(self).build_jacobian_impl(dt, rows, {}); }
+    {
+        std::forward<Derived>(self).build_jacobian_impl(dt, rows, {});
+    }
 
     [[nodiscard]] auto &obj_a() const { return *M_a; }
     [[nodiscard]] auto &obj_b() const { return *M_b; }
@@ -152,7 +154,9 @@ public:
         quantity<si::metre> distance = 0 * si::metre;
 
         template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
-        { return {a.id(), b.id()}; }
+        {
+            return {a.id(), b.id()};
+        }
 
         auto &&with_local_anchor_a(this auto &&self, const vec3<si::metre> &l_a)
         {
@@ -171,7 +175,9 @@ public:
         }
 
         static distance_constraint build_constraint(object &oa, object &ob, const desc &d)
-        { return distance_constraint(oa, ob, d.local_a, d.local_b, d.distance); }
+        {
+            return distance_constraint(oa, ob, d.local_a, d.local_b, d.distance);
+        }
     };
 
     static constexpr auto bias_factor = .1;
@@ -258,7 +264,9 @@ public:
         quantity<si::kilogram / si::second> damping = 0 * si::kilogram / si::second;
 
         template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
-        { return {a.id(), b.id()}; }
+        {
+            return {a.id(), b.id()};
+        }
 
         auto &&with_local_anchor_a(this auto &&self, const vec3<si::metre> &l_a)
         {
@@ -379,7 +387,9 @@ public:
         vec3<si::metre> anchor = vec3<si::metre>::zero();
 
         template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
-        { return {a.id(), b.id()}; }
+        {
+            return {a.id(), b.id()};
+        }
 
         auto &&with_anchor(this auto &&self, const vec3<si::metre> &anc)
         {
@@ -388,7 +398,9 @@ public:
         }
 
         static ball_socket_constraint build_constraint(object &oa, object &ob, const desc &d)
-        { return ball_socket_constraint(oa, ob, d.anchor); }
+        {
+            return ball_socket_constraint(oa, ob, d.anchor);
+        }
     };
 
     static constexpr auto bias_factor = .1;
@@ -469,7 +481,9 @@ public:
         vec3<one> local_axis_b = vec3<one>::zero();
 
         template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
-        { return {a.id(), b.id()}; }
+        {
+            return {a.id(), b.id()};
+        }
 
         auto &&with_local_anchor_a(this auto &&self, const vec3<si::metre> &l_a)
         {
@@ -493,7 +507,9 @@ public:
         }
 
         static hinge_constraint build_constraint(object &oa, object &ob, const desc &d)
-        { return hinge_constraint(oa, ob, d.local_a, d.local_b, d.local_axis_a, d.local_axis_b); }
+        {
+            return hinge_constraint(oa, ob, d.local_a, d.local_b, d.local_axis_a, d.local_axis_b);
+        }
     };
 
     static constexpr auto bias_factor = .2;
@@ -504,7 +520,9 @@ public:
                      const vec3<one> &local_axis_b)
         : constraint_base(a, b), M_local_anchor_a(local_anchor_a), M_local_anchor_b(local_anchor_b),
           M_local_axis_a(local_axis_a.normalized()), M_local_axis_b(local_axis_b.normalized())
-    { std::tie(M_local_v_a, M_local_w_a) = detail::build_orthonormal_basis(M_local_axis_a); }
+    {
+        std::tie(M_local_v_a, M_local_w_a) = detail::build_orthonormal_basis(M_local_axis_a);
+    }
 
     void build_jacobian_impl(quantity<si::second> dt, std::vector<jacobian_row> &rows,
                              ::physkit::detail::passkey<constraint_base> /*unused*/) const
@@ -605,7 +623,9 @@ public:
         vec3<one> axis = vec3<one>::zero();
 
         template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
-        { return {a.id(), b.id()}; }
+        {
+            return {a.id(), b.id()};
+        }
 
         auto &&with_anchor(this auto &&self, const vec3<si::metre> &anc)
         {
@@ -619,7 +639,9 @@ public:
         }
 
         static slider_constraint build_constraint(object &oa, object &ob, const desc &d)
-        { return slider_constraint(oa, ob, d.anchor, d.axis); }
+        {
+            return slider_constraint(oa, ob, d.anchor, d.axis);
+        }
     };
 
     static constexpr auto bias_factor = .1;
@@ -762,7 +784,9 @@ public:
         vec3<si::metre> anchor = vec3<si::metre>::zero();
 
         template <typename Handle> [[nodiscard]] static desc make(Handle a, Handle b)
-        { return {a.id(), b.id()}; }
+        {
+            return {a.id(), b.id()};
+        }
 
         auto &&with_anchor(this auto &&self, const vec3<si::metre> &anc)
         {
@@ -771,7 +795,9 @@ public:
         }
 
         static weld_constraint build_constraint(object &oa, object &ob, const desc &d)
-        { return weld_constraint(oa, ob, d.anchor); }
+        {
+            return weld_constraint(oa, ob, d.anchor);
+        }
     };
 
     static constexpr auto bias_factor = .1;

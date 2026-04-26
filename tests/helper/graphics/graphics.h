@@ -194,7 +194,9 @@ GRAPHICS_EXPORT namespace graphics
         explicit instanced_drawable(std::derived_from<gfx_obj_base> auto &parent,
                                     instanced_drawables &group)
             : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}, M_group{&group}
-        { group.add_object(*this); }
+        {
+            group.add_object(*this);
+        }
 
         instanced_drawable(const instanced_drawable &) = delete;
         instanced_drawable &operator=(const instanced_drawable &) = delete;
@@ -477,7 +479,9 @@ public:
     [[nodiscard]] auto time_step() const { return M_time_step.value_or(default_time_step); }
     [[nodiscard]] auto &record_output() const { return M_record_output; }
     [[nodiscard]] auto record_duration() const
-    { return M_record_duration.value_or(default_record_duration); }
+    {
+        return M_record_duration.value_or(default_record_duration);
+    }
     [[nodiscard]] auto record_fps() const { return M_record_fps.value_or(default_record_fps); }
     [[nodiscard]] bool recording() const { return M_record_output.has_value(); }
     [[nodiscard]] auto &objects() const { return M_objects; }
@@ -841,23 +845,23 @@ public:
     }
 
     graphics_app(const g_config &config)
-        : Magnum::Platform::Application{
-              config.args(),
-              [&config]
-              {
-                  Configuration configuration;
-                  configuration.setTitle(
-                      Containers::StringView{config.title().data(), config.title().size()});
-                  if (config.recording())
-                      configuration.setSize(config.window_size(), Vector2{1.0f});
-                  else
-                      configuration.setSize(config.window_size());
-                  configuration.setWindowFlags(
-                      config.recording()
-                          ? Platform::Application::Configuration::WindowFlag::Hidden
-                          : Platform::Application::Configuration::WindowFlag::Focused);
-                  return configuration;
-              }()},
+        : Magnum::Platform::
+              Application{config.args(),
+                          [&config]
+                          {
+                              Configuration configuration;
+                              configuration.setTitle(Containers::StringView{config.title().data(),
+                                                                            config.title().size()});
+                              if (config.recording())
+                                  configuration.setSize(config.window_size(), Vector2{1.0f});
+                              else
+                                  configuration.setSize(config.window_size());
+                              configuration.setWindowFlags(
+                                  config.recording()
+                                      ? Platform::Application::Configuration::WindowFlag::Hidden
+                                      : Platform::Application::Configuration::WindowFlag::Focused);
+                              return configuration;
+                          }()},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
           M_drag(true), M_grab_focus(!config.drag()), M_testing(config.testing())
@@ -965,10 +969,14 @@ protected:
     }
 
     physkit::quantity<mp_units::si::second> dt() const
-    { return M_timeline.previousFrameDuration() * mp_units::si::second; }
+    {
+        return M_timeline.previousFrameDuration() * mp_units::si::second;
+    }
 
     physkit::quantity<mp_units::si::second> current_time() const
-    { return M_timeline.previousFrameTime() * mp_units::si::second; }
+    {
+        return M_timeline.previousFrameTime() * mp_units::si::second;
+    }
 
     key_state get_mouse_button(Pointer button) const
     {
@@ -1216,7 +1224,9 @@ private:
 
 inline physkit::object &physics_obj::obj() { return **M_app->world().get_rigid(M_handle); }
 inline const physkit::object &physics_obj::obj() const
-{ return **std::as_const(*M_app).world().get_rigid(M_handle); }
+{
+    return **std::as_const(*M_app).world().get_rigid(M_handle);
+}
 
 inline void physics_obj::sync()
 {
@@ -1232,11 +1242,15 @@ namespace mesh_objs
 {
 // radius 1
 inline auto cube()
-{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
+{
+    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid()));
+}
 
 // radius 1
 inline auto sphere(unsigned int subdivisions = 3)
-{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions))); }
+{
+    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions)));
+}
 
 inline auto cone(unsigned int rings, unsigned int segments, float half_length)
 {
@@ -1253,6 +1267,8 @@ inline auto cylinder(unsigned int rings, unsigned int segments, float half_lengt
 }
 
 inline auto plane()
-{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
+{
+    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid()));
+}
 }; // namespace mesh_objs
 } // namespace graphics
