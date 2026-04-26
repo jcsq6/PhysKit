@@ -84,6 +84,7 @@ private:
     }
 
     // input spawning - based off mouse clicks
+    // modify it based off of input collision.
     task<> maybe_spawn_objects()
     {
         if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
@@ -101,7 +102,7 @@ private:
 
         // Floor
 
-        co_await add_rigid(object::desc::stat()
+        co_await add_rigid(object_desc::stat()
                                .with_mesh(mesh::box(vec3{arena_half, 0.2, arena_half}))
                                .with_pos(vec3{0.0, -0.2, 0.0})
                                .with_friction(0.8),
@@ -118,7 +119,7 @@ private:
 
         co_await add_rigid(object_desc::stat()
                                .with_mesh(wall_fb)
-                               .with_pos(vec3{0.0, wall_height, -arena_half})
+                               .with_pos(vec3{0.0, wall_height, arena_half})
                                .with_friction(0.7),
                            Color3{0.4f});
 
