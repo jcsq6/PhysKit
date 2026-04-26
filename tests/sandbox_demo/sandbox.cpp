@@ -38,28 +38,13 @@ public:
                            .solver_iterations(20)}
     {
         cam().speed(1.0f * si::metre / si::second);
-        // modify to have use runtime instead of just scene
         world().add_task(runtime());
     }
 
-    void update(mp_units::quantity<mp_units::si::second>) override {}
+    void update(mp_units::quantity<mp_units::si::second> dt) override {}
 
 private:
-    // need to make into proper void functions lmao
-    // create things like camera movement, object spawn, picking, collision logging, and debug
-    // output.
-    task<> runtime();
-
-    task<> main_loop()
-    {
-        while (true)
-        {
-            auto dt = *co_await next_render_frame();
-            co_await maybe_spawn_objects();
-        }
-    }
-
-    task<> spwan_box(vec3<si::metre> pos)
+    task<> spawn_box(vec3<si::metre> pos)
     {
         co_await add_rigid(object_desc::dynam()
                                .with_mesh(mesh::box(vec3{0.2, 0.2, 0.2} * m))
@@ -67,7 +52,7 @@ private:
                                .with_mass(1.0 * kg)
                                .with_restitution(0.4)
                                .with_friction(0.5),
-                           Color3f{0.7f});
+                           Color3{0.7f, 0.7f, 0.7f});
     }
 
     // handle generic spawning inputs
@@ -84,7 +69,6 @@ private:
     }
 
     // input spawning - based off mouse clicks
-    // modify it based off of input collision.
     task<> maybe_spawn_objects()
     {
         if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
@@ -101,51 +85,55 @@ private:
         auto thickness = 0.2 * m;
 
         // Floor
-
         co_await add_rigid(object_desc::stat()
-                               .with_mesh(mesh::box(vec3{arena_half, 0.2, arena_half}))
-                               .with_pos(vec3{0.0, -0.2, 0.0})
+                               .with_mesh(mesh::box(vec3{arena_half, 0.2 * m, arena_half}))
+                               .with_pos(vec3{0.0 * m, -0.2 * m, 0.0 * m})
                                .with_friction(0.8),
-                           Color3(0.2f, 0.3f, 0.35f));
+                           Color3{0.2f, 0.3f, 0.35f});
 
-        // back and front
+        // Back and front walls
         auto wall_fb = mesh::box(vec3{arena_half, wall_height, thickness});
 
         co_await add_rigid(object_desc::stat()
                                .with_mesh(wall_fb)
-                               .with_pos(vec3{0.0, wall_height, -arena_half})
+                               .with_pos(vec3{0.0 * m, wall_height, -arena_half})
                                .with_friction(0.7),
-                           Color3{0.4f});
+                           Color3{0.4f, 0.4f, 0.4f});
 
         co_await add_rigid(object_desc::stat()
                                .with_mesh(wall_fb)
-                               .with_pos(vec3{0.0, wall_height, arena_half})
+                               .with_pos(vec3{0.0 * m, wall_height, arena_half})
                                .with_friction(0.7),
-                           Color3{0.4f});
+                           Color3{0.4f, 0.4f, 0.4f});
 
-        // Left / Right
+        // Left / Right walls
         auto wall_lr = mesh::box(vec3{thickness, wall_height, arena_half});
 
         co_await add_rigid(object_desc::stat()
                                .with_mesh(wall_lr)
-                               .with_pos(vec3{-arena_half, wall_height, 0.0})
+                               .with_pos(vec3{-arena_half, wall_height, 0.0 * m})
                                .with_friction(0.7),
-                           Color3{0.4f});
+                           Color3{0.4f, 0.4f, 0.4f});
 
         co_await add_rigid(object_desc::stat()
                                .with_mesh(wall_lr)
-                               .with_pos(vec3{arena_half, wall_height, 0.0})
+                               .with_pos(vec3{arena_half, wall_height, 0.0 * m})
                                .with_friction(0.7),
-                           Color3{0.4f});
-    }
+                           Color3{0.4f, 0.4f, 0.4f});
 
-    /// create simple world scene with movements
+        co_return;
+    }
 
     task<> runtime()
     {
         co_await build_area();
-        co_await main_loop();
+
+        while (true)
+        {
+            co_await next_render_frame();
+            co_await maybe_spawn_objects();
+        }
     }
-}
+};
 
 MAGNUM_APPLICATION_MAIN(sandbox) // NOLINT
