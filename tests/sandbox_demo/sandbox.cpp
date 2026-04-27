@@ -32,6 +32,11 @@ struct sandbox_state
     bool gravity_on = true;
 
     double debug_timer = 0.0;
+
+    // required state for selection and gravity
+    world_base::handle_selected{};
+    bool has_selected = false;
+    vec3<si::metre / si::second / si::second> saved_gravity = gravity;
 }
 
 class sandbox : public graphics_app
@@ -57,6 +62,9 @@ public:
     void update(mp_units::quantity<mp_units::si::second> dt) override {}
 
 private:
+    sandbox_state M_state;
+
+    /// @brief - spawn in different objects
     task<> spawn_box(vec3<si::metre> pos)
     {
         co_await add_rigid(object_desc::dynam()
@@ -67,6 +75,19 @@ private:
                                .with_friction(0.5),
                            Color3{0.7f, 0.7f, 0.7f});
     }
+
+    task<> spawn_sphere(vec3<si::metre> pos)
+    {
+        co_return (*co_await add_rigid(object_desc::dynam()
+                                           .with_mesh(mesh::sphere(0.1 * m, 16, 16))
+                                           .with_pos(pos)
+                                           .with_mass(1.0 * kg)
+                                           .with_restitution(0.6)
+                                           .with_friction(0.3) Color3{0.8f, 0.8f, 0.8f}))
+            ->handle();
+    }
+
+    /// TODO: add in different shapes when branches merge - pyramid, cone, etc
 
     // handle generic spawning inputs
     task<world_base::handle> return_spawn_box(vec3<si::metre> pos)
@@ -91,6 +112,94 @@ private:
             auto spawn_pos = cam().pos() + cam().forward() * 2.0f * m;
             co_await spawn_box(spawn_pos);
         }
+    }
+
+    task<> handle_selection_input()
+    {
+        if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
+        {
+            auto ray = physkit::ray{cam().pos(), cam().forward()};
+
+            auto hit = co_await raycast{ray};
+
+            if (hit)
+            {
+                selected = hit->object;
+                has_selected = true;
+            }
+            else
+            {
+                has_selected = false;
+            }
+        }
+    }
+
+    /// @brief handles selection, delete, impulse, and velocity reset
+    task<> handle_actions_input()
+    {
+        if (!has_selected) { co_return; }
+
+        auto obj_opt = co_await get_rigid(selected);
+        if (!obj_opt)
+        {
+            has_selected = false;
+            co_return;
+        }
+
+        auto &obj = **obj_opt;
+
+        // delete function
+        if (is_key_pressed(Key::Delete))
+        {
+            co_await remove_rigid(selected);
+            has_selected = false;
+        }
+
+        // impulse forward
+        if (is_key_pressed(Key::F))
+        {
+            obj.apply_impulse(cam().forward() * obj.mass() * 5.0 * m / s);
+        }
+        // Reset velocity
+        if (is_key_pressed(Key::R))
+        {
+            obj.vel() = vec3<si::metre / si::second>::zero();
+            obj.ang_vel() = vec3<one / si::second>::zero();
+        }
+
+        // Gravity toggle
+        if (is_key_pressed(Key::G))
+        {
+            if (gravity_enabled) { world().gravity(vec3{0.0, 0.0, 0.0} * m / s / s); }
+            else
+            {
+                world().gravity(saved_gravity);
+            }
+
+            gravity_enabled = !gravity_enabled;
+        }
+    }
+
+    /// @brief reset function - resets objects in the arena
+    task<> reset_all()
+    {
+        for (auto h : world().rigid_handles())
+        {
+            auto obj = co_await get_rigid(h);
+            if (obj && obj->is_dynamic())
+            {
+                obj->vel() = vec3<si::metre / si::second>::zero();
+                obj->ang_vel() = vec3<one / si::second>::zero();
+            }
+        }
+    }
+
+    /// @brief keyboard functions for user to select and manipulate objects
+    void poll_keys(quantity<si::second> dt)
+    {
+        if (get_key(Key::One).is_initial_press()) { co_await spawn_box(spawn_pos); }
+
+        if (get_key(Key::Two).is_initial_press()) { co_await spawn_sphere(spawn_pos); }
     }
 
     task<> build_area()
