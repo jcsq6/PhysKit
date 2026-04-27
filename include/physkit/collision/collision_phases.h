@@ -254,7 +254,7 @@ public:
             auto &obj_a = get_object(man.a);
             auto &obj_b = get_object(man.b);
 
-            auto col_ret = gjk_epa(
+            auto col_ret = collision(
                 obj_a.instance(),
                 obj_b.instance()); // TODO: replace with dispatcher with updated shape options
 

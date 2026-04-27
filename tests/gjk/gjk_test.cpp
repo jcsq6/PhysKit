@@ -22,7 +22,7 @@ void aabb_aabb_overlap_on_x()
     // A extends [-1,1], B extends [0.5, 2.5] - 0.5m overlap on x
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void aabb_aabb_no_collision_x()
@@ -30,7 +30,7 @@ void aabb_aabb_no_collision_x()
     // A extends to x=1, B starts at x=2 - 1m gap
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{3.0, 0.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void aabb_aabb_no_collision_y()
@@ -38,7 +38,7 @@ void aabb_aabb_no_collision_y()
     // Aligned on XZ, separated on Y
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 3.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void aabb_aabb_no_collision_z()
@@ -46,7 +46,7 @@ void aabb_aabb_no_collision_z()
     // Aligned on XY, separated on Z
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 3.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void aabb_aabb_containment()
@@ -54,22 +54,22 @@ void aabb_aabb_containment()
     // Inner box fully inside outer box
     auto outer = box(vec3{3.0, 3.0, 3.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto inner = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(outer, inner).has_value());
-    CHECK(gjk_epa(inner, outer).has_value());
+    CHECK(collision(outer, inner).has_value());
+    CHECK(collision(inner, outer).has_value());
 }
 
 void aabb_aabb_large_separation()
 {
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{101.0, 0.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void aabb_aabb_same_box()
 {
     // Minkowski difference of a shape with itself contains the origin
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, a).has_value());
+    CHECK(collision(a, a).has_value());
 }
 
 void aabb_aabb_partial_overlap_all_axes()
@@ -77,7 +77,7 @@ void aabb_aabb_partial_overlap_all_axes()
     // Corner overlap: A=[0,2]^3, B=[1,3]^3 - overlap region [1,2]^3
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 1.0, 1.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{2.0, 2.0, 2.0} * m);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void aabb_aabb_separated_diagonal()
@@ -85,7 +85,7 @@ void aabb_aabb_separated_diagonal()
     // Boxes that don't overlap on any diagonal
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{6.0, 6.0, 6.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 // ============================================================
@@ -97,7 +97,7 @@ void obb_obb_axis_aligned_overlap()
     // Same as AABB overlap but using OBBs with identity orientation
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m, quat<one>::identity());
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void obb_obb_axis_aligned_separated()
@@ -105,7 +105,7 @@ void obb_obb_axis_aligned_separated()
     // 1m gap between faces
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{3.0, 0.0, 0.0} * m, quat<one>::identity());
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void obb_obb_same_center_different_orientation()
@@ -115,7 +115,7 @@ void obb_obb_same_center_different_orientation()
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, rot);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void obb_obb_rotated_45_overlap()
@@ -126,7 +126,7 @@ void obb_obb_rotated_45_overlap()
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 0.0, 0.0} * m, rot);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void obb_obb_rotated_45_separated()
@@ -137,7 +137,7 @@ void obb_obb_rotated_45_separated()
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{3.0, 0.0, 0.0} * m, rot);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void obb_obb_cross_config_overlap()
@@ -147,7 +147,7 @@ void obb_obb_cross_config_overlap()
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto b = box(vec3{2.0, 0.2, 0.2} * m).at(vec3{0.0, 0.0, 0.0} * m, rot);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void obb_obb_cross_config_separated()
@@ -161,7 +161,7 @@ void obb_obb_cross_config_separated()
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto b = box(vec3{2.0, 0.2, 0.2} * m).at(vec3{0.0, 3.0, 0.0} * m, rot);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void obb_obb_rotated_90_x_overlap()
@@ -171,7 +171,7 @@ void obb_obb_rotated_90_x_overlap()
     auto rot =
         quat<one>::from_angle_axis((std::numbers::pi / 2.0) * si::radian, vec3<one>{1.0, 0.0, 0.0});
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.5, 0.5, 0.5} * m, rot);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void obb_obb_non_uniform_extents_overlap()
@@ -179,7 +179,7 @@ void obb_obb_non_uniform_extents_overlap()
     // Flat slab vs tall narrow box that intersect
     auto slab = box(vec3{3.0, 0.3, 3.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto pillar = box(vec3{0.3, 3.0, 0.3} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
-    CHECK(gjk_epa(slab, pillar).has_value());
+    CHECK(collision(slab, pillar).has_value());
 }
 
 void obb_obb_non_uniform_extents_separated()
@@ -187,7 +187,7 @@ void obb_obb_non_uniform_extents_separated()
     // Slab and pillar with no overlap: pillar offset so it's beside the slab
     auto slab = box(vec3{3.0, 0.3, 3.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto pillar = box(vec3{0.3, 3.0, 0.3} * m).at(vec3{5.0, 0.0, 0.0} * m, quat<one>::identity());
-    CHECK(!gjk_epa(slab, pillar).has_value());
+    CHECK(!collision(slab, pillar).has_value());
 }
 
 void obb_obb_3d_diagonal_overlap()
@@ -195,7 +195,7 @@ void obb_obb_3d_diagonal_overlap()
     // Both unit cubes, centers 1.5m apart diagonally → 0.5m overlap on every axis
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 1.5, 1.5} * m, quat<one>::identity());
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void obb_obb_3d_diagonal_separated()
@@ -203,7 +203,7 @@ void obb_obb_3d_diagonal_separated()
     // Centers 3m apart diagonally → 1m gap on every axis
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{3.0, 3.0, 3.0} * m, quat<one>::identity());
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 // ============================================================
@@ -214,16 +214,16 @@ void obb_aabb_axis_aligned_overlap()
 {
     auto o = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
-    CHECK(gjk_epa(o, a).has_value());
-    CHECK(gjk_epa(a, o).has_value());
+    CHECK(collision(o, a).has_value());
+    CHECK(collision(a, o).has_value());
 }
 
 void obb_aabb_axis_aligned_separated()
 {
     auto o = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{3.5, 0.0, 0.0} * m);
-    CHECK(!gjk_epa(o, a).has_value());
-    CHECK(!gjk_epa(a, o).has_value());
+    CHECK(!collision(o, a).has_value());
+    CHECK(!collision(a, o).has_value());
 }
 
 void obb_aabb_rotated_overlap()
@@ -233,8 +233,8 @@ void obb_aabb_rotated_overlap()
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto o = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 0.0, 0.0} * m, rot);
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(o, a).has_value());
-    CHECK(gjk_epa(a, o).has_value());
+    CHECK(collision(o, a).has_value());
+    CHECK(collision(a, o).has_value());
 }
 
 void obb_aabb_rotated_separated()
@@ -244,8 +244,8 @@ void obb_aabb_rotated_separated()
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto o = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{5.0, 0.0, 0.0} * m, rot);
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
-    CHECK(!gjk_epa(o, a).has_value());
-    CHECK(!gjk_epa(a, o).has_value());
+    CHECK(!collision(o, a).has_value());
+    CHECK(!collision(a, o).has_value());
 }
 
 void obb_aabb_containment()
@@ -253,8 +253,8 @@ void obb_aabb_containment()
     // Large AABB containing an OBB
     auto o = box(vec3{0.5, 0.5, 0.5} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto a = box(vec3{2.0, 2.0, 2.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(o, a).has_value());
-    CHECK(gjk_epa(a, o).has_value());
+    CHECK(collision(o, a).has_value());
+    CHECK(collision(a, o).has_value());
 }
 
 // ============================================================
@@ -265,14 +265,14 @@ void symmetry_aabb_aabb_colliding()
 {
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value() == collision(b, a).has_value());
 }
 
 void symmetry_aabb_aabb_separated()
 {
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{4.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value() == collision(b, a).has_value());
 }
 
 void symmetry_obb_obb_colliding()
@@ -281,21 +281,21 @@ void symmetry_obb_obb_colliding()
     auto rot = quat<one>::from_angle_axis((std::numbers::pi / 6.0) * si::radian,
                                           vec3<one>{1.0, 1.0, 0.0}.normalized());
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.0, 1.0, 0.0} * m, rot);
-    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value() == collision(b, a).has_value());
 }
 
 void symmetry_obb_obb_separated()
 {
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m, quat<one>::identity());
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{4.0, 0.0, 0.0} * m, quat<one>::identity());
-    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value() == collision(b, a).has_value());
 }
 
 void collision_info_nullopt_when_separated()
 {
     auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
     auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{4.0, 0.0, 0.0} * m);
-    auto result = gjk_epa(a, b);
+    auto result = collision(a, b);
     CHECK(!result.has_value());
 }
 
@@ -309,7 +309,7 @@ void mesh_instance_box_box_overlap()
     auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
     auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = msh.at(vec3{1.5, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void mesh_instance_box_box_separated()
@@ -318,7 +318,7 @@ void mesh_instance_box_box_separated()
     auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
     auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = msh.at(vec3{3.0, 0.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void mesh_instance_box_box_containment()
@@ -328,8 +328,8 @@ void mesh_instance_box_box_containment()
     auto inner = shape(box(vec3{0.5, 0.5, 0.5} * m));
     auto a = outer.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = inner.at(vec3{0.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value());
-    CHECK(gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value());
+    CHECK(collision(b, a).has_value());
 }
 
 void mesh_instance_box_box_same_instance()
@@ -337,7 +337,7 @@ void mesh_instance_box_box_same_instance()
     // Same instance at same position: Minkowski difference contains origin
     auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
     auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, a).has_value());
+    CHECK(collision(a, a).has_value());
 }
 
 void mesh_instance_box_box_rotated_overlap()
@@ -348,7 +348,7 @@ void mesh_instance_box_box_rotated_overlap()
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = msh.at(vec3{1.0, 0.0, 0.0} * m, rot);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void mesh_instance_box_box_rotated_separated()
@@ -359,7 +359,7 @@ void mesh_instance_box_box_rotated_separated()
         quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = msh.at(vec3{3.0, 0.0, 0.0} * m, rot);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void mesh_instance_sphere_sphere_overlap()
@@ -368,7 +368,7 @@ void mesh_instance_sphere_sphere_overlap()
     auto sph = shape(sphere(1.0 * m));
     auto a = sph.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = sph.at(vec3{1.5, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void mesh_instance_sphere_sphere_separated()
@@ -377,7 +377,7 @@ void mesh_instance_sphere_sphere_separated()
     auto sph = shape(sphere(1.0 * m));
     auto a = sph.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = sph.at(vec3{3.0, 0.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void mesh_instance_box_sphere_overlap()
@@ -387,8 +387,8 @@ void mesh_instance_box_sphere_overlap()
     auto sph_msh = shape(sphere(1.0 * m));
     auto a = box_msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = sph_msh.at(vec3{1.5, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value());
-    CHECK(gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value());
+    CHECK(collision(b, a).has_value());
 }
 
 void mesh_instance_box_sphere_separated()
@@ -398,8 +398,8 @@ void mesh_instance_box_sphere_separated()
     auto sph_msh = shape(sphere(1.0 * m));
     auto a = box_msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = sph_msh.at(vec3{3.0, 0.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
-    CHECK(!gjk_epa(b, a).has_value());
+    CHECK(!collision(a, b).has_value());
+    CHECK(!collision(b, a).has_value());
 }
 
 void mesh_instance_symmetry_colliding()
@@ -407,7 +407,7 @@ void mesh_instance_symmetry_colliding()
     auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
     auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = msh.at(vec3{1.5, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value() == collision(b, a).has_value());
 }
 
 void mesh_instance_symmetry_separated()
@@ -415,7 +415,7 @@ void mesh_instance_symmetry_separated()
     auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
     auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = msh.at(vec3{4.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value() == gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value() == collision(b, a).has_value());
 }
 
 void mesh_instance_collision_info_nullopt_when_separated()
@@ -423,7 +423,7 @@ void mesh_instance_collision_info_nullopt_when_separated()
     auto msh = shape(box(vec3{1.0, 1.0, 1.0} * m));
     auto a = msh.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = msh.at(vec3{4.0, 0.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 // ============================================================
@@ -436,7 +436,7 @@ void pyramid_pyramid_same_pos()
     // Minkowski difference of a shape with itself contains the origin
     auto pyr = pyramid(1.0 * m, 2.0 * m);
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, a).has_value());
+    CHECK(collision(a, a).has_value());
 }
 
 void pyramid_pyramid_overlap_y()
@@ -445,7 +445,7 @@ void pyramid_pyramid_overlap_y()
     auto pyr = pyramid(1.0 * m, 2.0 * m);
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = pyr.at(vec3{0.0, 1.5, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void pyramid_pyramid_separated_y()
@@ -454,7 +454,7 @@ void pyramid_pyramid_separated_y()
     auto pyr = pyramid(1.0 * m, 2.0 * m);
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = pyr.at(vec3{0.0, 4.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void pyramid_pyramid_separated_x()
@@ -463,7 +463,7 @@ void pyramid_pyramid_separated_x()
     auto pyr = pyramid(1.0 * m, 2.0 * m);
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = pyr.at(vec3{4.0, 0.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void pyramid_pyramid_flipped_overlap()
@@ -475,7 +475,7 @@ void pyramid_pyramid_flipped_overlap()
     auto rot = quat<one>::from_angle_axis(std::numbers::pi * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = pyr.at(vec3{0.0, 3.0, 0.0} * m, rot);
-    CHECK(gjk_epa(a, b).has_value());
+    CHECK(collision(a, b).has_value());
 }
 
 void pyramid_pyramid_flipped_separated()
@@ -485,7 +485,7 @@ void pyramid_pyramid_flipped_separated()
     auto rot = quat<one>::from_angle_axis(std::numbers::pi * si::radian, vec3<one>{0.0, 0.0, 1.0});
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = pyr.at(vec3{0.0, 6.0, 0.0} * m, rot);
-    CHECK(!gjk_epa(a, b).has_value());
+    CHECK(!collision(a, b).has_value());
 }
 
 void pyramid_box_overlap()
@@ -495,8 +495,8 @@ void pyramid_box_overlap()
     auto aabb_box = box(vec3{1.0, 1.0, 1.0} * m);
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = aabb_box.at(vec3{0.0, 0.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value());
-    CHECK(gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value());
+    CHECK(collision(b, a).has_value());
 }
 
 void pyramid_box_separated()
@@ -506,8 +506,8 @@ void pyramid_box_separated()
     auto aabb_box = box(vec3{1.0, 1.0, 1.0} * m);
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = aabb_box.at(vec3{0.0, -3.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
-    CHECK(!gjk_epa(b, a).has_value());
+    CHECK(!collision(a, b).has_value());
+    CHECK(!collision(b, a).has_value());
 }
 
 void pyramid_sphere_overlap()
@@ -517,8 +517,8 @@ void pyramid_sphere_overlap()
     auto sph = sphere(1.0 * m);
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = sph.at(vec3{0.0, 1.0, 0.0} * m);
-    CHECK(gjk_epa(a, b).has_value());
-    CHECK(gjk_epa(b, a).has_value());
+    CHECK(collision(a, b).has_value());
+    CHECK(collision(b, a).has_value());
 }
 
 void pyramid_sphere_separated()
@@ -528,8 +528,8 @@ void pyramid_sphere_separated()
     auto sph = sphere(1.0 * m);
     auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
     auto b = sph.at(vec3{0.0, 5.0, 0.0} * m);
-    CHECK(!gjk_epa(a, b).has_value());
-    CHECK(!gjk_epa(b, a).has_value());
+    CHECK(!collision(a, b).has_value());
+    CHECK(!collision(b, a).has_value());
 }
 
 } // namespace

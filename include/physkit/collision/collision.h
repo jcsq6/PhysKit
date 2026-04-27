@@ -28,6 +28,6 @@ public:
     quantity<si::metre> depth{};
 };
 
-std::optional<collision_info> gjk_epa(const physkit::instance &a, const physkit::instance &b);
+std::optional<collision_info> collision(const physkit::instance &a, const physkit::instance &b);
 // std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b);
 } // namespace physkit

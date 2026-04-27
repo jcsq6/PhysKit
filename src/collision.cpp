@@ -445,7 +445,7 @@ struct epa_solver
         solver.build_initial_tetrahedron();
 
         constexpr int max_iterations = 64;
-        constexpr auto tolerance = 1e-6 * si::metre;
+        constexpr auto tolerance = 1e-8 * si::metre;
 
         auto get_barycentric = [&](const face &f, const support_pt &p)
         {
@@ -534,11 +534,214 @@ struct epa_solver
     absl::InlinedVector<std::size_t, buffer_size> face_heap;
 };
 
-std::optional<collision_info> gjk_epa(const physkit::instance &a, const physkit::instance &b)
+// NOLINTNEXTLINE
+#define DEFINE_MIRROR_IMPL(a_t, b_t)                                                               \
+    std::optional<collision_info> b_t##_##a_t(const instance &a, const instance &b)                \
+    {                                                                                              \
+        if (auto info = a_t##_##b_t(b, a))                                                         \
+        {                                                                                          \
+            info->normal = -info->normal;                                                          \
+            std::swap(info->world_a, info->world_b);                                               \
+            return info;                                                                           \
+        }                                                                                          \
+        return std::nullopt;                                                                       \
+    }
+
+inline std::optional<collision_info> gjk_epa(const instance &a, const instance &b)
 {
     auto simplex = gjk_collision(a, b);
-    if (simplex) return epa_solver::solve(a, b, *simplex);
-    return std::nullopt;
+    if (!simplex) return std::nullopt;
+    return epa_solver::solve(a, b, *simplex);
+}
+
+std::optional<collision_info> sphere_sphere(const instance &a, const instance &b)
+{
+    using namespace mp_units::si::unit_symbols;
+    const auto ra = a.geometry().sphere().radius();
+    const auto rb = b.geometry().sphere().radius();
+    const auto diff = a.position() - b.position();
+    const auto dist2 = diff.squared_norm();
+    const auto rsum = ra + rb;
+
+    if (dist2 > rsum * rsum) return std::nullopt;
+
+    vec3<one> normal;
+    quantity<si::metre> dist; // NOLINT
+    if (dist2 < 1e-24 * pow<2>(si::metre))
+    {
+        normal = vec3<one>{1.0, 0.0, 0.0};
+        dist = 0.0 * m;
+    }
+    else
+    {
+        dist = mp_units::sqrt(dist2);
+        normal = diff / dist;
+    }
+
+    return collision_info{
+        .normal = normal,
+        .world_a = a.position() - ra * normal,
+        .world_b = b.position() + rb * normal,
+        .depth = rsum - dist,
+    };
+}
+
+std::optional<collision_info> box_sphere(const instance &a, const instance &b)
+{
+    using namespace mp_units::si::unit_symbols;
+    const auto &bx = a.geometry().box();
+    const auto he = bx.half_extents();
+    const auto box_q = a.orientation();
+    const auto sph_center = b.position();
+    const auto sph_radius = b.geometry().sphere().radius();
+
+    const auto local_center = box_q.conjugate() * (sph_center - a.position());
+
+    const auto clamp = [](quantity<si::metre> v, quantity<si::metre> lim)
+    { return v < -lim ? -lim : (v > lim ? lim : v); };
+
+    vec3<si::metre> cp_local{clamp(local_center.x(), he.x()), clamp(local_center.y(), he.y()),
+                             clamp(local_center.z(), he.z())};
+
+    const auto diff_local = cp_local - local_center;
+    const auto dist2 = diff_local.squared_norm();
+
+    if (dist2 < 1e-24 * pow<2>(si::metre))
+    {
+        const auto dx = he.x() - mp_units::abs(local_center.x());
+        const auto dy = he.y() - mp_units::abs(local_center.y());
+        const auto dz = he.z() - mp_units::abs(local_center.z());
+
+        vec3<one> local_normal;
+        quantity<si::metre> penetration; // NOLINT
+        vec3<si::metre> cp_face;
+        if (dx <= dy && dx <= dz)
+        {
+            const auto sign = local_center.x() >= 0.0 * m ? 1.0 : -1.0;
+            local_normal = vec3<one>{-sign, 0.0, 0.0};
+            penetration = dx;
+            cp_face = vec3<si::metre>{sign * he.x(), local_center.y(), local_center.z()};
+        }
+        else if (dy <= dz)
+        {
+            const auto sign = local_center.y() >= 0.0 * m ? 1.0 : -1.0;
+            local_normal = vec3<one>{0.0, -sign, 0.0};
+            penetration = dy;
+            cp_face = vec3<si::metre>{local_center.x(), sign * he.y(), local_center.z()};
+        }
+        else
+        {
+            const auto sign = local_center.z() >= 0.0 * m ? 1.0 : -1.0;
+            local_normal = vec3<one>{0.0, 0.0, -sign};
+            penetration = dz;
+            cp_face = vec3<si::metre>{local_center.x(), local_center.y(), sign * he.z()};
+        }
+
+        const auto world_normal = box_q * local_normal;
+        return collision_info{
+            .normal = world_normal,
+            .world_a = box_q * cp_face + a.position(),
+            .world_b = sph_center + sph_radius * world_normal,
+            .depth = penetration + sph_radius,
+        };
+    }
+
+    if (dist2 > sph_radius * sph_radius) return std::nullopt;
+
+    const auto dist = mp_units::sqrt(dist2);
+    const auto local_normal = diff_local / dist;
+    const auto world_normal = box_q * local_normal;
+
+    return collision_info{
+        .normal = world_normal,
+        .world_a = box_q * cp_local + a.position(),
+        .world_b = sph_center + sph_radius * world_normal,
+        .depth = sph_radius - dist,
+    };
+}
+
+std::optional<collision_info> box_box(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> box_cylinder(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> box_cone(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> box_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> box_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> sphere_cylinder(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> sphere_cone(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> sphere_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> sphere_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> cylinder_cylinder(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cylinder_cone(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cylinder_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cylinder_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> cone_cone(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cone_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cone_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> pyramid_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> pyramid_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> mesh_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+DEFINE_MIRROR_IMPL(box, sphere)
+DEFINE_MIRROR_IMPL(box, cylinder)
+DEFINE_MIRROR_IMPL(box, cone)
+DEFINE_MIRROR_IMPL(box, pyramid)
+DEFINE_MIRROR_IMPL(box, mesh)
+
+DEFINE_MIRROR_IMPL(sphere, cylinder)
+DEFINE_MIRROR_IMPL(sphere, cone)
+DEFINE_MIRROR_IMPL(sphere, pyramid)
+DEFINE_MIRROR_IMPL(sphere, mesh)
+
+DEFINE_MIRROR_IMPL(cylinder, cone)
+DEFINE_MIRROR_IMPL(cylinder, pyramid)
+DEFINE_MIRROR_IMPL(cylinder, mesh)
+
+DEFINE_MIRROR_IMPL(cone, pyramid)
+DEFINE_MIRROR_IMPL(cone, mesh)
+
+DEFINE_MIRROR_IMPL(pyramid, mesh)
+
+#undef DEFINE_MIRROR_IMPL
+
+static constexpr auto collision_map = std::array{
+    std::array{box_box, box_sphere, box_cylinder, box_cone, box_pyramid, box_mesh},
+    std::array{sphere_box, sphere_sphere, sphere_cylinder, sphere_cone, sphere_pyramid,
+               sphere_mesh},
+    std::array{cylinder_box, cylinder_sphere, cylinder_cylinder, cylinder_cone, cylinder_pyramid,
+               cylinder_mesh},
+    std::array{cone_box, cone_sphere, cone_cylinder, cone_cone, cone_pyramid, cone_mesh},
+    std::array{pyramid_box, pyramid_sphere, pyramid_cylinder, pyramid_cone, pyramid_pyramid,
+               pyramid_mesh},
+    std::array{mesh_box, mesh_sphere, mesh_cylinder, mesh_cone, mesh_pyramid, mesh_mesh},
+};
+
+std::optional<collision_info> collision(const physkit::instance &a, const physkit::instance &b)
+{
+    return collision_map[static_cast<std::size_t>(a.geometry().type())]
+                        [static_cast<std::size_t>(b.geometry().type())](a, b);
 }
 
 // std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)

@@ -496,8 +496,8 @@ class shape
 public:
     enum class type : std::uint8_t
     {
-        sphere = 0,
-        box,
+        box = 0,
+        sphere,
         cylinder,
         cone,
         pyramid,

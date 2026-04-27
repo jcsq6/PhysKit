@@ -31,6 +31,7 @@ class pool_app : public graphics_app
 {
     static inline const auto gravity = vec3{0.0, -9.81, 0.0} * m / s / s;
     using typed_world = physkit::world;
+    static constexpr auto ball_radius = 0.0285 * m;
 
 public:
     explicit pool_app(const Platform::Application::Arguments &arguments)
@@ -41,8 +42,8 @@ public:
                            .look_at(fvec3{0.0f, 0.0f, 1.5f} * si::metre)
                            .drag(false)
                            .gravity(gravity)
-                           .time_step(1.0 / 1200.0 * si::second)
-                           .solver_iterations(20)}
+                           .time_step(1.0 / 1500.0 * si::second)
+                           .solver_iterations(40)}
     {
         cam().speed(1.0f * si::metre / si::second);
         world().add_task(scene());
@@ -103,18 +104,36 @@ private:
                            color);
     }
 
-    task<world_base::handle> make_ball(physkit::shape ball,
-                                       physkit::quantity<si::kilogram, double> ball_mass,
-                                       vec3<si::metre> pos, Color3 color)
+    task<world_base::handle> make_ball(vec3<si::metre> pos, Color3 color)
     {
-        co_return (*co_await add_rigid(object_desc::dynam()
-                                           .with_shape(std::move(ball))
-                                           .with_pos(pos)
-                                           .with_mass(ball_mass)
-                                           .with_restitution(0.9)
-                                           .with_friction(0.005),
-                                       color))
-            ->handle();
+        auto h = (*co_await add_rigid(object_desc::dynam()
+                                          .with_shape(sphere(ball_radius))
+                                          .with_pos(pos)
+                                          .with_mass(.17 * kg)
+                                          .with_restitution(0.9)
+                                          .with_friction(0.5),
+                                      color))
+                     ->handle();
+        // Fix perfect sphere friction loss
+        co_await add_task<policy::no_wait>(
+            [h](this auto self) -> task<> // NOLINT
+            {
+                while (auto opt = co_await get_rigid(h))
+                {
+                    co_await next_frame{};
+                    auto &ball = **opt;
+                    // Apply realistic damping so balls eventually come to rest.
+                    ball.apply_force(-ball.vel() * (0.05 * kg / s));
+                    ball.apply_torque(-ball.ang_vel() * (0.00005 * kg * m * m / s));
+
+                    if (ball.vel().norm() < 0.005 * m / s && ball.ang_vel().norm() < 0.1 / s)
+                    {
+                        ball.vel() = vec3<si::metre / si::second>::zero();
+                        ball.ang_vel() = vec3<one / si::second>::zero();
+                    }
+                }
+            }());
+        co_return h;
     }
 
     task<> scene()
@@ -163,7 +182,7 @@ private:
                                .with_shape(felt_mesh)
                                .with_pos(felt_pos)
                                .with_restitution(0.3)
-                               .with_friction(0.6),
+                               .with_friction(1),
                            Color3{0.1f, 0.45f, 0.15f});
 
         auto felt_bounds = felt_mesh.bounds();
@@ -194,57 +213,38 @@ private:
         co_await make_rail(rail_lr, vec3{felt_hx + rail_t, 0.0 * m, lr_z_offset}, wood);
 
         // --- Balls ---
-        auto ball = sphere(0.0285 * m);
-        auto ball_mass = 0.17 * kg;
 
         // Cue ball
-        auto ball_bounds = ball.bounds();
-        auto ball_radius = (ball_bounds.max.x() - ball_bounds.min.x()) * 0.5;
-        double sp = (ball_bounds.max.x() - ball_bounds.min.x()).numerical_value_in(m) +
-                    0.001; // just over diameter
+        auto sp = ball_radius * 2.0 + 0.001 * m; // just over diameter
 
-        auto cue_ball_handle = *co_await make_ball(
-            ball, ball_mass, vec3{0.0 * m, ball_radius, -0.8 * m}, {0.95f, 0.95f, 0.95f});
+        auto cue_ball_handle =
+            *co_await make_ball(vec3{0.0 * m, ball_radius, -0.8 * m}, {0.95f, 0.95f, 0.95f});
 
         // Rack: 5 rows, apex at z=0.8
-        double zsp = sp * 0.866; // equilateral triangle row spacing
-        double z0 = 0.8;
+        auto zsp = sp * 0.866; // equilateral triangle row spacing
+        auto z0 = 0.8 * m;
         auto y = ball_radius;
 
         // Row 1
-        co_await make_ball(ball, ball_mass, vec3{0.0 * m, y, z0 * m}, {1.0f, 0.85f, 0.0f});
+        co_await make_ball(vec3{0.0 * m, y, z0}, {1.0f, 0.85f, 0.0f});
         // Row 2
-        co_await make_ball(ball, ball_mass, vec3{-sp / 2 * m, y, (z0 + zsp) * m},
-                           {1.0f, 0.92f, 0.55f});
-        co_await make_ball(ball, ball_mass, vec3{sp / 2 * m, y, (z0 + zsp) * m},
-                           {0.0f, 0.25f, 0.85f});
+        co_await make_ball(vec3{-sp / 2, y, (z0 + zsp)}, {1.0f, 0.92f, 0.55f});
+        co_await make_ball(vec3{sp / 2, y, (z0 + zsp)}, {0.0f, 0.25f, 0.85f});
         // Row 3
-        co_await make_ball(ball, ball_mass, vec3{-sp * m, y, (z0 + zsp * 2) * m},
-                           {0.55f, 0.65f, 0.9f});
-        co_await make_ball(ball, ball_mass, vec3{0.0 * m, y, (z0 + zsp * 2) * m},
-                           {0.08f, 0.08f, 0.08f}); // 8-ball
-        co_await make_ball(ball, ball_mass, vec3{sp * m, y, (z0 + zsp * 2) * m},
-                           {0.85f, 0.1f, 0.1f});
+        co_await make_ball(vec3{-sp, y, (z0 + zsp * 2)}, {0.55f, 0.65f, 0.9f});
+        co_await make_ball(vec3{0.0 * m, y, (z0 + zsp * 2)}, {0.08f, 0.08f, 0.08f}); // 8-ball
+        co_await make_ball(vec3{sp, y, (z0 + zsp * 2)}, {0.85f, 0.1f, 0.1f});
         // Row 4
-        co_await make_ball(ball, ball_mass, vec3{-sp * 1.5 * m, y, (z0 + zsp * 3) * m},
-                           {0.9f, 0.55f, 0.55f});
-        co_await make_ball(ball, ball_mass, vec3{-sp / 2 * m, y, (z0 + zsp * 3) * m},
-                           {0.5f, 0.1f, 0.1f});
-        co_await make_ball(ball, ball_mass, vec3{sp / 2 * m, y, (z0 + zsp * 3) * m},
-                           {0.5f, 0.0f, 0.5f});
-        co_await make_ball(ball, ball_mass, vec3{sp * 1.5 * m, y, (z0 + zsp * 3) * m},
-                           {0.7f, 0.45f, 0.7f});
+        co_await make_ball(vec3{-sp * 1.5, y, (z0 + zsp * 3)}, {0.9f, 0.55f, 0.55f});
+        co_await make_ball(vec3{-sp / 2, y, (z0 + zsp * 3)}, {0.5f, 0.1f, 0.1f});
+        co_await make_ball(vec3{sp / 2, y, (z0 + zsp * 3)}, {0.5f, 0.0f, 0.5f});
+        co_await make_ball(vec3{sp * 1.5, y, (z0 + zsp * 3)}, {0.7f, 0.45f, 0.7f});
         // Row 5
-        co_await make_ball(ball, ball_mass, vec3{-sp * 2 * m, y, (z0 + zsp * 4) * m},
-                           {0.95f, 0.5f, 0.0f});
-        co_await make_ball(ball, ball_mass, vec3{-sp * m, y, (z0 + zsp * 4) * m},
-                           {0.95f, 0.72f, 0.45f});
-        co_await make_ball(ball, ball_mass, vec3{0.0 * m, y, (z0 + zsp * 4) * m},
-                           {0.0f, 0.5f, 0.1f});
-        co_await make_ball(ball, ball_mass, vec3{sp * m, y, (z0 + zsp * 4) * m},
-                           {0.55f, 0.75f, 0.55f});
-        co_await make_ball(ball, ball_mass, vec3{sp * 2 * m, y, (z0 + zsp * 4) * m},
-                           {0.7f, 0.45f, 0.45f});
+        co_await make_ball(vec3{-sp * 2, y, (z0 + zsp * 4)}, {0.95f, 0.5f, 0.0f});
+        co_await make_ball(vec3{-sp, y, (z0 + zsp * 4)}, {0.95f, 0.72f, 0.45f});
+        co_await make_ball(vec3{0.0 * m, y, (z0 + zsp * 4)}, {0.0f, 0.5f, 0.1f});
+        co_await make_ball(vec3{sp, y, (z0 + zsp * 4)}, {0.55f, 0.75f, 0.55f});
+        co_await make_ball(vec3{sp * 2, y, (z0 + zsp * 4)}, {0.7f, 0.45f, 0.45f});
 
         co_await add_task<policy::no_wait>(respawn_cue_ball(cue_ball_handle));
         auto shoot_offset = 0.0 * m;
