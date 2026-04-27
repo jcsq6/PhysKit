@@ -8,6 +8,7 @@
 import physkit;
 import mp_units;
 #else
+#include "sandbox.h"
 #include <physkit/physkit.h>
 #endif
 #ifdef PHYSKIT_GRAPHICS_MODULES
@@ -20,6 +21,18 @@ using namespace mp_units;
 using namespace mp_units::si::unit_symbols;
 using namespace physkit;
 using namespace graphics;
+
+// TODO: Maybe swap to header - driver format and split files
+struct sandbox_state
+{
+    std::optional<world_base::handle> selected;
+
+    std::vector<world_base::handle> dynamic_bodies;
+
+    bool gravity_on = true;
+
+    double debug_timer = 0.0;
+}
 
 class sandbox : public graphics_app
 {
@@ -68,7 +81,9 @@ private:
             ->handle();
     }
 
-    // input spawning - based off mouse clicks
+    /// @brief keyboard and mouse-bindings for the user to manipulate objects in the arena.
+    // TODO: Need to bind to other mouse button - or to a keybind since the left click is also drag
+    // and view for the world
     task<> maybe_spawn_objects()
     {
         if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
@@ -124,14 +139,18 @@ private:
         co_return;
     }
 
+    // build static world geometry, then loop forever on the render frame
     task<> runtime()
     {
         co_await build_area();
 
         while (true)
         {
+            auto dt = *co_await next_render_frame();
             co_await next_render_frame();
             co_await maybe_spawn_objects();
+            co_await maybe_pick();
+            poll_keys(dt);
         }
     }
 };
