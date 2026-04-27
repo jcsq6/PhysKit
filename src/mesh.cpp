@@ -318,7 +318,7 @@ std::vector<std::uint32_t> mesh::overlap_sphere(const bounding_sphere &sphere) c
 
     auto r_sq = sphere.radius * sphere.radius;
 
-    thread_local std::vector<std::uint32_t> buffer;
+    std::vector<std::uint32_t> buffer;
     buffer.clear();
     buffer.reserve(M_triangles.size() / 10); // heuristic
 

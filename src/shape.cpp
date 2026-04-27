@@ -156,7 +156,7 @@ vec3<m> box::closest_point(const vec3<m> &p) const
     const auto b = M_base_half;
     const auto h = M_height;
 
-    static const std::array<vec3<si::metre>, 5> verts{
+    const std::array<vec3<si::metre>, 5> verts{
         vec3{b, 0.0 * m, b},  vec3{-b, 0.0 * m, b},      vec3{-b, 0.0 * m, -b},
         vec3{b, 0.0 * m, -b}, vec3{0.0 * m, h, 0.0 * m},
     };
