@@ -1,5 +1,6 @@
 #pragma once
 #include "../collision/mesh.h"
+#include "../collision/shape.h"
 #include "particle.h"
 
 PHYSKIT_EXPORT
@@ -60,7 +61,12 @@ public:
 
     auto &&with_mesh(this auto &&self, std::shared_ptr<const physkit::mesh> msh)
     {
-        self.M_mesh = std::move(msh);
+        self.M_shape = std::move(msh);
+        return std::forward<decltype(self)>(self);
+    }
+    auto &&with_shape(this auto &&self, physkit::shape shp)
+    {
+        self.M_shape = std::move(shp);
         return std::forward<decltype(self)>(self);
     }
 
@@ -85,13 +91,27 @@ public:
     }
     [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
     [[nodiscard]] const vec3<si::radian / si::second> &ang_vel() const { return M_ang_vel; }
-    [[nodiscard]] const mat3<si::kilogram * si::metre * si::metre> &inertia_tensor() const
-    { return M_inertia; }
+    [[nodiscard]] mat3<si::kilogram * si::metre * si::metre> inertia_tensor() const
+    {
+        if (M_inertia.has_value()) return *M_inertia;
+
+        if (M_type == body_type::stat)
+            return vec3{
+                std::numeric_limits<quantity<si::kilogram * si::metre * si::metre>>::infinity(),
+                std::numeric_limits<quantity<si::kilogram * si::metre * si::metre>>::infinity(),
+                std::numeric_limits<quantity<si::kilogram * si::metre * si::metre>>::infinity()}
+                .as_diagonal();
+
+        auto density = M_mass / M_shape.volume();
+        return M_shape.inertia_tensor(density);
+    }
     [[nodiscard]] double restitution() const { return M_restitution; }
     [[nodiscard]] double friction() const { return M_friction; }
 
     [[nodiscard]] auto &&mesh(this auto &&self)
-    { return std::forward_like<decltype(self)>(self.M_mesh); }
+    { return std::forward_like<decltype(self)>(self.M_shape.mesh()); }
+    [[nodiscard]] auto &&shape(this auto &&self)
+    { return std::forward_like<decltype(self)>(self.M_shape); }
     [[nodiscard]] body_type type() const { return M_type; }
 
 private:
@@ -101,28 +121,41 @@ private:
     quantity<si::kilogram> M_mass = 1.0 * si::kilogram;
     quat<one> M_orientation = quat<one>::identity();
     vec3<si::radian / si::second> M_ang_vel = vec3<si::radian / si::second>::zero();
-    mat3<si::kilogram * si::metre * si::metre> M_inertia =
-        mat3<si::kilogram * si::metre * si::metre>::identity();
-    std::shared_ptr<const physkit::mesh> M_mesh;
+    std::optional<mat3<si::kilogram * si::metre * si::metre>> M_inertia;
+    physkit::shape M_shape;
     double M_restitution = 0.5;
     double M_friction = 0.5;
 };
 
-class object : public particle
+class object : public rigid_body
 {
 public:
     explicit object(object_desc desc)
-        : particle(desc.pos(), desc.vel(), desc.mass(), desc.orientation(), desc.ang_vel(),
-                   desc.inertia_tensor()),
-          M_type(desc.type()), M_mesh(std::move(desc).mesh()), M_restitution(desc.restitution()),
+        : rigid_body(desc.pos(), desc.vel(), desc.mass(), desc.orientation(), desc.ang_vel(),
+                     desc.inertia_tensor()),
+          M_type(desc.type()), M_shape(std::move(desc).shape()), M_restitution(desc.restitution()),
           M_friction(desc.friction())
     {
-        // TODO: use simple shape as default
-        if (!M_mesh) throw std::invalid_argument("Object must have a mesh");
     }
 
-    [[nodiscard]] const struct mesh &mesh() const { return *M_mesh; }
-    [[nodiscard]] const std::shared_ptr<const struct mesh> &mesh_ptr() const { return M_mesh; }
+    [[nodiscard]] const struct shape &shape() const { return M_shape; }
+    [[nodiscard]] const physkit::shape *shape_ptr() const { return &M_shape; }
+
+    void shape(physkit::shape new_shape)
+    {
+        M_shape = std::move(new_shape);
+        if (is_dynamic())
+            inertia_tensor(M_shape.inertia_tensor(rigid_body::mass() / M_shape.volume()));
+    }
+
+    /// @brief Update the mass and automatically recalculate the physics inertia tensor
+    void mass(quantity<si::kilogram> new_mass)
+    {
+        rigid_body::mass(new_mass);
+        if (is_dynamic()) inertia_tensor(M_shape.inertia_tensor(new_mass / M_shape.volume()));
+    }
+
+    [[nodiscard]] auto mass() const { return rigid_body::mass(); }
 
     [[nodiscard]] body_type type() const { return M_type; }
     [[nodiscard]] bool is_dynamic() const { return M_type == body_type::dynam; }
@@ -134,10 +167,10 @@ public:
     void friction(double f) { M_friction = f; }
 
     /// @brief Return a lightweight view for world-space queries.
-    [[nodiscard]] struct mesh::instance instance() const { return {*M_mesh, pos(), orientation()}; }
+    [[nodiscard]] physkit::instance instance() const { return {M_shape, pos(), orientation()}; }
 
 private:
-    std::shared_ptr<const struct mesh> M_mesh;
+    physkit::shape M_shape;
     body_type M_type;
     double M_restitution;
     double M_friction;

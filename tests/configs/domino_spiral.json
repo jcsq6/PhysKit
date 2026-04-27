@@ -19,7 +19,7 @@
     "solver_iterations": 20,
     "objects": [
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     20.0,
@@ -44,7 +44,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -75,7 +75,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -106,7 +106,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -137,7 +137,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -168,7 +168,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -199,7 +199,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -230,7 +230,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -261,7 +261,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -292,7 +292,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -323,7 +323,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -354,7 +354,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -385,7 +385,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -416,7 +416,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -447,7 +447,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -478,7 +478,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -509,7 +509,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -540,7 +540,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -571,7 +571,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -602,7 +602,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -633,7 +633,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -664,7 +664,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -695,7 +695,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -726,7 +726,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -757,7 +757,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -788,7 +788,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -819,7 +819,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -850,7 +850,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -881,7 +881,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -912,7 +912,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -943,7 +943,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -974,7 +974,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1005,7 +1005,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1036,7 +1036,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1067,7 +1067,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1098,7 +1098,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1129,7 +1129,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1160,7 +1160,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1191,7 +1191,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1222,7 +1222,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1253,7 +1253,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1284,7 +1284,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1315,7 +1315,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1346,7 +1346,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1377,7 +1377,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1408,7 +1408,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1439,7 +1439,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1470,7 +1470,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1501,7 +1501,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1532,7 +1532,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1563,7 +1563,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1594,7 +1594,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1625,7 +1625,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1656,7 +1656,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1687,7 +1687,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1718,7 +1718,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1749,7 +1749,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1780,7 +1780,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1811,7 +1811,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1842,7 +1842,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1873,7 +1873,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1904,7 +1904,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1935,7 +1935,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1966,7 +1966,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -1997,7 +1997,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2028,7 +2028,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2059,7 +2059,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2090,7 +2090,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2121,7 +2121,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2152,7 +2152,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2183,7 +2183,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2214,7 +2214,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2245,7 +2245,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2276,7 +2276,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2307,7 +2307,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2338,7 +2338,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2369,7 +2369,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2400,7 +2400,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2431,7 +2431,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2462,7 +2462,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2493,7 +2493,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2524,7 +2524,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2555,7 +2555,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2586,7 +2586,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2617,7 +2617,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2648,7 +2648,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2679,7 +2679,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2710,7 +2710,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2741,7 +2741,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2772,7 +2772,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2803,7 +2803,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2834,7 +2834,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2865,7 +2865,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2896,7 +2896,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2927,7 +2927,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2958,7 +2958,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -2989,7 +2989,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3020,7 +3020,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3051,7 +3051,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3082,7 +3082,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3113,7 +3113,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3144,7 +3144,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3175,7 +3175,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3206,7 +3206,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3237,7 +3237,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3268,7 +3268,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3299,7 +3299,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3330,7 +3330,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3361,7 +3361,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3392,7 +3392,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3423,7 +3423,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3454,7 +3454,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3485,7 +3485,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3516,7 +3516,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3547,7 +3547,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3578,7 +3578,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3609,7 +3609,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3640,7 +3640,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3671,7 +3671,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3702,7 +3702,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3733,7 +3733,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3764,7 +3764,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3795,7 +3795,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3826,7 +3826,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3857,7 +3857,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3888,7 +3888,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3919,7 +3919,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3950,7 +3950,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -3981,7 +3981,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4012,7 +4012,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4043,7 +4043,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4074,7 +4074,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4105,7 +4105,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4136,7 +4136,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4167,7 +4167,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4198,7 +4198,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4229,7 +4229,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4260,7 +4260,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4291,7 +4291,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4322,7 +4322,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4353,7 +4353,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4384,7 +4384,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4415,7 +4415,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4446,7 +4446,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4477,7 +4477,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4508,7 +4508,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4539,7 +4539,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4570,7 +4570,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4601,7 +4601,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4632,7 +4632,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4663,7 +4663,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4694,7 +4694,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4725,7 +4725,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4756,7 +4756,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4787,7 +4787,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4818,7 +4818,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4849,7 +4849,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4880,7 +4880,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4911,7 +4911,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4942,7 +4942,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -4973,7 +4973,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5004,7 +5004,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5035,7 +5035,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5066,7 +5066,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5097,7 +5097,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5128,7 +5128,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5159,7 +5159,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5190,7 +5190,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5221,7 +5221,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5252,7 +5252,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5283,7 +5283,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5314,7 +5314,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5345,7 +5345,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5376,7 +5376,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5407,7 +5407,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5438,7 +5438,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5469,7 +5469,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5500,7 +5500,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5531,7 +5531,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5562,7 +5562,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5593,7 +5593,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5624,7 +5624,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5655,7 +5655,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5686,7 +5686,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5717,7 +5717,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5748,7 +5748,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5779,7 +5779,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5810,7 +5810,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5841,7 +5841,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5872,7 +5872,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5903,7 +5903,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5934,7 +5934,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5965,7 +5965,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -5996,7 +5996,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6027,7 +6027,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6058,7 +6058,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6089,7 +6089,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6120,7 +6120,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6151,7 +6151,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6182,7 +6182,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6213,7 +6213,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6244,7 +6244,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6275,7 +6275,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6306,7 +6306,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6337,7 +6337,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6368,7 +6368,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6399,7 +6399,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6430,7 +6430,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6461,7 +6461,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6492,7 +6492,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6523,7 +6523,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6554,7 +6554,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6585,7 +6585,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6616,7 +6616,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6647,7 +6647,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6678,7 +6678,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6709,7 +6709,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6740,7 +6740,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6771,7 +6771,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6802,7 +6802,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6833,7 +6833,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6864,7 +6864,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6895,7 +6895,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6926,7 +6926,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6957,7 +6957,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -6988,7 +6988,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7019,7 +7019,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7050,7 +7050,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7081,7 +7081,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7112,7 +7112,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7143,7 +7143,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7174,7 +7174,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7205,7 +7205,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7236,7 +7236,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7267,7 +7267,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7298,7 +7298,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7329,7 +7329,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7360,7 +7360,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7391,7 +7391,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7422,7 +7422,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7453,7 +7453,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7484,7 +7484,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7515,7 +7515,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7546,7 +7546,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7577,7 +7577,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7608,7 +7608,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7639,7 +7639,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7670,7 +7670,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7701,7 +7701,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7732,7 +7732,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7763,7 +7763,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7794,7 +7794,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7825,7 +7825,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7856,7 +7856,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7887,7 +7887,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7918,7 +7918,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7949,7 +7949,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -7980,7 +7980,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8011,7 +8011,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8042,7 +8042,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8073,7 +8073,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8104,7 +8104,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8135,7 +8135,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8166,7 +8166,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8197,7 +8197,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8228,7 +8228,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8259,7 +8259,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8290,7 +8290,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8321,7 +8321,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8352,7 +8352,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8383,7 +8383,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8414,7 +8414,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8445,7 +8445,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8476,7 +8476,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8507,7 +8507,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8538,7 +8538,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8569,7 +8569,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8600,7 +8600,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8631,7 +8631,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8662,7 +8662,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8693,7 +8693,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.08,
@@ -8724,7 +8724,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8750,7 +8750,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     1.0,

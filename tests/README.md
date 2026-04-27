@@ -172,7 +172,7 @@ Pass a JSON file with `--config` / `-c`. The file is deserialized with [Glaze](h
             "mass": 1.0,                                // kg (required)
             "type": "dynam",                            // "dynam" | "stat"
             "color": [1.0, 0.0, 0.0, 1.0],             // RGBA floats 0-1, default white
-            "mesh": {                                   // mesh descriptor (see below)
+            "shape": {                                   // mesh descriptor (see below)
                 "name": "sphere",
                 "radius": 0.5
             }
@@ -198,14 +198,14 @@ Pass a JSON file with `--config` / `-c`. The file is deserialized with [Glaze](h
     "drag": true,
     "objects": [
         {
-            "mesh": {"name": "sphere", "radius": 0.5},
+            "shape": {"name": "sphere", "radius": 0.5},
             "pos": [0.0, 0.0, 0.0],
             "vel": [1.0, 20.0, 0.0],
             "mass": 1.0,
             "color": [1.0, 0.0, 0.0]
         },
         {
-            "mesh": {"name": "box", "half_extents": [0.5, 0.5, 0.5]},
+            "shape": {"name": "box", "half_extents": [0.5, 0.5, 0.5]},
             "pos": [5.0, 0.0, 0.0],
             "vel": [-1.0, 20.0, 0.0],
             "mass": 2.0,
@@ -541,8 +541,8 @@ auto pl     = mesh_objs::plane();                   // unit plane
 Use `get_mesh(physkit_mesh)` to create a GPU mesh from a physics mesh:
 
 ```cpp
-auto phys_mesh = physkit::mesh::box(vec3{1, 1, 1} * m);
-auto gl_mesh = get_mesh(*phys_mesh);
+auto phys_mesh = physkit::box(vec3{1, 1, 1} * m);
+auto gl_mesh = get_mesh(phys_mesh);
 ```
 
 ---

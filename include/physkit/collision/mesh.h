@@ -30,6 +30,8 @@ PHYSKIT_EXPORT
 namespace physkit
 {
 
+class instance;
+
 struct triangle_t : std::array<unsigned int, 3>
 {
     [[nodiscard]] std::array<vec3<si::metre>, 3>
@@ -121,69 +123,6 @@ class mesh : public std::enable_shared_from_this<mesh>
     };
 
 public:
-    /// @brief A view of a mesh placed in world space.
-    /// Provides world-space collision queries by transforming into local space and back.
-    /// Instances are meant for temporary use in queries and should not be stored long-term by
-    /// users. Watch out for dangling references.
-    class instance
-    {
-    public:
-        instance(const mesh &msh, const vec3<si::metre> &position,
-                 const quat<one> &orientation = quat<one>::identity());
-
-        [[nodiscard]] const mesh &geometry() const { return *M_mesh; }
-        [[nodiscard]] const vec3<si::metre> &position() const { return M_position; }
-        [[nodiscard]] const quat<one> &orientation() const { return M_orientation; }
-
-        [[nodiscard]] vec3<si::metre> vertex(unsigned int index) const
-        {
-            assert(index < M_mesh->vertices().size());
-            return M_orientation * M_mesh->vertices()[index] + M_position;
-        }
-
-        /// @brief Compute the world-space AABB by rotating the local AABB and translating.
-        [[nodiscard]] aabb bounds() const;
-
-        /// @brief Compute the world-space bounding sphere. Rotation-invariant — only the
-        /// center is translated.
-        [[nodiscard]] bounding_sphere bsphere() const
-        {
-            auto local = M_mesh->bsphere();
-            return {.center = M_orientation * local.center + M_position, .radius = local.radius};
-        }
-
-        /// @brief Compute the world-space ray intersection by transforming the ray into local space
-        /// and back.
-        [[nodiscard]] std::optional<ray::hit>
-        ray_intersect(const ray &r, quantity<si::metre> max_distance =
-                                        std::numeric_limits<quantity<si::metre>>::infinity()) const;
-
-        /// @brief Compute the closest point on the mesh surface to the given world-space point.
-        /// O(log N) time.
-        [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const;
-
-        /// @brief Point containment test in world space. O(log N) time.
-        [[nodiscard]] bool contains(const vec3<si::metre> &point) const;
-
-        /// @brief Gathers indices of triangles whose vertices overlap the given world-space sphere.
-        [[nodiscard]] std::vector<std::uint32_t>
-        overlap_sphere(const bounding_sphere &sphere) const;
-
-        /// @brief GJK support function in world space. Rotates the direction into
-        /// local frame, queries the mesh, and transforms the result back.
-        [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const;
-
-        /// @brief Compute the inertia tensor rotated into the world frame and shifted to the
-        /// instance's position via the parallel axis theorem.
-        [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
-        inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const;
-
-    private:
-        const mesh *M_mesh; // NOLINT
-        vec3<si::metre> M_position;
-        quat<one> M_orientation;
-    };
-
     mesh(key /*unused*/) {}
     mesh(std::span<const vec3<si::metre>> vertices, std::span<const triangle_t> triangles,
          key /*unused*/)
@@ -218,22 +157,6 @@ public:
 
     static std::shared_ptr<mesh> make(std::span<const vec3<si::metre>> vertices,
                                       std::span<const triangle_t> triangles);
-
-    /// @brief Create a box mesh centered at the origin with the given half-extents.
-    static std::shared_ptr<mesh> box(const vec3<si::metre> &half_extents);
-
-    /// @brief Create a UV-sphere mesh centered at the origin.
-    /// @param radius Sphere radius.
-    /// @param stacks Number of horizontal divisions (latitude, >= 2).
-    /// @param sectors Number of vertical divisions (longitude, >= 3).
-    static std::shared_ptr<mesh> sphere(quantity<si::metre> radius, unsigned int stacks = 16,
-                                        unsigned int sectors = 32);
-
-    /// @brief Create a square-base pyramid with base centered at the origin and apex at
-    /// (0, height, 0).
-    /// @param base_half Half the side length of the square base.
-    /// @param height Height from base to apex.
-    static std::shared_ptr<mesh> pyramid(quantity<si::metre> base_half, quantity<si::metre> height);
 
     auto ptr(this auto &&self) { return std::forward<decltype(self)>(self).shared_from_this(); }
 
@@ -271,9 +194,7 @@ public:
 
     /// @brief Create an instance view of this mesh at the given position and orientation.
     [[nodiscard]] instance at(const vec3<si::metre> &position,
-                              const quat<one> &orientation = quat<one>::identity()) const
-    { return {*this, position, orientation}; }
-
+                              const quat<one> &orientation = quat<one>::identity()) const;
     /// @brief - Add in support to return obb objects -> much more tedious, more research later.
 
 private:
@@ -283,11 +204,5 @@ private:
     std::vector<triangle_t> M_triangles;
     detail::static_bvh M_bvh;
 };
-
-inline mesh::instance::instance(const mesh &msh, const vec3<si::metre> &position,
-                                const quat<one> &orientation)
-    : M_mesh{&msh}, M_position{position}, M_orientation{orientation}
-{
-}
 
 } // namespace physkit

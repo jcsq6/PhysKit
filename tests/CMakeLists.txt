@@ -100,6 +100,7 @@ add_subdirectory(dynamic_bvh)
 add_subdirectory(gjk)
 add_subdirectory(epa)
 add_subdirectory(co)
+add_subdirectory(shape)
 
 if (PHYSKIT_BUILD_GRAPHICS_TESTS)
   add_subdirectory(demo)

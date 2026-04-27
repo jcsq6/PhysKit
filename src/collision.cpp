@@ -5,9 +5,32 @@
 
 namespace physkit
 {
+struct support_pt
+{
+    vec3<si::metre> p;  // minkowski point
+    vec3<si::metre> pa; // point on A
+    vec3<si::metre> pb; // point on b
+};
+
+/// @brief - not a true convex check but just checking for valid furthest point
+template <typename T>
+concept SupportShape = requires(const T &shape, const vec3<one> &dir) {
+    { shape.support(dir) } -> std::same_as<vec3<si::metre>>;
+};
+
+/// @brief minkowski difference support for convex shapes
+template <typename ShapeA, typename ShapeB>
+    requires SupportShape<ShapeA> && SupportShape<ShapeB>
+inline support_pt minkowski_support(const ShapeA &a, const ShapeB &b, const vec3<one> &direction)
+{
+    auto pa = a.support(direction);
+    auto pb = b.support(-direction);
+    return support_pt{.p = pa - pb, .pa = pa, .pb = pb};
+}
+
 /// based off winter dev gjk algorithm implementation
 
-using simplex = absl::InlinedVector<detail::support_pt, 4>;
+using simplex = absl::InlinedVector<support_pt, 4>;
 
 inline bool handle_line(simplex &simplex, vec3<one> &direction)
 {
@@ -162,14 +185,13 @@ inline bool handle_simplex(simplex &simplex, vec3<one> &direction)
 }
 
 /// @brief modify collision loop to check on separation
-std::optional<simplex> gjk_collision(const detail::SupportShape auto &a,
-                                     const detail::SupportShape auto &b)
+std::optional<simplex> gjk_collision(const SupportShape auto &a, const SupportShape auto &b)
 {
     constexpr auto eps = 1e-12;
     simplex simplex;
     vec3<one> direction = {1.0, 0.0, 0.0};
 
-    auto point = detail::minkowski_support(a, b, direction);
+    auto point = minkowski_support(a, b, direction);
     simplex.push_back(point);
     if (point.p.squared_norm() < eps * pow<2>(si::metre)) return simplex;
     direction = -point.p.normalized();
@@ -177,7 +199,7 @@ std::optional<simplex> gjk_collision(const detail::SupportShape auto &a,
     constexpr int max_iterations = 100;
     for (int iter = 0; iter < max_iterations; ++iter)
     {
-        auto new_point = detail::minkowski_support(a, b, direction);
+        auto new_point = minkowski_support(a, b, direction);
         auto progress = new_point.p.dot(direction);
         if (progress <= 0 * si::metre) return std::nullopt;
 
@@ -188,8 +210,7 @@ std::optional<simplex> gjk_collision(const detail::SupportShape auto &a,
     return std::nullopt;
 }
 
-inline bool pad_simplex(const detail::SupportShape auto &a, const detail::SupportShape auto &b,
-                        simplex &simplex)
+inline bool pad_simplex(const SupportShape auto &a, const SupportShape auto &b, simplex &simplex)
 {
     using a_type = std::decay_t<decltype(a)>;
     using b_type = std::decay_t<decltype(b)>;
@@ -197,10 +218,10 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
     auto on_1 = [](const a_type &a, const b_type &b, physkit::simplex &simplex)
     {
         auto dir = vec3{1, 0, 0};
-        auto p2 = detail::minkowski_support(a, b, dir);
+        auto p2 = minkowski_support(a, b, dir);
 
         if ((p2.p - simplex[0].p).squared_norm() < 1e-6 * pow<2>(si::metre))
-            p2 = detail::minkowski_support(a, b, -dir);
+            p2 = minkowski_support(a, b, -dir);
         simplex.push_back(p2);
     };
     auto on_2 = [](const a_type &a, const b_type &b, physkit::simplex &simplex)
@@ -209,9 +230,9 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
         auto dir = line.normalized().cross(vec3<one>{0.0, 1.0, 0.0});
         if (dir.squared_norm() < 1e-6) dir = line.normalized().cross(vec3<one>{0.0, 0.0, 1.0});
         dir.normalize();
-        auto p3 = detail::minkowski_support(a, b, dir);
+        auto p3 = minkowski_support(a, b, dir);
         if (line.cross(p3.p - simplex[0].p).squared_norm() < 1e-6 * pow<4>(si::metre))
-            p3 = detail::minkowski_support(a, b, -dir);
+            p3 = minkowski_support(a, b, -dir);
         simplex.push_back(p3);
     };
     auto on_3 = [](const a_type &a, const b_type &b, physkit::simplex &simplex)
@@ -219,9 +240,9 @@ inline bool pad_simplex(const detail::SupportShape auto &a, const detail::Suppor
         auto ab = simplex[1].p - simplex[0].p;
         auto ac = simplex[2].p - simplex[0].p;
         auto dir = ab.cross(ac).normalized();
-        auto p4 = detail::minkowski_support(a, b, dir);
+        auto p4 = minkowski_support(a, b, dir);
         if (abs((p4.p - simplex[0].p).dot(dir)) < 1e-6 * si::metre)
-            p4 = detail::minkowski_support(a, b, -dir);
+            p4 = minkowski_support(a, b, -dir);
         simplex.push_back(p4);
     };
 
@@ -281,19 +302,24 @@ struct epa_solver
         auto ac = polytope[k].p - polytope[i].p;
         face.normal = ab.cross(ac) / pow<2>(si::metre);
 
-        if (face.normal.squared_norm() < 1e-12)
+        if (face.normal.squared_norm() < 1e-24)
+        {
             face.normal = vec3<one>::zero();
+            face.distance = quantity<si::metre>::max();
+        }
         else
+        {
             face.normal.normalize();
 
-        if (opposite_index != null_index &&
-            face.normal.dot(polytope[opposite_index].p - polytope[i].p) > 0.0 * si::metre)
-        {
-            std::swap(face.vertices[1], face.vertices[2]);
-            face.normal = -face.normal;
-        }
+            if (opposite_index != null_index &&
+                face.normal.dot(polytope[opposite_index].p - polytope[i].p) > 0.0 * si::metre)
+            {
+                std::swap(face.vertices[1], face.vertices[2]);
+                face.normal = -face.normal;
+            }
 
-        face.distance = face.normal.dot(polytope[i].p);
+            face.distance = face.normal.dot(polytope[i].p);
+        }
     }
 
     std::size_t allocate_face()
@@ -408,8 +434,8 @@ struct epa_solver
     }
 
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    static std::optional<collision_info> solve(const detail::SupportShape auto &a,
-                                               const detail::SupportShape auto &b, simplex &simplex)
+    static std::optional<collision_info> solve(const SupportShape auto &a,
+                                               const SupportShape auto &b, simplex &simplex)
     {
         if (simplex.size() < 4 && !pad_simplex(a, b, simplex))
             return std::nullopt; // Degenerate case, treat as no collision
@@ -419,9 +445,9 @@ struct epa_solver
         solver.build_initial_tetrahedron();
 
         constexpr int max_iterations = 64;
-        constexpr auto tolerance = 1e-6 * si::metre;
+        constexpr auto tolerance = 1e-8 * si::metre;
 
-        auto get_barycentric = [&](const face &f, const detail::support_pt &p)
+        auto get_barycentric = [&](const face &f, const support_pt &p)
         {
             auto p0 = solver.polytope[f.vertices[0]];
             auto p1 = solver.polytope[f.vertices[1]];
@@ -460,7 +486,7 @@ struct epa_solver
 
             const auto &min_face = solver.faces[min_face_idx];
 
-            auto p = detail::minkowski_support(a, b, min_face.normal);
+            auto p = minkowski_support(a, b, min_face.normal);
             auto p_dist = min_face.normal.dot(p.p);
             if (p_dist - min_face.distance < tolerance) // convergence
                 return get_barycentric(min_face, p);
@@ -504,35 +530,363 @@ struct epa_solver
     }
 
     absl::InlinedVector<face, buffer_size> faces;
-    absl::InlinedVector<detail::support_pt, buffer_size> polytope;
+    absl::InlinedVector<support_pt, buffer_size> polytope;
     absl::InlinedVector<std::size_t, buffer_size> face_heap;
 };
 
-/// @brief return data for obb obb collision
-std::optional<collision_info> gjk_epa(detail::SupportShape auto const &a,
-                                      detail::SupportShape auto const &b)
+// NOLINTNEXTLINE
+#define DEFINE_MIRROR_IMPL(a_t, b_t)                                                               \
+    std::optional<collision_info> b_t##_##a_t(const instance &a, const instance &b)                \
+    {                                                                                              \
+        if (auto info = a_t##_##b_t(b, a))                                                         \
+        {                                                                                          \
+            info->normal = -info->normal;                                                          \
+            std::swap(info->world_a, info->world_b);                                               \
+            return info;                                                                           \
+        }                                                                                          \
+        return std::nullopt;                                                                       \
+    }
+
+inline std::optional<collision_info> gjk_epa(const instance &a, const instance &b)
 {
     auto simplex = gjk_collision(a, b);
-    if (simplex) return epa_solver::solve(a, b, *simplex);
-    return std::nullopt;
+    if (!simplex) return std::nullopt;
+    return epa_solver::solve(a, b, *simplex);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define INSTANTIATE_GJK_EPA(ShapeA, ShapeB)                                                        \
-    template std::optional<collision_info> gjk_epa(const ShapeA &a, const ShapeB &b);
+std::optional<collision_info> sphere_sphere(const instance &a, const instance &b)
+{
+    using namespace mp_units::si::unit_symbols;
+    const auto ra = a.geometry().sphere().radius();
+    const auto rb = b.geometry().sphere().radius();
+    const auto diff = a.position() - b.position();
+    const auto dist2 = diff.squared_norm();
+    const auto rsum = ra + rb;
 
-INSTANTIATE_GJK_EPA(obb, obb)
-INSTANTIATE_GJK_EPA(aabb, aabb)
-INSTANTIATE_GJK_EPA(obb, aabb)
-INSTANTIATE_GJK_EPA(aabb, obb)
-INSTANTIATE_GJK_EPA(mesh::instance, mesh::instance)
-INSTANTIATE_GJK_EPA(aabb, mesh::instance)
-INSTANTIATE_GJK_EPA(mesh::instance, aabb)
-INSTANTIATE_GJK_EPA(obb, mesh::instance)
-INSTANTIATE_GJK_EPA(mesh::instance, obb)
+    if (dist2 > rsum * rsum) return std::nullopt;
 
-#undef INSTANTIATE_GJK_EPA
+    vec3<one> normal;
+    quantity<si::metre> dist; // NOLINT
+    if (dist2 < 1e-24 * pow<2>(si::metre))
+    {
+        normal = vec3<one>{1.0, 0.0, 0.0};
+        dist = 0.0 * m;
+    }
+    else
+    {
+        dist = mp_units::sqrt(dist2);
+        normal = diff / dist;
+    }
 
-std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
-{ throw std::runtime_error("SAT not implemented"); }
+    return collision_info{
+        .normal = normal,
+        .world_a = a.position() - ra * normal,
+        .world_b = b.position() + rb * normal,
+        .depth = rsum - dist,
+    };
+}
+
+std::optional<collision_info> box_sphere(const instance &a, const instance &b)
+{
+    using namespace mp_units::si::unit_symbols;
+    const auto &bx = a.geometry().box();
+    const auto he = bx.half_extents();
+    const auto box_q = a.orientation();
+    const auto sph_center = b.position();
+    const auto sph_radius = b.geometry().sphere().radius();
+
+    const auto local_center = box_q.conjugate() * (sph_center - a.position());
+
+    const auto clamp = [](quantity<si::metre> v, quantity<si::metre> lim)
+    { return v < -lim ? -lim : (v > lim ? lim : v); };
+
+    vec3<si::metre> cp_local{clamp(local_center.x(), he.x()), clamp(local_center.y(), he.y()),
+                             clamp(local_center.z(), he.z())};
+
+    const auto diff_local = cp_local - local_center;
+    const auto dist2 = diff_local.squared_norm();
+
+    if (dist2 < 1e-24 * pow<2>(si::metre))
+    {
+        const auto dx = he.x() - mp_units::abs(local_center.x());
+        const auto dy = he.y() - mp_units::abs(local_center.y());
+        const auto dz = he.z() - mp_units::abs(local_center.z());
+
+        vec3<one> local_normal;
+        quantity<si::metre> penetration; // NOLINT
+        vec3<si::metre> cp_face;
+        if (dx <= dy && dx <= dz)
+        {
+            const auto sign = local_center.x() >= 0.0 * m ? 1.0 : -1.0;
+            local_normal = vec3<one>{-sign, 0.0, 0.0};
+            penetration = dx;
+            cp_face = vec3<si::metre>{sign * he.x(), local_center.y(), local_center.z()};
+        }
+        else if (dy <= dz)
+        {
+            const auto sign = local_center.y() >= 0.0 * m ? 1.0 : -1.0;
+            local_normal = vec3<one>{0.0, -sign, 0.0};
+            penetration = dy;
+            cp_face = vec3<si::metre>{local_center.x(), sign * he.y(), local_center.z()};
+        }
+        else
+        {
+            const auto sign = local_center.z() >= 0.0 * m ? 1.0 : -1.0;
+            local_normal = vec3<one>{0.0, 0.0, -sign};
+            penetration = dz;
+            cp_face = vec3<si::metre>{local_center.x(), local_center.y(), sign * he.z()};
+        }
+
+        const auto world_normal = box_q * local_normal;
+        return collision_info{
+            .normal = world_normal,
+            .world_a = box_q * cp_face + a.position(),
+            .world_b = sph_center + sph_radius * world_normal,
+            .depth = penetration + sph_radius,
+        };
+    }
+
+    if (dist2 > sph_radius * sph_radius) return std::nullopt;
+
+    const auto dist = mp_units::sqrt(dist2);
+    const auto local_normal = diff_local / dist;
+    const auto world_normal = box_q * local_normal;
+
+    return collision_info{
+        .normal = world_normal,
+        .world_a = box_q * cp_local + a.position(),
+        .world_b = sph_center + sph_radius * world_normal,
+        .depth = sph_radius - dist,
+    };
+}
+
+std::optional<collision_info> box_box(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> box_cylinder(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> box_cone(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> box_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> box_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> sphere_cylinder(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> sphere_cone(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> sphere_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> sphere_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> cylinder_cylinder(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cylinder_cone(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cylinder_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cylinder_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> cone_cone(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cone_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> cone_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> pyramid_pyramid(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+std::optional<collision_info> pyramid_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+std::optional<collision_info> mesh_mesh(const instance &a, const instance &b)
+{ return gjk_epa(a, b); }
+
+DEFINE_MIRROR_IMPL(box, sphere)
+DEFINE_MIRROR_IMPL(box, cylinder)
+DEFINE_MIRROR_IMPL(box, cone)
+DEFINE_MIRROR_IMPL(box, pyramid)
+DEFINE_MIRROR_IMPL(box, mesh)
+
+DEFINE_MIRROR_IMPL(sphere, cylinder)
+DEFINE_MIRROR_IMPL(sphere, cone)
+DEFINE_MIRROR_IMPL(sphere, pyramid)
+DEFINE_MIRROR_IMPL(sphere, mesh)
+
+DEFINE_MIRROR_IMPL(cylinder, cone)
+DEFINE_MIRROR_IMPL(cylinder, pyramid)
+DEFINE_MIRROR_IMPL(cylinder, mesh)
+
+DEFINE_MIRROR_IMPL(cone, pyramid)
+DEFINE_MIRROR_IMPL(cone, mesh)
+
+DEFINE_MIRROR_IMPL(pyramid, mesh)
+
+#undef DEFINE_MIRROR_IMPL
+
+static constexpr auto collision_map = std::array{
+    std::array{box_box, box_sphere, box_cylinder, box_cone, box_pyramid, box_mesh},
+    std::array{sphere_box, sphere_sphere, sphere_cylinder, sphere_cone, sphere_pyramid,
+               sphere_mesh},
+    std::array{cylinder_box, cylinder_sphere, cylinder_cylinder, cylinder_cone, cylinder_pyramid,
+               cylinder_mesh},
+    std::array{cone_box, cone_sphere, cone_cylinder, cone_cone, cone_pyramid, cone_mesh},
+    std::array{pyramid_box, pyramid_sphere, pyramid_cylinder, pyramid_cone, pyramid_pyramid,
+               pyramid_mesh},
+    std::array{mesh_box, mesh_sphere, mesh_cylinder, mesh_cone, mesh_pyramid, mesh_mesh},
+};
+
+std::optional<collision_info> collision(const physkit::instance &a, const physkit::instance &b)
+{
+    return collision_map[static_cast<std::size_t>(a.geometry().type())]
+                        [static_cast<std::size_t>(b.geometry().type())](a, b);
+}
+
+// std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
+// {
+//     // could be made faster if unique edges were stored in mesh.
+//     // SAT must be performed on 2 convex meshes.
+
+//     // need to compare projected intersection across every axis of the follosing types
+//     // 1. The normal of every face from both meshes.
+//     // 2. The cross product of every edge from mesh A with every edge from mesh B
+
+//     // can optimize by removing parallel axes
+
+//     constexpr auto eps = 1e-12;
+
+//     auto a_tris = a.geometry().triangles();
+//     auto b_tris = b.geometry().triangles();
+//     auto sum_triangle_count = a_tris.size() + b_tris.size();
+
+//     // the variables related to edge count assume the following:
+//     //  Polyhedra are convex
+//     //  All faces are triangles
+//     //  Edges are manifold (each edge belongs to exactly 2 faces)
+//     //  all verticies of every triangle are ordered CCW such that the norm generated using vertex
+//     0
+//     //      as the base points away from the center
+
+//     // The edge count for mesh A
+//     auto a_edge_count = (a_tris.size() * 3) / 2;
+//     // The edge count for mesh B
+//     auto b_edge_count = (b_tris.size() * 3) / 2;
+//     // The total number of unique edges in both meshes.
+//     auto sum_edge_count = ((sum_triangle_count * 3) / 2);
+//     auto sum_vertex_count = ((sum_triangle_count * 3) / 2);
+//     // The maximum possible number of separating axes.
+//     auto max_axes = (a_edge_count * b_edge_count) + sum_triangle_count;
+
+//     auto a_vertices = a.geometry().vertices(); // std::span<const vec3<si::metre>>
+//     auto b_vertices = b.geometry().vertices();
+
+//     // extra collision info
+//     auto info = collision_info();
+//     info.depth = quantity<si::metre>::max();
+
+//     // returns a pair of the min and max value of a a set of verticies projected along an axis.
+//     auto project_mesh = [](auto const &axis, auto const &vertices)
+//     {
+//         // the divide by |axis| can be omitted from the difference
+//         // the axis's units are si::metre^2
+//         auto minv = vertices[0];
+//         auto maxv = minv;
+//         auto minc = axis.dot(minv);
+//         auto maxc = minc;
+//         for (size_t i = 1; i < vertices.size(); ++i)
+//         {
+//             auto p = axis.dot(vertices[i]);
+//             if (p < minc)
+//             {
+//                 minv = vertices[i];
+//                 minc = p;
+//             }
+//             else if (p > maxc)
+//             {
+//                 maxv = vertices[i];
+//                 maxc = p;
+//             }
+//         }
+//         return std::tuple{minv, maxv, minc, maxc};
+//     };
+
+//     auto test_axis = [&](const vec3<one> &axis)
+//     {
+//         auto [a_minv, a_maxv, a_minc, a_maxc] = project_mesh(axis, a_vertices);
+//         auto [b_minv, b_maxv, b_minc, b_maxc] = project_mesh(axis, b_vertices);
+
+//         // checks if the axes have collision
+//         auto overlap_unnormal = (std::min(a_maxc, b_maxc) - std::max(a_minc, b_minc));
+
+//         if (overlap_unnormal <= 0 * si::metre) return false; // no collision
+
+//         if (overlap_unnormal < info.depth)
+//         {
+//             // new minimum overlap
+//             info.depth = overlap_unnormal; // this is not the actual depth until it is normalized
+//             at
+//                                            // the end. lazy normalization.
+//             info.normal = axis;            // this is not the actual normal yet either
+//             if (a_maxc > b_maxc)
+//             {
+//                 info.world_a = a_minv;
+//                 info.world_b = b_maxv;
+//             }
+//             else
+//             {
+//                 info.world_a = a_maxv;
+//                 info.world_b = b_minv;
+//             }
+//         };
+//         return true;
+//     };
+
+//     // if unique edges were stored in mesh this would be 4 times more efficient.
+//     for (const auto &a_tri : a_tris)
+//     {
+//         auto a_ver = a_tri.vertices(a);
+//         std::array<vec3<si::metre>, 3> a_edges = {(a_ver[1] - a_ver[0]), (a_ver[2] - a_ver[1]),
+//                                                   (a_ver[0] - a_ver[2])};
+
+//         // Face axis
+//         auto n = (a_edges[0]).cross(a_edges[1]) *
+//                  (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+//         if (!test_axis(n)) return std::nullopt;
+
+//         for (const auto &b_tri : b_tris)
+//         {
+//             auto b_ver = b_tri.vertices(b);
+//             std::array<vec3<si::metre>, 3> b_edges = {(b_ver[1] - b_ver[0]), (b_ver[2] -
+//             b_ver[1]),
+//                                                       (b_ver[0] - b_ver[2])};
+
+//             // Face axis
+//             if (a_tri == a_tris.front())
+//             { // once per tri
+//                 n = (b_edges[0]).cross(b_edges[1]) *
+//                     (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+//                 if (!test_axis(n)) return std::nullopt;
+//             }
+
+//             // edge cross axes
+//             for (size_t i = 0; i < 3; i++)
+//             {
+//                 for (size_t j = 0; j < 3; j++)
+//                 {
+//                     n = (a_edges[i]).cross(b_edges[j]) *
+//                         (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
+
+//                     if (n.squared_norm() < eps) continue; // near 0 axis.
+//                     if (!test_axis(n)) return std::nullopt;
+//                 }
+//             }
+//         }
+//     }
+
+//     info.depth /= info.normal.norm();
+//     info.normal = info.normal.normalized();
+//     return info;
+// }
 } // namespace physkit

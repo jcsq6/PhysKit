@@ -50,6 +50,120 @@ struct cube_fixture
     std::shared_ptr<mesh> make_mesh() const { return mesh::make(vertices, triangles); }
 };
 
+std::shared_ptr<mesh> make_box(const vec3<m> &half_extents)
+{
+    auto hx = half_extents.x();
+    auto hy = half_extents.y();
+    auto hz = half_extents.z();
+
+    std::array vertices{
+        vec3{-hx, -hy, -hz}, // 0
+        vec3{+hx, -hy, -hz}, // 1
+        vec3{+hx, +hy, -hz}, // 2
+        vec3{-hx, +hy, -hz}, // 3
+        vec3{-hx, -hy, +hz}, // 4
+        vec3{+hx, -hy, +hz}, // 5
+        vec3{+hx, +hy, +hz}, // 6
+        vec3{-hx, +hy, +hz}, // 7
+    };
+
+    std::array<triangle_t, 12> triangles{{
+        {4, 5, 6},
+        {4, 6, 7}, // +z
+        {0, 3, 2},
+        {0, 2, 1}, // -z
+        {1, 2, 6},
+        {1, 6, 5}, // +x
+        {0, 4, 7},
+        {0, 7, 3}, // -x
+        {3, 7, 6},
+        {3, 6, 2}, // +y
+        {0, 1, 5},
+        {0, 5, 4}, // -y
+    }};
+
+    return mesh::make(vertices, triangles);
+}
+
+std::shared_ptr<mesh> make_sphere(quantity<m> radius, unsigned int stacks, unsigned int sectors)
+{
+    assert(stacks >= 2);
+    assert(sectors >= 3);
+
+    std::vector<vec3<m>> vertices;
+    std::vector<triangle_t> triangles;
+
+    vertices.reserve(2 + ((stacks - 1) * sectors));
+    triangles.reserve(2ULL * sectors * (stacks - 1));
+
+    // North pole
+    vertices.emplace_back(0.0 * m, radius, 0.0 * m);
+
+    // Intermediate rings
+    for (unsigned int i = 1; i < stacks; ++i)
+    {
+        auto phi = std::numbers::pi * static_cast<double>(i) / static_cast<double>(stacks);
+        for (unsigned int j = 0; j < sectors; ++j)
+        {
+            auto theta =
+                2.0 * std::numbers::pi * static_cast<double>(j) / static_cast<double>(sectors);
+            vertices.emplace_back(radius * std::sin(phi) * std::cos(theta), radius * std::cos(phi),
+                                  radius * std::sin(phi) * std::sin(theta));
+        }
+    }
+
+    // South pole
+    vertices.emplace_back(0.0 * m, -radius, 0.0 * m);
+    auto south_pole = static_cast<unsigned int>(vertices.size() - 1);
+
+    // North cap
+    for (unsigned int j = 0; j < sectors; ++j)
+        triangles.push_back({0, 1 + ((j + 1) % sectors), 1 + j});
+
+    // Body bands
+    for (unsigned int i = 1; i < stacks - 1; ++i)
+    {
+        for (unsigned int j = 0; j < sectors; ++j)
+        {
+            auto top = 1 + ((i - 1) * sectors) + j;
+            auto top_next = 1 + ((i - 1) * sectors) + ((j + 1) % sectors);
+            auto bot = 1 + (i * sectors) + j;
+            auto bot_next = 1 + (i * sectors) + ((j + 1) % sectors);
+            triangles.push_back({top, top_next, bot_next});
+            triangles.push_back({top, bot_next, bot});
+        }
+    }
+
+    // South cap
+    auto last_ring = 1 + ((stacks - 2) * sectors);
+    for (unsigned int j = 0; j < sectors; ++j)
+        triangles.push_back({south_pole, last_ring + j, last_ring + ((j + 1) % sectors)});
+
+    return mesh::make(vertices, triangles);
+}
+
+std::shared_ptr<mesh> make_pyramid(quantity<m> base_half, quantity<m> height)
+{
+    std::array vertices{
+        vec3{-base_half, 0.0 * m, -base_half}, // 0
+        vec3{+base_half, 0.0 * m, -base_half}, // 1
+        vec3{+base_half, 0.0 * m, +base_half}, // 2
+        vec3{-base_half, 0.0 * m, +base_half}, // 3
+        vec3{0.0 * m, height, 0.0 * m},        // 4 (apex)
+    };
+
+    std::array<triangle_t, 6> triangles{{
+        {0, 1, 2},
+        {0, 2, 3}, // base (-y)
+        {1, 0, 4}, // front (-z)
+        {2, 1, 4}, // right (+x)
+        {3, 2, 4}, // back  (+z)
+        {0, 3, 4}, // left  (-x)
+    }};
+
+    return mesh::make(vertices, triangles);
+}
+
 // ---------------------------------------------------------------------------
 // AABB tests
 // ---------------------------------------------------------------------------
@@ -460,9 +574,9 @@ void test_mesh_contains()
     CHECK(!msh->contains(vec3{0.5, 0.5, -10.0} * m));
     CHECK(!msh->contains(vec3{0.5, 0.5, 10.0} * m));
 
-    // --- Factory mesh: mesh::box (half-extents = 1 → range [-1, 1]^3) ---
+    // --- Factory mesh: box (half-extents = 1 → range [-1, 1]^3) ---
     {
-        auto box_msh = mesh::box(vec3{1.0, 1.0, 1.0} * m);
+        auto box_msh = make_box(vec3{1.0, 1.0, 1.0} * m);
 
         CHECK(box_msh->contains(vec3{0.0, 0.0, 0.0} * m)); // center
         CHECK(box_msh->contains(vec3{0.5, 0.5, 0.5} * m));
@@ -475,9 +589,9 @@ void test_mesh_contains()
         CHECK(!box_msh->contains(vec3{-2.0, -2.0, -2.0} * m)); // far corner
     }
 
-    // --- Factory mesh: mesh::sphere ---
+    // --- Factory mesh: sphere ---
     {
-        auto sph_msh = mesh::sphere(1.0 * m, 32, 32);
+        auto sph_msh = make_sphere(1.0 * m, 32, 32);
 
         CHECK(sph_msh->contains(vec3{0.0, 0.0, 0.0} * m)); // center
         CHECK(sph_msh->contains(vec3{0.5, 0.0, 0.0} * m));
@@ -736,7 +850,7 @@ void test_ray_intersect_zero_distance()
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void test_ray_intersect_sphere()
 {
-    auto msh = mesh::sphere(1.0 * m, 32, 32);
+    auto msh = make_sphere(1.0 * m, 32, 32);
 
     // Along +X axis from outside
     auto hit = msh->ray_intersect({vec3{5.0, 0.0, 0.0} * m, {-1, 0, 0}});
@@ -760,7 +874,7 @@ void test_ray_intersect_sphere()
 
 void test_ray_intersect_pyramid()
 {
-    auto msh = mesh::pyramid(1.0 * m, 2.0 * m);
+    auto msh = make_pyramid(1.0 * m, 2.0 * m);
     // Base at y=0, apex at (0, 2, 0)
 
     // Ray from below hitting the base
@@ -866,7 +980,7 @@ void test_ray_intersect_instance_rotated()
 
 void test_ray_intersect_centered_box()
 {
-    auto msh = mesh::box(vec3{1.0, 2.0, 3.0} * m); // half-extents -> [-1,1] x [-2,2] x [-3,3]
+    auto msh = make_box(vec3{1.0, 2.0, 3.0} * m); // half-extents -> [-1,1] x [-2,2] x [-3,3]
 
     // Hit from +X
     auto hit = msh->ray_intersect({vec3{5.0, 0.0, 0.0} * m, {-1, 0, 0}});
@@ -902,8 +1016,8 @@ void test_mesh_is_convex()
 {
     cube_fixture cube;
     auto msh = cube.make_mesh();
-    auto sphere_msh = mesh::sphere(2.0 * m, 3, 3);
-    auto pyra_msh = mesh::pyramid(2.0 * m, 2.0 * m);
+    auto sphere_msh = make_sphere(2.0 * m, 3, 3);
+    auto pyra_msh = make_pyramid(2.0 * m, 2.0 * m);
 
     std::array<vec3<m>, 12> v = {{
         vec3{0.0, 0.0, 0.0} * m, // 0
@@ -1031,7 +1145,7 @@ void test_is_convex_slightly_dented()
 // A very flat box is geometrically degenerate but still strictly convex.
 void test_is_convex_thin_box()
 {
-    auto thin = mesh::box({2.0 * m, 0.001 * m, 2.0 * m});
+    auto thin = make_box({2.0 * m, 0.001 * m, 2.0 * m});
     CHECK(thin->is_convex());
 }
 
@@ -1264,7 +1378,7 @@ void test_closest_point_distance_property()
 // Test closest_point on a centered box (symmetric about origin)
 void test_closest_point_centered_box()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m); // half-extents -> [-1,1]^3
+    auto msh = make_box(vec3{1.0, 1.0, 1.0} * m); // half-extents -> [-1,1]^3
 
     // Exterior: face projections
     CHECK_APPROX(msh->closest_point(vec3{3.0, 0.0, 0.0} * m), vec3{1.0, 0.0, 0.0} * m);
@@ -1281,7 +1395,7 @@ void test_closest_point_centered_box()
 // Test closest_point on a sphere mesh with known geometry
 void test_closest_point_sphere_mesh()
 {
-    auto msh = mesh::sphere(2.0 * m, 32, 32);
+    auto msh = make_sphere(2.0 * m, 32, 32);
 
     // Point far along +X axis: closest point should be near (2,0,0)
     auto cp = msh->closest_point(vec3{5.0, 0.0, 0.0} * m);
@@ -1302,7 +1416,7 @@ void test_closest_point_sphere_mesh()
 // Test closest_point on a pyramid mesh
 void test_closest_point_pyramid()
 {
-    auto msh = mesh::pyramid(1.0 * m, 2.0 * m); // base half=1, height=2
+    auto msh = make_pyramid(1.0 * m, 2.0 * m); // base half=1, height=2
     // Base is at y=0, apex at y=2, base corners at (±1, 0, ±1)
 
     // Point below base center -> projects to base
@@ -1486,7 +1600,7 @@ void test_overlap_sphere_subset_of_triangles()
 
 void test_overlap_sphere_sphere_mesh()
 {
-    auto msh = mesh::sphere(1.0 * m, 16, 16);
+    auto msh = make_sphere(1.0 * m, 16, 16);
 
     // Sphere at origin with radius slightly smaller than mesh radius — should
     // overlap all triangles (closest point on each tri is < 1m from origin)
@@ -1507,7 +1621,7 @@ void test_overlap_sphere_sphere_mesh()
 
 void test_overlap_sphere_centered_box()
 {
-    auto msh = mesh::box(vec3{1.0, 1.0, 1.0} * m); // [-1,1]^3
+    auto msh = make_box(vec3{1.0, 1.0, 1.0} * m); // [-1,1]^3
 
     // Sphere at origin with small radius — overlaps closest face triangles
     bounding_sphere origin_sphere{.center = vec3{0.0, 0.0, 0.0} * m, .radius = 1.1 * m};
@@ -1606,16 +1720,6 @@ void test_overlap_sphere_instance_translated_and_rotated()
 // ---------------------------------------------------------------------------
 // Mesh instance tests
 // ---------------------------------------------------------------------------
-
-void test_mesh_instance_basic()
-{
-    cube_fixture cube;
-    auto msh = cube.make_mesh();
-    auto inst = msh->at(vec3{5.0, 0.0, 0.0} * m);
-
-    CHECK(&inst.geometry() == msh.get());
-    CHECK_APPROX(inst.position(), vec3{5.0, 0.0, 0.0} * m);
-}
 
 void test_mesh_instance_world_bounds()
 {
@@ -1818,7 +1922,6 @@ int main()
         .test("translated+rotated instance", test_overlap_sphere_instance_translated_and_rotated);
 
     tests.group("Mesh Instance Tests")
-        .test("basic construction", test_mesh_instance_basic)
         .test("world_bounds", test_mesh_instance_world_bounds)
         .test("world_bsphere", test_mesh_instance_world_bsphere)
         .test("ray_intersect", test_mesh_instance_ray_intersect)

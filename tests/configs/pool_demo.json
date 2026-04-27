@@ -19,7 +19,7 @@
     "solver_iterations": 15,
     "objects": [
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     3.0,
@@ -44,7 +44,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     3.1,
@@ -69,7 +69,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     3.1,
@@ -94,7 +94,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.1,
@@ -119,7 +119,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.1,
@@ -144,11 +144,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.0,
@@ -166,11 +164,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.0,
@@ -188,11 +184,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.301,
@@ -210,11 +204,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.301,
@@ -232,11 +224,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.601,
@@ -254,11 +244,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.0,
@@ -276,11 +264,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.601,
@@ -298,11 +284,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.902,
@@ -320,11 +304,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.301,
@@ -342,11 +324,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.301,
@@ -364,11 +344,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.902,
@@ -386,11 +364,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -1.202,
@@ -408,11 +384,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.601,
@@ -430,11 +404,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.0,
@@ -452,11 +424,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.601,
@@ -474,11 +444,9 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 1.202,
