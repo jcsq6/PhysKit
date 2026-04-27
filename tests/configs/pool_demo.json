@@ -146,9 +146,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.0,
@@ -168,9 +166,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.0,
@@ -190,9 +186,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.301,
@@ -212,9 +206,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.301,
@@ -234,9 +226,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.601,
@@ -256,9 +246,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.0,
@@ -278,9 +266,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.601,
@@ -300,9 +286,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.902,
@@ -322,9 +306,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.301,
@@ -344,9 +326,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.301,
@@ -366,9 +346,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.902,
@@ -388,9 +366,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -1.202,
@@ -410,9 +386,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 -0.601,
@@ -432,9 +406,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.0,
@@ -454,9 +426,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 0.601,
@@ -476,9 +446,7 @@
         {
             "shape": {
                 "name": "sphere",
-                "radius": 0.3,
-                "stacks": 16,
-                "sectors": 24
+                "radius": 0.3
             },
             "pos": [
                 1.202,
