@@ -39,19 +39,21 @@ class sandbox : public graphics_app
 public:
     explicit sandbox(const Platform::Application::Arguments &arguments)
         : graphics_app{g_config(arguments, false)
-                           .window_size({1980, 1080})
-                           .cam_pos(fvec3{0.0f, 1.0f, -2.0f} * si::metre)
-                           .look_at(fvec3{0.0f, 0.0f, 1.5f} * si::metre)
+                           .window_size({1600, 900})
+                           .cam_pos(fvec3{22.0f, 16.0f, -28.0f} * si::metre)
+                           .look_at(fvec3{-2.0f, 3.0f, 0.0f} * si::metre)
+                           .fov(50.0f * degree)
                            .drag(false)
                            .gravity(gravity)
                            .time_step(1.0 / 1200.0 * si::second)
                            .solver_iterations(20)}
     {
-        cam().speed(1.0f * si::metre / si::second);
+        cam().speed(3.0f * si::metre / si::second);
         M_state.saved_gravity = gravity;
         world().add_task(runtime());
     }
 
+    auto &w = dynamic_cast < physkit::world<physkit::semi_implicit_euler &>(world());
     void update(mp_units::quantity<mp_units::si::second> /*dt*/) override {}
 
 private:
@@ -86,28 +88,64 @@ private:
     }
 
     /// @brief - spawn in different objects
+    /// do deliberate pass of vol, density, inertia
     task<> spawn_box(vec3<si::metre> pos)
     {
+        auto shp = physkit::shape{box(vec3{0.2, 0.2, 0.2} * m)};
+        auto mass = 1.0 * kg;
+        auto density = mass / shp.volume();
+        auto inertia = shp.inertia_tensor(density);
+
         co_await add_rigid(object_desc::dynam()
-                               .with_shape(box(vec3{0.2, 0.2, 0.2} * m))
+                               .with_shape(shp)
                                .with_pos(pos)
-                               .with_mass(1.0 * kg)
+                               .with_mass(mass)
+                               .with_inertia_tensor(inertia)
+                               .with_ang_vel(vec3{4.0, 8.0, 2.0} * rad / s)
                                .with_restitution(0.4)
                                .with_friction(0.5),
                            Color3{0.7f, 0.7f, 0.7f});
         co_return;
+
+        // you could optionally do it this way
+        /*co_await add_rigid(object_desc::dynam()
+                               .with_shape(box(vec3{0.2, 0.2, 0.2} * m))
+                               .with_pos(pos)
+                               .with_mass(1.0 * kg)
+                               .with_ang_vel(vec3{4.0, 8.0, 2.0} * rad / s)
+                               .with_restitution(0.4)
+                               .with_friction(0.5),
+                           Color3{0.7f, 0.7f, 0.7f});
+        co_return;*/
     }
 
     task<> spawn_sphere(vec3<si::metre> pos)
     {
+        auto shp = physkit::shape{sphere(0.1 * m)};
+        auto mass = 1.0 * kg;
+        auto density = mass / shp.volume();
+        auto inertia = shp.inertia_tensor(density);
+
         co_await add_rigid(object_desc::dynam()
+                               .with_shape(shp)
+                               .with_pos(pos)
+                               .with_mass(mass)
+                               .with_inertia_tensor(inertia)
+                               .with_ang_vel(vec3{20, 0, 0} * rad / s)
+                               .with_restitution(0.6)
+                               .with_friction(0.3),
+                           Color3{0.8f, 0.8f, 0.8f});
+        co_return;
+
+        // see above
+        /*co_await add_rigid(object_desc::dynam()
                                .with_shape(sphere(0.1 * m))
                                .with_pos(pos)
                                .with_mass(1.0 * kg)
                                .with_restitution(0.6)
                                .with_friction(0.3),
                            Color3{0.8f, 0.8f, 0.8f});
-        co_return;
+        co_return;*/
     }
 
     /// TODO: add in different shapes when branches merge - pyramid, cone, etc
@@ -209,7 +247,7 @@ private:
 
     task<> build_area()
     {
-        auto arena_half = 10.0 * m;
+        auto arena_half = 30.0 * m;
         auto wall_height = 5.0 * m;
         auto thickness = 0.4 * m;
 
