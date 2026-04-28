@@ -8,7 +8,6 @@
 import physkit;
 import mp_units;
 #else
-#include "sandbox.h"
 #include <physkit/physkit.h>
 #endif
 #ifdef PHYSKIT_GRAPHICS_MODULES
@@ -26,29 +25,22 @@ using namespace graphics;
 struct sandbox_state
 {
     std::optional<world_base::handle> selected;
-
-    std::vector<world_base::handle> dynamic_bodies;
-
     bool gravity_on = true;
-
-    double debug_timer = 0.0;
-
-    // required state for selection and gravity
-    world_base::handle_selected{};
-    bool has_selected = false;
-    vec3<si::metre / si::second / si::second> saved_gravity = gravity;
-}
+    vec3<si::metre / si::second / si::second> saved_gravity{};
+};
 
 class sandbox : public graphics_app
 {
     static inline const auto gravity = vec3{0.0, -9.81, 0.0} * m / s / s;
     using typed_world = physkit::world;
 
+    // TODO: test other screen resolutions - perhaps sandbox demo should be fullscreen in the
+    // future.
 public:
     explicit sandbox(const Platform::Application::Arguments &arguments)
         : graphics_app{g_config(arguments, false)
-                           .window_size({1280, 720})
-                           .cam_pos(fvec3{0.0f, 2.0f, -3.0f} * si::metre)
+                           .window_size({1980, 1080})
+                           .cam_pos(fvec3{0.0f, 1.0f, -2.0f} * si::metre)
                            .look_at(fvec3{0.0f, 0.0f, 1.5f} * si::metre)
                            .drag(false)
                            .gravity(gravity)
@@ -56,13 +48,42 @@ public:
                            .solver_iterations(20)}
     {
         cam().speed(1.0f * si::metre / si::second);
+        M_state.saved_gravity = gravity;
         world().add_task(runtime());
     }
 
-    void update(mp_units::quantity<mp_units::si::second> dt) override {}
+    void update(mp_units::quantity<mp_units::si::second> /*dt*/) override {}
 
 private:
     sandbox_state M_state;
+
+    [[nodiscard]] const auto &world_gravity() const
+    {
+        const auto &const_world = static_cast<const world_base &>(world());
+        return const_world.gravity();
+    }
+
+    // graphics_app only exposes a const gravity accessor, but the sandbox needs
+    // to toggle it at runtime.
+    auto &mutable_world_gravity()
+    {
+        return const_cast<vec3<si::metre / si::second / si::second> &>(world_gravity());
+    }
+
+    void remove_physics_object(world_base::handle handle)
+    {
+        physics_obj *to_remove = nullptr;
+        for (auto *obj : physics_objects())
+        {
+            if (obj->handle() == handle)
+            {
+                to_remove = obj;
+                break;
+            }
+        }
+
+        delete to_remove;
+    }
 
     /// @brief - spawn in different objects
     task<> spawn_box(vec3<si::metre> pos)
@@ -78,36 +99,21 @@ private:
 
     task<> spawn_sphere(vec3<si::metre> pos)
     {
-        co_return (*co_await add_rigid(object_desc::dynam()
-                                           .with_mesh(mesh::sphere(0.1 * m, 16, 16))
-                                           .with_pos(pos)
-                                           .with_mass(1.0 * kg)
-                                           .with_restitution(0.6)
-                                           .with_friction(0.3) Color3{0.8f, 0.8f, 0.8f}))
-            ->handle();
+        co_await add_rigid(object_desc::dynam()
+                               .with_mesh(mesh::sphere(0.1 * m, 16, 16))
+                               .with_pos(pos)
+                               .with_mass(1.0 * kg)
+                               .with_restitution(0.6)
+                               .with_friction(0.3),
+                           Color3{0.8f, 0.8f, 0.8f});
     }
 
     /// TODO: add in different shapes when branches merge - pyramid, cone, etc
 
-    // handle generic spawning inputs
-    task<world_base::handle> return_spawn_box(vec3<si::metre> pos)
-    {
-        co_return (*co_await add_rigid(object_desc::dynam()
-                                           .with_mesh(mesh::box(vec3{0.1, 0.1, 0.1} * m))
-                                           .with_pos(pos)
-                                           .with_mass(1.0 * kg)
-                                           .with_restitution(0.4)
-                                           .with_friction(0.5),
-                                       Color3{0.7f, 0.7f, 0.7f}))
-            ->handle();
-    }
-
     /// @brief keyboard and mouse-bindings for the user to manipulate objects in the arena.
-    // TODO: Need to bind to other mouse button - or to a keybind since the left click is also drag
-    // and view for the world
     task<> maybe_spawn_objects()
     {
-        if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
+        if (get_mouse_button(Pointer::MouseRight).is_initial_press())
         {
             auto spawn_pos = cam().pos() + cam().forward() * 2.0f * m;
             co_await spawn_box(spawn_pos);
@@ -119,17 +125,17 @@ private:
         if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
         {
             auto ray = physkit::ray{cam().pos(), cam().forward()};
+            auto hits = co_await raycast{ray};
+            M_state.selected.reset();
 
-            auto hit = co_await raycast{ray};
-
-            if (hit)
+            for (auto hit : hits)
             {
-                selected = hit->object;
-                has_selected = true;
-            }
-            else
-            {
-                has_selected = false;
+                auto obj_opt = co_await get_rigid(hit.first);
+                if (obj_opt && (*obj_opt)->is_dynamic())
+                {
+                    M_state.selected = hit.first;
+                    break;
+                }
             }
         }
     }
@@ -137,65 +143,62 @@ private:
     /// @brief handles selection, delete, impulse, and velocity reset
     task<> handle_actions_input()
     {
-        if (!has_selected) { co_return; }
+        if (get_key(Key::R).is_initial_press()) { co_await reset_all(); }
 
+        if (get_key(Key::G).is_initial_press())
+        {
+            if (M_state.gravity_on)
+                mutable_world_gravity() = vec3{0.0, 0.0, 0.0} * m / s / s;
+            else
+                mutable_world_gravity() = M_state.saved_gravity;
+
+            M_state.gravity_on = !M_state.gravity_on;
+        }
+
+        if (!M_state.selected) { co_return; }
+
+        auto selected = *M_state.selected;
         auto obj_opt = co_await get_rigid(selected);
         if (!obj_opt)
         {
-            has_selected = false;
+            M_state.selected.reset();
             co_return;
         }
 
         auto &obj = **obj_opt;
 
         // delete function
-        if (is_key_pressed(Key::Delete))
+        if (get_key(Key::Delete).is_initial_press())
         {
-            co_await remove_rigid(selected);
-            has_selected = false;
+            co_await destroy_rigid{selected};
+            remove_physics_object(selected);
+            M_state.selected.reset();
+            co_return;
         }
 
         // impulse forward
-        if (is_key_pressed(Key::F))
+        if (get_key(Key::F).is_initial_press())
         {
             obj.apply_impulse(cam().forward() * obj.mass() * 5.0 * m / s);
-        }
-        // Reset velocity
-        if (is_key_pressed(Key::R))
-        {
-            obj.vel() = vec3<si::metre / si::second>::zero();
-            obj.ang_vel() = vec3<one / si::second>::zero();
-        }
-
-        // Gravity toggle
-        if (is_key_pressed(Key::G))
-        {
-            if (gravity_enabled) { world().gravity(vec3{0.0, 0.0, 0.0} * m / s / s); }
-            else
-            {
-                world().gravity(saved_gravity);
-            }
-
-            gravity_enabled = !gravity_enabled;
         }
     }
 
     /// @brief reset function - resets objects in the arena
     task<> reset_all()
     {
-        for (auto h : world().rigid_handles())
+        for (auto *phys_obj : physics_objects())
         {
-            auto obj = co_await get_rigid(h);
-            if (obj && obj->is_dynamic())
+            auto obj = co_await get_rigid(phys_obj->handle());
+            if (obj && (*obj)->is_dynamic())
             {
-                obj->vel() = vec3<si::metre / si::second>::zero();
-                obj->ang_vel() = vec3<one / si::second>::zero();
+                (*obj)->vel() = vec3<si::metre / si::second>::zero();
+                (*obj)->ang_vel() = vec3<one / si::second>::zero();
             }
         }
     }
 
     /// @brief keyboard functions for user to select and manipulate objects
-    void poll_keys(quantity<si::second> dt)
+    task<> poll_keys(vec3<si::metre> spawn_pos)
     {
         if (get_key(Key::One).is_initial_press()) { co_await spawn_box(spawn_pos); }
 
@@ -255,11 +258,13 @@ private:
 
         while (true)
         {
-            auto dt = *co_await next_render_frame();
             co_await next_render_frame();
             co_await maybe_spawn_objects();
-            co_await maybe_pick();
-            poll_keys(dt);
+            co_await handle_selection_input();
+            co_await handle_actions_input();
+
+            auto spawn_pos = cam().pos() + cam().forward() * 2.0f * m;
+            co_await poll_keys(spawn_pos);
         }
     }
 };
