@@ -740,8 +740,8 @@ static constexpr auto collision_map = std::array{
 
 std::optional<collision_info> collision(const physkit::instance &a, const physkit::instance &b)
 {
-    return collision_map[static_cast<std::size_t>(a.geometry().type())]
-                        [static_cast<std::size_t>(b.geometry().type())](a, b);
+    return collision_map[static_cast<std::size_t>(a.geometry().stored_type())]
+                        [static_cast<std::size_t>(b.geometry().stored_type())](a, b);
 }
 
 // std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)

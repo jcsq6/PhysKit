@@ -100,7 +100,7 @@ template <> struct hash<physkit::shape>
 {
     std::size_t operator()(const physkit::shape &s) const
     {
-        switch (s.type())
+        switch (s.stored_type())
         {
         case physkit::shape::type::sphere:
             return std::hash<physkit::sphere>{}(s.sphere());
