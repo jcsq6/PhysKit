@@ -77,7 +77,7 @@ private:
 struct contact_point
 {
     contact_point() = default;
-    contact_point(const collision_info &info, const particle &a, const particle &b)
+    contact_point(const collision_info &info, const rigid_body &a, const rigid_body &b)
         : normal(info.normal), local_a(a.project_to_local(info.world_a)),
           local_b(b.project_to_local(info.world_b)), depth(info.depth)
     {
@@ -260,7 +260,7 @@ public:
             auto &obj_a = get_object(man.a);
             auto &obj_b = get_object(man.b);
 
-            auto col_ret = gjk_epa(
+            auto col_ret = collision(
                 obj_a.instance(),
                 obj_b.instance()); // TODO: replace with dispatcher with updated shape options
 

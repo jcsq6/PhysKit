@@ -50,7 +50,7 @@ class PhysKit(ConanFile):
             tc.cache_variables["CMAKE_EXPERIMENTAL_CXX_IMPORT_STD"] = (
                 "d0edc3af-4c50-42ea-a356-e2862fe7a444"
             )
-            
+
         tc.cache_variables["PHYSKIT_BUILD_STATIC"] = self.options.build_static
 
         tc.generate()

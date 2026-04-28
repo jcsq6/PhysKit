@@ -19,7 +19,7 @@
     "solver_iterations": 25,
     "objects": [
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     10.0,
@@ -44,7 +44,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     10.0,
@@ -69,7 +69,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     10.0,
@@ -94,7 +94,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.1,
@@ -119,7 +119,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.1,
@@ -144,7 +144,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -175,7 +175,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -206,7 +206,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -237,7 +237,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -268,7 +268,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -299,7 +299,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -330,7 +330,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -361,7 +361,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -392,7 +392,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -423,7 +423,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -454,7 +454,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -485,7 +485,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -516,7 +516,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -547,7 +547,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -578,7 +578,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -609,7 +609,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -640,7 +640,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -671,7 +671,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -702,7 +702,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -733,7 +733,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -764,7 +764,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -795,7 +795,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -826,7 +826,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -857,7 +857,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -888,7 +888,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -919,7 +919,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -950,7 +950,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -981,7 +981,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1012,7 +1012,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1043,7 +1043,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1074,7 +1074,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1105,7 +1105,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1136,7 +1136,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1167,7 +1167,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1198,7 +1198,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1229,7 +1229,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1260,7 +1260,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1291,7 +1291,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1322,7 +1322,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1353,7 +1353,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1384,7 +1384,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1415,7 +1415,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1446,7 +1446,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1477,7 +1477,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1508,7 +1508,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1539,7 +1539,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1570,7 +1570,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1601,7 +1601,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1632,7 +1632,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1663,7 +1663,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1694,7 +1694,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1725,7 +1725,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1756,7 +1756,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1787,7 +1787,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1818,7 +1818,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1849,7 +1849,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1880,7 +1880,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1911,7 +1911,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1942,7 +1942,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -1973,7 +1973,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2004,7 +2004,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2035,7 +2035,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2066,7 +2066,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2097,7 +2097,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2128,7 +2128,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2159,7 +2159,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2190,7 +2190,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2221,7 +2221,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2252,7 +2252,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2283,7 +2283,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2314,7 +2314,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2345,7 +2345,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2376,7 +2376,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2407,7 +2407,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2438,7 +2438,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2469,7 +2469,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2500,7 +2500,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2531,7 +2531,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2562,7 +2562,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2593,7 +2593,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2624,7 +2624,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2655,7 +2655,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2686,7 +2686,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2717,7 +2717,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2748,7 +2748,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2779,7 +2779,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2810,7 +2810,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2841,7 +2841,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2872,7 +2872,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2903,7 +2903,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2934,7 +2934,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2965,7 +2965,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -2996,7 +2996,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3027,7 +3027,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3058,7 +3058,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3089,7 +3089,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3120,7 +3120,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3151,7 +3151,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3182,7 +3182,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3213,7 +3213,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3244,7 +3244,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3275,7 +3275,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3306,7 +3306,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3337,7 +3337,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3368,7 +3368,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3399,7 +3399,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3430,7 +3430,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3461,7 +3461,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3492,7 +3492,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3523,7 +3523,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3554,7 +3554,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3585,7 +3585,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3616,7 +3616,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3647,7 +3647,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3678,7 +3678,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3709,7 +3709,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3740,7 +3740,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3771,7 +3771,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3802,7 +3802,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3833,7 +3833,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3864,7 +3864,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3895,7 +3895,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3926,7 +3926,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3957,7 +3957,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -3988,7 +3988,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4019,7 +4019,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4050,7 +4050,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4081,7 +4081,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4112,7 +4112,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4143,7 +4143,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4174,7 +4174,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4205,7 +4205,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4236,7 +4236,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4267,7 +4267,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4298,7 +4298,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4329,7 +4329,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4360,7 +4360,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4391,7 +4391,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4422,7 +4422,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4453,7 +4453,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4484,7 +4484,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4515,7 +4515,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4546,7 +4546,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4577,7 +4577,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4608,7 +4608,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4639,7 +4639,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4670,7 +4670,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4701,7 +4701,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4732,7 +4732,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4763,7 +4763,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4794,7 +4794,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4825,7 +4825,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4856,7 +4856,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4887,7 +4887,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4918,7 +4918,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4949,7 +4949,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -4980,7 +4980,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5011,7 +5011,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5042,7 +5042,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5073,7 +5073,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5104,7 +5104,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5135,7 +5135,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5166,7 +5166,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5197,7 +5197,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5228,7 +5228,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5259,7 +5259,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5290,7 +5290,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5321,7 +5321,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5352,7 +5352,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5383,7 +5383,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5414,7 +5414,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5445,7 +5445,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5476,7 +5476,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5507,7 +5507,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5538,7 +5538,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5569,7 +5569,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5600,7 +5600,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5631,7 +5631,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5662,7 +5662,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5693,7 +5693,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5724,7 +5724,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5755,7 +5755,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5786,7 +5786,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5817,7 +5817,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5848,7 +5848,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5879,7 +5879,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5910,7 +5910,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5941,7 +5941,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.15,
@@ -5972,7 +5972,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -5997,7 +5997,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6022,7 +6022,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6047,7 +6047,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6072,7 +6072,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6097,7 +6097,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6122,7 +6122,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6147,7 +6147,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6172,7 +6172,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6197,7 +6197,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6222,7 +6222,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6247,7 +6247,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6272,7 +6272,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6297,7 +6297,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     0.05,
@@ -6322,7 +6322,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     5.0,
@@ -6350,7 +6350,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "box",
                 "half_extents": [
                     5.0,
@@ -6378,7 +6378,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6399,7 +6399,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6420,7 +6420,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6441,7 +6441,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6462,7 +6462,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6483,7 +6483,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6504,7 +6504,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6525,7 +6525,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6546,7 +6546,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6567,7 +6567,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6588,7 +6588,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6609,7 +6609,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6630,7 +6630,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6651,7 +6651,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6672,7 +6672,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6693,7 +6693,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6714,7 +6714,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6735,7 +6735,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6756,7 +6756,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6777,7 +6777,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6798,7 +6798,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6819,7 +6819,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6840,7 +6840,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6861,7 +6861,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6882,7 +6882,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6903,7 +6903,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6924,7 +6924,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6945,7 +6945,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6966,7 +6966,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -6987,7 +6987,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7008,7 +7008,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7029,7 +7029,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7050,7 +7050,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7071,7 +7071,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7092,7 +7092,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7113,7 +7113,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7134,7 +7134,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7155,7 +7155,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7176,7 +7176,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7197,7 +7197,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7218,7 +7218,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7239,7 +7239,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7260,7 +7260,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7281,7 +7281,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7302,7 +7302,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7323,7 +7323,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7344,7 +7344,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7365,7 +7365,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7386,7 +7386,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7407,7 +7407,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7428,7 +7428,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7449,7 +7449,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7470,7 +7470,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7491,7 +7491,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7512,7 +7512,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7533,7 +7533,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7554,7 +7554,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7575,7 +7575,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7596,7 +7596,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7617,7 +7617,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7638,7 +7638,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7659,7 +7659,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7680,7 +7680,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7701,7 +7701,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7722,7 +7722,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7743,7 +7743,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7764,7 +7764,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7785,7 +7785,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7806,7 +7806,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7827,7 +7827,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7848,7 +7848,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7869,7 +7869,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7890,7 +7890,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7911,7 +7911,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7932,7 +7932,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7953,7 +7953,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7974,7 +7974,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -7995,7 +7995,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8016,7 +8016,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8037,7 +8037,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8058,7 +8058,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8079,7 +8079,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8100,7 +8100,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8121,7 +8121,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8142,7 +8142,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8163,7 +8163,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8184,7 +8184,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8205,7 +8205,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8226,7 +8226,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8247,7 +8247,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8268,7 +8268,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8289,7 +8289,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8310,7 +8310,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8331,7 +8331,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8352,7 +8352,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8373,7 +8373,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8394,7 +8394,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8415,7 +8415,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8436,7 +8436,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8457,7 +8457,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8478,7 +8478,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8499,7 +8499,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8520,7 +8520,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8541,7 +8541,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8562,7 +8562,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8583,7 +8583,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8604,7 +8604,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8625,7 +8625,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8646,7 +8646,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8667,7 +8667,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8688,7 +8688,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8709,7 +8709,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8730,7 +8730,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8751,7 +8751,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8772,7 +8772,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8793,7 +8793,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8814,7 +8814,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8835,7 +8835,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8856,7 +8856,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8877,7 +8877,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8898,7 +8898,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8919,7 +8919,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8940,7 +8940,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8961,7 +8961,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -8982,7 +8982,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9003,7 +9003,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9024,7 +9024,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9045,7 +9045,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9066,7 +9066,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9087,7 +9087,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9108,7 +9108,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9129,7 +9129,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9150,7 +9150,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9171,7 +9171,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9192,7 +9192,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9213,7 +9213,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9234,7 +9234,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9255,7 +9255,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9276,7 +9276,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9297,7 +9297,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9318,7 +9318,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9339,7 +9339,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9360,7 +9360,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9381,7 +9381,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9402,7 +9402,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9423,7 +9423,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9444,7 +9444,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9465,7 +9465,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9486,7 +9486,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9507,7 +9507,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9528,7 +9528,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9549,7 +9549,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9570,7 +9570,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9591,7 +9591,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9612,7 +9612,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9633,7 +9633,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9654,7 +9654,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9675,7 +9675,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9696,7 +9696,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9717,7 +9717,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9738,7 +9738,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9759,7 +9759,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9780,7 +9780,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9801,7 +9801,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9822,7 +9822,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9843,7 +9843,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9864,7 +9864,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9885,7 +9885,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9906,7 +9906,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9927,7 +9927,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9948,7 +9948,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9969,7 +9969,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -9990,7 +9990,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10011,7 +10011,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10032,7 +10032,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10053,7 +10053,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10074,7 +10074,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10095,7 +10095,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10116,7 +10116,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10137,7 +10137,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10158,7 +10158,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10179,7 +10179,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10200,7 +10200,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10221,7 +10221,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10242,7 +10242,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10263,7 +10263,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10284,7 +10284,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10305,7 +10305,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10326,7 +10326,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10347,7 +10347,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10368,7 +10368,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10389,7 +10389,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10410,7 +10410,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10431,7 +10431,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10452,7 +10452,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10473,7 +10473,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10494,7 +10494,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10515,7 +10515,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10536,7 +10536,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10557,7 +10557,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10578,7 +10578,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10599,7 +10599,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10620,7 +10620,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10641,7 +10641,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10662,7 +10662,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10683,7 +10683,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10704,7 +10704,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10725,7 +10725,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10746,7 +10746,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10767,7 +10767,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10788,7 +10788,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10809,7 +10809,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10830,7 +10830,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10851,7 +10851,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10872,7 +10872,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10893,7 +10893,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10914,7 +10914,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10935,7 +10935,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10956,7 +10956,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10977,7 +10977,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -10998,7 +10998,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11019,7 +11019,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11040,7 +11040,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11061,7 +11061,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11082,7 +11082,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11103,7 +11103,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11124,7 +11124,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11145,7 +11145,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11166,7 +11166,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11187,7 +11187,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11208,7 +11208,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11229,7 +11229,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11250,7 +11250,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11271,7 +11271,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11292,7 +11292,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11313,7 +11313,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11334,7 +11334,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11355,7 +11355,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11376,7 +11376,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11397,7 +11397,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11418,7 +11418,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11439,7 +11439,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11460,7 +11460,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11481,7 +11481,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11502,7 +11502,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11523,7 +11523,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11544,7 +11544,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11565,7 +11565,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11586,7 +11586,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11607,7 +11607,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11628,7 +11628,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11649,7 +11649,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11670,7 +11670,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11691,7 +11691,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11712,7 +11712,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11733,7 +11733,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11754,7 +11754,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11775,7 +11775,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11796,7 +11796,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11817,7 +11817,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11838,7 +11838,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11859,7 +11859,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11880,7 +11880,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11901,7 +11901,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11922,7 +11922,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11943,7 +11943,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11964,7 +11964,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -11985,7 +11985,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12006,7 +12006,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12027,7 +12027,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12048,7 +12048,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12069,7 +12069,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12090,7 +12090,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12111,7 +12111,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12132,7 +12132,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12153,7 +12153,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12174,7 +12174,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12195,7 +12195,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12216,7 +12216,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12237,7 +12237,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12258,7 +12258,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12279,7 +12279,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12300,7 +12300,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12321,7 +12321,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12342,7 +12342,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12363,7 +12363,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12384,7 +12384,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12405,7 +12405,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12426,7 +12426,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12447,7 +12447,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12468,7 +12468,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12489,7 +12489,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12510,7 +12510,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12531,7 +12531,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12552,7 +12552,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12573,7 +12573,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12594,7 +12594,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12615,7 +12615,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12636,7 +12636,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12657,7 +12657,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12678,7 +12678,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12699,7 +12699,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12720,7 +12720,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12741,7 +12741,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12762,7 +12762,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12783,7 +12783,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12804,7 +12804,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12825,7 +12825,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12846,7 +12846,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12867,7 +12867,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12888,7 +12888,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12909,7 +12909,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12930,7 +12930,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12951,7 +12951,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12972,7 +12972,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -12993,7 +12993,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13014,7 +13014,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13035,7 +13035,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13056,7 +13056,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13077,7 +13077,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13098,7 +13098,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13119,7 +13119,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13140,7 +13140,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13161,7 +13161,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13182,7 +13182,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13203,7 +13203,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13224,7 +13224,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13245,7 +13245,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13266,7 +13266,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13287,7 +13287,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13308,7 +13308,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13329,7 +13329,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13350,7 +13350,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13371,7 +13371,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13392,7 +13392,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13413,7 +13413,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13434,7 +13434,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13455,7 +13455,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13476,7 +13476,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13497,7 +13497,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13518,7 +13518,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13539,7 +13539,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13560,7 +13560,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13581,7 +13581,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13602,7 +13602,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13623,7 +13623,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13644,7 +13644,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13665,7 +13665,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13686,7 +13686,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13707,7 +13707,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13728,7 +13728,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13749,7 +13749,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13770,7 +13770,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13791,7 +13791,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13812,7 +13812,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13833,7 +13833,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13854,7 +13854,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13875,7 +13875,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13896,7 +13896,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13917,7 +13917,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13938,7 +13938,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13959,7 +13959,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -13980,7 +13980,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14001,7 +14001,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14022,7 +14022,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14043,7 +14043,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14064,7 +14064,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14085,7 +14085,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14106,7 +14106,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14127,7 +14127,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14148,7 +14148,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14169,7 +14169,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14190,7 +14190,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14211,7 +14211,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14232,7 +14232,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14253,7 +14253,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14274,7 +14274,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14295,7 +14295,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14316,7 +14316,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14337,7 +14337,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14358,7 +14358,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14379,7 +14379,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14400,7 +14400,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14421,7 +14421,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14442,7 +14442,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14463,7 +14463,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14484,7 +14484,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14505,7 +14505,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14526,7 +14526,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14547,7 +14547,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14568,7 +14568,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14589,7 +14589,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14610,7 +14610,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14631,7 +14631,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14652,7 +14652,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14673,7 +14673,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14694,7 +14694,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14715,7 +14715,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14736,7 +14736,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14757,7 +14757,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14778,7 +14778,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14799,7 +14799,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14820,7 +14820,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14841,7 +14841,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14862,7 +14862,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14883,7 +14883,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14904,7 +14904,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14925,7 +14925,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14946,7 +14946,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14967,7 +14967,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -14988,7 +14988,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15009,7 +15009,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15030,7 +15030,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15051,7 +15051,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15072,7 +15072,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15093,7 +15093,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15114,7 +15114,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15135,7 +15135,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15156,7 +15156,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15177,7 +15177,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15198,7 +15198,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15219,7 +15219,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15240,7 +15240,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15261,7 +15261,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15282,7 +15282,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15303,7 +15303,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15324,7 +15324,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15345,7 +15345,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15366,7 +15366,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15387,7 +15387,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15408,7 +15408,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15429,7 +15429,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15450,7 +15450,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15471,7 +15471,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15492,7 +15492,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15513,7 +15513,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15534,7 +15534,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15555,7 +15555,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15576,7 +15576,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15597,7 +15597,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15618,7 +15618,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15639,7 +15639,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15660,7 +15660,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15681,7 +15681,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15702,7 +15702,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15723,7 +15723,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15744,7 +15744,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15765,7 +15765,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15786,7 +15786,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15807,7 +15807,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15828,7 +15828,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15849,7 +15849,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15870,7 +15870,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15891,7 +15891,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15912,7 +15912,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15933,7 +15933,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15954,7 +15954,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15975,7 +15975,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -15996,7 +15996,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16017,7 +16017,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16038,7 +16038,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16059,7 +16059,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16080,7 +16080,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16101,7 +16101,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16122,7 +16122,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16143,7 +16143,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16164,7 +16164,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16185,7 +16185,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16206,7 +16206,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16227,7 +16227,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16248,7 +16248,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16269,7 +16269,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16290,7 +16290,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16311,7 +16311,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16332,7 +16332,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16353,7 +16353,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16374,7 +16374,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16395,7 +16395,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16416,7 +16416,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16437,7 +16437,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16458,7 +16458,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16479,7 +16479,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16500,7 +16500,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16521,7 +16521,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16542,7 +16542,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16563,7 +16563,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16584,7 +16584,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16605,7 +16605,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16626,7 +16626,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16647,7 +16647,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16668,7 +16668,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16689,7 +16689,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16710,7 +16710,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16731,7 +16731,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16752,7 +16752,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16773,7 +16773,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16794,7 +16794,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16815,7 +16815,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16836,7 +16836,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
@@ -16857,7 +16857,7 @@
             ]
         },
         {
-            "mesh": {
+            "shape": {
                 "name": "sphere",
                 "radius": 0.25
             },
