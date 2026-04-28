@@ -42,18 +42,17 @@ public:
                            .window_size({1600, 900})
                            .cam_pos(fvec3{22.0f, 16.0f, -28.0f} * si::metre)
                            .look_at(fvec3{-2.0f, 3.0f, 0.0f} * si::metre)
-                           .fov(50.0f * degree)
                            .drag(false)
                            .gravity(gravity)
                            .time_step(1.0 / 1200.0 * si::second)
-                           .solver_iterations(20)}
+                           .solver_iterations(32)}
     {
         cam().speed(3.0f * si::metre / si::second);
         M_state.saved_gravity = gravity;
         world().add_task(runtime());
+        // auto &w = dynamic_cast<physkit::world<physkit::semi_implicit_euler> &>(world());
     }
 
-    auto &w = dynamic_cast < physkit::world<physkit::semi_implicit_euler &>(world());
     void update(mp_units::quantity<mp_units::si::second> /*dt*/) override {}
 
 private:
