@@ -89,23 +89,25 @@ private:
     task<> spawn_box(vec3<si::metre> pos)
     {
         co_await add_rigid(object_desc::dynam()
-                               .with_mesh(mesh::box(vec3{0.2, 0.2, 0.2} * m))
+                               .with_shape(box(vec3{0.2, 0.2, 0.2} * m))
                                .with_pos(pos)
                                .with_mass(1.0 * kg)
                                .with_restitution(0.4)
                                .with_friction(0.5),
                            Color3{0.7f, 0.7f, 0.7f});
+        co_return;
     }
 
     task<> spawn_sphere(vec3<si::metre> pos)
     {
         co_await add_rigid(object_desc::dynam()
-                               .with_mesh(mesh::sphere(0.1 * m, 16, 16))
+                               .with_shape(sphere(0.1 * m))
                                .with_pos(pos)
                                .with_mass(1.0 * kg)
                                .with_restitution(0.6)
                                .with_friction(0.3),
                            Color3{0.8f, 0.8f, 0.8f});
+        co_return;
     }
 
     /// TODO: add in different shapes when branches merge - pyramid, cone, etc
@@ -207,43 +209,43 @@ private:
 
     task<> build_area()
     {
-        auto arena_half = 5.0 * m;
-        auto wall_height = 2.0 * m;
-        auto thickness = 0.2 * m;
+        auto arena_half = 10.0 * m;
+        auto wall_height = 5.0 * m;
+        auto thickness = 0.4 * m;
 
         // Floor
         co_await add_rigid(object_desc::stat()
-                               .with_mesh(mesh::box(vec3{arena_half, 0.2 * m, arena_half}))
+                               .with_shape(box(vec3{arena_half, 0.2 * m, arena_half}))
                                .with_pos(vec3{0.0 * m, -0.2 * m, 0.0 * m})
                                .with_friction(0.8),
                            Color3{0.2f, 0.3f, 0.35f});
 
         // Back and front walls
-        auto wall_fb = mesh::box(vec3{arena_half, wall_height, thickness});
+        auto wall_fb = box(vec3{arena_half, wall_height, thickness});
 
         co_await add_rigid(object_desc::stat()
-                               .with_mesh(wall_fb)
+                               .with_shape(wall_fb)
                                .with_pos(vec3{0.0 * m, wall_height, -arena_half})
                                .with_friction(0.7),
                            Color3{0.4f, 0.4f, 0.4f});
 
         co_await add_rigid(object_desc::stat()
-                               .with_mesh(wall_fb)
+                               .with_shape(wall_fb)
                                .with_pos(vec3{0.0 * m, wall_height, arena_half})
                                .with_friction(0.7),
                            Color3{0.4f, 0.4f, 0.4f});
 
         // Left / Right walls
-        auto wall_lr = mesh::box(vec3{thickness, wall_height, arena_half});
+        auto wall_lr = box(vec3{thickness, wall_height, arena_half});
 
         co_await add_rigid(object_desc::stat()
-                               .with_mesh(wall_lr)
+                               .with_shape(wall_lr)
                                .with_pos(vec3{-arena_half, wall_height, 0.0 * m})
                                .with_friction(0.7),
                            Color3{0.4f, 0.4f, 0.4f});
 
         co_await add_rigid(object_desc::stat()
-                               .with_mesh(wall_lr)
+                               .with_shape(wall_lr)
                                .with_pos(vec3{arena_half, wall_height, 0.0 * m})
                                .with_friction(0.7),
                            Color3{0.4f, 0.4f, 0.4f});
