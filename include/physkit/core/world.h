@@ -223,6 +223,28 @@ public:
         return std::nullopt;
     }
 
+    // *** Just updated and put in here for the Debug Screen
+    
+    [[nodiscard]] size_t object_count() const 
+
+    { 
+        return M_rigid.slots.size() - M_rigid.free.size(); 
+    }
+
+    template<typename F>
+    void for_each_object(F&& callback) const 
+    {
+        for (size_t i = 0; i < M_rigid.slots.size(); i++) {
+            const auto& slot = M_rigid.slots[i];
+            if (!slot.available) {
+                handle h = handle::from_id(i);
+                std::forward<F>(callback)(h, slot.value.obj);
+            }
+        }
+    }
+
+    // *** End of edits to world.h for the debug screen
+
     [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
 
     task_handle add_task(task<> t) { return M_task_handler.add_task(std::move(t), {}); }
