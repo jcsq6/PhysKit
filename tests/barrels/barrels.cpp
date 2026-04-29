@@ -51,75 +51,71 @@ public:
     void update(mp_units::quantity<mp_units::si::second> dt) override {}
 
 private:
-    task<> add_beam(vec3<si::metre> pos, quantity<si::metre> length,
-        quantity<si::metre> width, quantity<si::metre> thickness,
-        float ang,
-        Color3 color)
+    task<> add_beam(vec3<si::metre> pos, quantity<si::metre> length, quantity<si::metre> width,
+                    quantity<si::metre> thickness, float ang, Color3 color)
     {
-        auto bx = box(vec3<si::metre>{2*length,2*thickness,2*width});
+        auto bx = box(vec3<si::metre>{2 * length, 2 * thickness, 2 * width});
 
-        quat<one> rot = quat<one>::from_angle_axis(ang*deg, vec3<one>{0,0,1});
+        quat<one> rot = quat<one>::from_angle_axis(ang * deg, vec3<one>{0, 0, 1});
 
         co_await add_rigid(object_desc::stat()
-                                    .with_shape(std::move(bx))
-                                    .with_mass(100*kg)
-                                    .with_pos(pos)
-                                    .with_orientation(rot)
-                                    .with_restitution(0.3)
-                                    .with_friction(0.15),
-                                    color);
-    }
-    task <world_base::handle> make_barrel(vec3<si::metre> pos,
-        quantity<si::metre> radius,
-        quantity<si::metre> height,
-        Color3 color)
-    {
-        auto mesh = cylinder(radius, height);
-        auto rot = quat<one>::from_angle_axis(90.0*deg, vec3<one>{1,0,0});
-
-        auto h = (*co_await add_rigid(object_desc::dynam()
-                               .with_shape(mesh)
+                               .with_shape(std::move(bx))
+                               .with_mass(100 * kg)
                                .with_pos(pos)
-                               .with_mass(100*kg)
                                .with_orientation(rot)
                                .with_restitution(0.3)
                                .with_friction(0.15),
-                           color))->handle();
+                           color);
+    }
+    task<world_base::handle> make_barrel(vec3<si::metre> pos, quantity<si::metre> radius,
+                                         quantity<si::metre> height, Color3 color)
+    {
+        auto mesh = cylinder(radius, height);
+        auto rot = quat<one>::from_angle_axis(90.0 * deg, vec3<one>{1, 0, 0});
+
+        auto h = (*co_await add_rigid(object_desc::dynam()
+                                          .with_shape(mesh)
+                                          .with_pos(pos)
+                                          .with_mass(100 * kg)
+                                          .with_orientation(rot)
+                                          .with_restitution(0.3)
+                                          .with_friction(0.15),
+                                      color))
+                     ->handle();
         co_return h;
     }
 
     task<> scene()
     {
-        Color3 red{178.0/255, 34.0/255, 34.0/255};
-        Color3 rust{183.0/255,65.0/255,14.0/255};
+        Color3 red{178.0 / 255, 34.0 / 255, 34.0 / 255};
+        Color3 rust{183.0 / 255, 65.0 / 255, 14.0 / 255};
 
         auto start_h = 2.0;
         auto spacing = 1.0;
-        auto len = 0.6*m;
+        auto len = 0.6 * m;
         auto xdist = 1.0;
-        auto wid = 0.75*m;
-		  auto thicc = 0.01*m;
+        auto wid = 0.75 * m;
+        auto thicc = 0.01 * m;
         auto angle = 5.5;
         for (int i = 0; i < 3; i++)
         {
-            auto pos1 = vec3{xdist, start_h-spacing*i, 0}*m;
-            auto pos2 = vec3{-xdist, start_h-spacing*i-spacing/2.0, 0}*m;
-            //right
+            auto pos1 = vec3{xdist, start_h - spacing * i, 0} * m;
+            auto pos2 = vec3{-xdist, start_h - spacing * i - spacing / 2.0, 0} * m;
+            // right
             co_await add_beam(pos1, len, wid, thicc, angle, red);
-            //left
+            // left
             co_await add_beam(pos2, len, wid, thicc, -angle, red);
         }
-        //auto mesh = box(vec3{0.1, 0.1, 0.1} * m);
+        // auto mesh = box(vec3{0.1, 0.1, 0.1} * m);
         while (true)
-		  {
+        {
             auto frame_time = *co_await next_render_frame();
             if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
             {
-                co_await make_barrel(vec3{1, 2.4, 0}*m, 0.12*m, 0.4*m, rust);
+                co_await make_barrel(vec3{1, 2.4, 0} * m, 0.12 * m, 0.4 * m, rust);
             }
-		  }
+        }
     }
-
 };
 
 MAGNUM_APPLICATION_MAIN(barrels_app) // NOLINT

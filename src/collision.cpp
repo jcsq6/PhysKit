@@ -869,6 +869,97 @@ inline sat_contact_polygon sat_clip_polygon(const sat_contact_polygon &polygon,
     return clipped;
 }
 
+inline vec3<si::metre> sat_project_to_plane(const vec3<si::metre> &point,
+                                            const vec3<si::metre> &plane_point,
+                                            const vec3<one> &plane_normal)
+{ return point - plane_normal * (point - plane_point).dot(plane_normal); }
+
+// TODO: replace with smarter point selection
+
+inline bool sat_point_in_polygon(const sat_contact_polygon &polygon, const vec3<si::metre> &point,
+                                 const vec3<one> &plane_normal)
+{
+    if (polygon.size() < 3) return false;
+
+    static constexpr auto side_tol = 1e-9 * pow<2>(si::metre);
+    int sign = 0;
+
+    for (std::size_t i = 0; i < polygon.size(); ++i)
+    {
+        const auto &a = polygon[i];
+        const auto &b = polygon[(i + 1) % polygon.size()];
+        const auto side = (b - a).cross(point - a).dot(plane_normal);
+        const int current = side > side_tol ? 1 : (side < -side_tol ? -1 : 0);
+
+        if (current == 0) continue;
+        if (sign == 0)
+            sign = current;
+        else if (sign != current)
+            return false;
+    }
+
+    return true;
+}
+
+inline vec3<si::metre> sat_closest_point_on_segment(const vec3<si::metre> &point,
+                                                    const vec3<si::metre> &a,
+                                                    const vec3<si::metre> &b)
+{
+    const auto ab = b - a;
+    const auto ab_len2 = ab.squared_norm();
+    static constexpr auto eps = 1e-24 * pow<2>(si::metre);
+    if (ab_len2 <= eps) return a;
+
+    return a + ab * std::clamp(static_cast<double>((point - a).dot(ab) / ab_len2), 0.0, 1.0);
+}
+
+inline vec3<si::metre> sat_closest_point_on_polygon(const sat_contact_polygon &polygon,
+                                                    const vec3<si::metre> &point,
+                                                    const vec3<one> &plane_normal)
+{
+    const auto projected = sat_project_to_plane(point, polygon[0], plane_normal);
+    if (sat_point_in_polygon(polygon, projected, plane_normal)) return projected;
+
+    auto best = polygon.front();
+    auto best_dist2 = (best - point).squared_norm();
+    for (std::size_t i = 0; i < polygon.size(); ++i)
+    {
+        const auto candidate =
+            sat_closest_point_on_segment(point, polygon[i], polygon[(i + 1) % polygon.size()]);
+        if (const auto dist2 = (candidate - point).squared_norm(); dist2 < best_dist2)
+        {
+            best = candidate;
+            best_dist2 = dist2;
+        }
+    }
+
+    return best;
+}
+
+inline vec3<si::metre> sat_representative_face_point(const sat_contact_polygon &polygon,
+                                                     const vec3<one> &plane_normal,
+                                                     const vec3<si::metre> &center_a,
+                                                     const vec3<si::metre> &center_b)
+{
+    auto projected_inside = [&](const vec3<si::metre> &center) -> std::optional<vec3<si::metre>>
+    {
+        const auto projected = sat_project_to_plane(center, polygon[0], plane_normal);
+        if (sat_point_in_polygon(polygon, projected, plane_normal)) return projected;
+        return std::nullopt;
+    };
+
+    const auto projected_a = projected_inside(center_a);
+    const auto projected_b = projected_inside(center_b);
+
+    if (projected_a && projected_b) return (*projected_a + *projected_b) * 0.5;
+    if (projected_a) return *projected_a;
+    if (projected_b) return *projected_b;
+
+    const auto closest_a = sat_closest_point_on_polygon(polygon, center_a, plane_normal);
+    const auto closest_b = sat_closest_point_on_polygon(polygon, center_b, plane_normal);
+    return (closest_a + closest_b) * 0.5;
+}
+
 inline collision_info sat_clipped_face_contact(const sat_polyhedron &a, const sat_polyhedron &b,
                                                const vec3<one> &normal,
                                                quantity<si::metre> fallback_depth, bool ref_is_a)
@@ -896,14 +987,19 @@ inline collision_info sat_clipped_face_contact(const sat_polyhedron &a, const sa
 
     const auto ref_offset = ref_outward.dot(ref.vertices[ref_face.vertices[0]]);
     auto best_depth = -std::numeric_limits<quantity<si::metre>>::infinity();
+    auto shallowest_depth = std::numeric_limits<quantity<si::metre>>::infinity();
     auto sum_a = vec3<si::metre>::zero();
     auto sum_b = vec3<si::metre>::zero();
     std::size_t contact_count = 0;
+    sat_contact_polygon valid_polygon;
 
     for (const auto &p : polygon)
     {
         const auto depth = ref_offset - ref_outward.dot(p);
         if (depth < -contact_tol) continue;
+
+        valid_polygon.push_back(p);
+        shallowest_depth = std::min(shallowest_depth, depth);
 
         const auto ref_point = p + ref_outward * depth;
         const auto world_a = ref_is_a ? ref_point : p;
@@ -924,7 +1020,7 @@ inline collision_info sat_clipped_face_contact(const sat_polyhedron &a, const sa
         }
     }
 
-    if (contact_count == 0)
+    if (valid_polygon.empty())
     {
         const auto world_a = a.vertices.front();
         return collision_info{
@@ -932,6 +1028,21 @@ inline collision_info sat_clipped_face_contact(const sat_polyhedron &a, const sa
             .world_a = world_a,
             .world_b = world_a + normal * fallback_depth,
             .depth = fallback_depth,
+        };
+    }
+
+    if (best_depth - shallowest_depth <= contact_tol)
+    {
+        const auto p =
+            sat_representative_face_point(valid_polygon, inc_face.normal, a.center, b.center);
+        const auto depth = ref_offset - ref_outward.dot(p);
+        const auto ref_point = p + ref_outward * depth;
+
+        return collision_info{
+            .normal = normal,
+            .world_a = ref_is_a ? ref_point : p,
+            .world_b = ref_is_a ? p : ref_point,
+            .depth = depth,
         };
     }
 
