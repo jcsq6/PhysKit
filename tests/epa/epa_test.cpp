@@ -806,6 +806,26 @@ void epa_mixed_mesh_obb_mtv()
     check_unit_normal(result->normal);
 }
 
+void sat_face_contact_uses_body_center_when_supported()
+{
+    const auto platform = box(vec3{5.0, 5.0, 5.0} * m).at(vec3{-4.501, -5.0, 0.0} * m);
+    const auto card = box(vec3{0.5, 0.1, 0.2} * m).at(vec3{0.0, 0.099, 0.0} * m);
+
+    const auto result = collision(platform, card);
+    CHECK(result.has_value());
+    CHECK_APPROX(result->depth, 0.001 * m, depth_tol);
+    CHECK(result->normal.y().numerical_value_in(one) < -0.9);
+    CHECK_APPROX(result->world_b.x(), 0.0 * m, 1e-6 * m);
+    check_contact_anchors_aligned(*result);
+
+    const auto reversed = collision(card, platform);
+    CHECK(reversed.has_value());
+    CHECK_APPROX(reversed->depth, 0.001 * m, depth_tol);
+    CHECK(reversed->normal.y().numerical_value_in(one) > 0.9);
+    CHECK_APPROX(reversed->world_a.x(), 0.0 * m, 1e-6 * m);
+    check_contact_anchors_aligned(*reversed);
+}
+
 } // namespace
 
 int main()
@@ -888,6 +908,10 @@ int main()
         .test("multiple rotation axes", epa_multiple_rotation_axes)
         .test("mesh vs AABB", epa_mixed_mesh_aabb_mtv)
         .test("mesh vs OBB", epa_mixed_mesh_obb_mtv);
+
+    s.group("SAT Face Contacts")
+        .test("partial support uses centered representative",
+              sat_face_contact_uses_body_center_when_supported);
 
     return s.run();
 }
