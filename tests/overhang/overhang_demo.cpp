@@ -85,15 +85,15 @@ private:
 
     task<world_base::handle> make_card(std::size_t n)
     {
-        auto eps = 0.008 * m; // less than 0.007 lags out.
+        auto eps = 0.000 * m; // less than 0.007 lags out.
         auto pos = vec3{0.0 * m, (2 * n + 1) * card_hheight, pivot_z * m};
         auto h = (*co_await add_rigid(
                       object_desc::dynam()
                           .with_shape(box(vec3{card_hwidth, card_hheight + eps, card_hlength}))
                           .with_pos(pos)
                           .with_mass(card_mass)
-                          .with_restitution(0.3)
-                          .with_friction(0.7),
+                          .with_restitution(0.0)
+                          .with_friction(1),
                       colors[(n) % colors.size()]))
                      ->handle();
 
@@ -119,13 +119,14 @@ private:
     task<> scene()
     {
         auto initial_pos = vec3{0.0, 5.0, 0.0} * m;
-
+        auto eps = -0.001;
         auto platform =
             (*co_await add_rigid(
                  object_desc::stat()
                      .with_shape(box(vec3{platform_size, platform_size, platform_size} * m))
-                     .with_pos(vec3{card_hwidth - platform_size * m, -platform_size * m, 0.0 * m})
-                     .with_restitution(0.1)
+                     .with_pos(
+                         vec3{card_hwidth + (eps - platform_size) * m, -platform_size * m, 0.0 * m})
+                     .with_restitution(0.0)
                      .with_friction(1),
                  Color3{0.1f, 0.45f, 0.15f}))
                 ->handle();
