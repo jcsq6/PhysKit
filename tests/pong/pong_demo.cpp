@@ -59,7 +59,75 @@ class pong_game : public graphics_app {
 
         }
 
+    private:
+        int player_score = 0;
+        int ai_score = 0;
+        world_base::handle ball_handle;
+        world_base::handle left_paddle_handle;
+        world_base::handle right_paddle_handle;
 
+        task<> make_wall(vec3<si::metre> pos, vec3<si::metre> half_extents, Color3 color, float restitution = 1.0f) {
+            co_await add_rigid(object_desc::stat()
+                                    .with_shape(box(half_extents))
+                                    .with_pos(pos)
+                                    .with_restitution(restitution)
+                                    .with_friction(0.0), color);
+        }
+
+        task<> scene {
+            // Top Wall
+            co_await make_wall(
+                vec3{0.0 * m, play_height / 2 + 0.05 * m, 0.0 * m},
+                vec3{play_width / 2, 0.03 * m, 0.2 * m},
+                Color3{0.0f, 0.3f, 0.3f}
+            );
+
+            // Bottom Wall
+            co_await make_wall(
+                vec3{0.0 * m, -play_height / 2 - 0.05 * m, 0.0 * m},
+                vec3{play_width / 2, 0.03 * m, 0.2 * m},
+                Color3{0.0f, 0.3f, 0.3f}
+            );
+
+            // Back Wall
+            co_await make_wall(
+                vec3{0.0 * m, 0.0 m, -0.3 * m},
+                vec3{play_width / 2, play_height / 2, 0.02 * m},
+                Color3{0.2f, 0.2f, 0.25f},
+                0.5f
+            );
+
+            // Front Wall
+            co_await make_wall(
+                vec3{0.0 * m, 0.0 m, 0.3 * m},
+                vec3{play_width / 2, play_height / 2, 0.01 * m},
+                Color3{0.15f, 0.15f, 0.2f},
+                0.5f
+            );
+
+            // Center Line
+            auto line_segment = box(vec3{0.01 * m, 0.05 * m, 0.01 * m});
+            for (int i = -5; i <= 5; ++i) {
+                co_await add_rigid(object_desc::stat()
+                                        .with_shape(line_segment)
+                                        .with_pos(vec3{0.0 * m, i * 0.12 * m, 0.0 * m})
+                                        .with_restitution(1.0), Color3{0.5f, 0.5f, 0.5f});
+            }
+
+            // Left Paddle
+            auto left_paddle_obj = co_await add_rigid(
+                object_desc::dynam()
+                    .with_shape(vec3{paddle_width, paddle_height, paddle_depth})
+                    .with_pos(vec3{-play_width / 2 + 0.08 * m, 0.0 * m, 0.0 * m})
+                    .with_mass(2.0 * kg)
+                    .with_restitution(1.2)
+                    .with_friction(0.0), Color3{0.2f, 0.6f, 0.9f}
+            );
+            left_paddle_handle = (*left_paddle_obj)->handle();
+
+            (**left_paddle_obj)
+
+        }
 
 
 
