@@ -40,9 +40,9 @@ public:
                            .cam_pos(fvec3{0.0f, 2.0f, -4.0f} * si::metre)
                            .look_at(fvec3{0.0f, 2.0f, 1.5f} * si::metre)
                            .drag(false)
-                           .gravity(gravity/2)
-                           .time_step(1.0 / 1200.0 * si::second)
-                           .solver_iterations(20)}
+                           .gravity(gravity)
+                           .time_step(1.0 / 120.0 * si::second)
+                           .solver_iterations(300)}
     {
         cam().speed(1.0f * si::metre / si::second);
         world().add_task(scene());
@@ -52,11 +52,11 @@ public:
 
 private:
     task<> add_beam(vec3<si::metre> pos, quantity<si::metre> length,
-        quantity<si::metre> width,
+        quantity<si::metre> width, quantity<si::metre> thickness,
         float ang,
         Color3 color)
     {
-        auto bx = box(vec3<si::metre>{2*length,2*width/5,2*width});
+        auto bx = box(vec3<si::metre>{2*length,2*thickness,2*width});
 
         quat<one> rot = quat<one>::from_angle_axis(ang*deg, vec3<one>{0,0,1});
 
@@ -65,8 +65,8 @@ private:
                                     .with_mass(100*kg)
                                     .with_pos(pos)
                                     .with_orientation(rot)
-                                    .with_restitution(0.5)
-                                    .with_friction(0.8),
+                                    .with_restitution(0.3)
+                                    .with_friction(0.15),
                                     color);
     }
     task <world_base::handle> make_barrel(vec3<si::metre> pos,
@@ -82,8 +82,8 @@ private:
                                .with_pos(pos)
                                .with_mass(100*kg)
                                .with_orientation(rot)
-                               .with_restitution(0.5)
-                               .with_friction(0.8),
+                               .with_restitution(0.3)
+                               .with_friction(0.15),
                            color))->handle();
         co_return h;
     }
@@ -94,19 +94,20 @@ private:
         Color3 rust{183.0/255,65.0/255,14.0/255};
 
         auto start_h = 2.0;
-        auto spacing = 1.2;
-        auto len = 0.5*m;
-        auto xdist = 0.5;
-        auto wid = 0.1*m;
-        auto angle = 5.0;
+        auto spacing = 1.0;
+        auto len = 0.6*m;
+        auto xdist = 1.0;
+        auto wid = 0.75*m;
+		  auto thicc = 0.01*m;
+        auto angle = 5.5;
         for (int i = 0; i < 3; i++)
         {
             auto pos1 = vec3{xdist, start_h-spacing*i, 0}*m;
             auto pos2 = vec3{-xdist, start_h-spacing*i-spacing/2.0, 0}*m;
             //right
-            co_await add_beam(pos1, len, wid, angle, red);
+            co_await add_beam(pos1, len, wid, thicc, angle, red);
             //left
-            co_await add_beam(pos2, len, wid, -angle, red);
+            co_await add_beam(pos2, len, wid, thicc, -angle, red);
         }
         //auto mesh = box(vec3{0.1, 0.1, 0.1} * m);
         while (true)
@@ -114,7 +115,7 @@ private:
             auto frame_time = *co_await next_render_frame();
             if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
             {
-                co_await make_barrel(vec3{1, 2.4, 0}*m, 0.1*m, 0.1*m, rust);
+                co_await make_barrel(vec3{1, 2.4, 0}*m, 0.12*m, 0.4*m, rust);
             }
 		  }
     }
