@@ -13,3 +13,8 @@ add_executable(constraint_demo
     constraint_demo.cpp
 )
 target_link_libraries(constraint_demo PRIVATE phys_graphics)
+
+add_executable(fountain_demo
+    fountain.cpp
+)
+target_link_libraries(fountain_demo PRIVATE phys_graphics)

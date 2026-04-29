@@ -38,6 +38,16 @@ void check_mtv_separates(const instance &a, const instance &b, const collision_i
     CHECK(!collision(a_moved, b).has_value());
 }
 
+void check_contact_anchors_aligned(const collision_info &info)
+{
+    auto relative = info.world_b - info.world_a;
+    auto normal_depth = relative.dot(info.normal);
+    auto tangent_delta = relative - info.normal * normal_depth;
+
+    CHECK_APPROX(normal_depth, info.depth, depth_tol);
+    CHECK(tangent_delta.norm() < depth_tol);
+}
+
 // ============================================================
 // EPA Depth Accuracy: AABB vs AABB
 //
@@ -194,6 +204,16 @@ void epa_aabb_normal_is_unit_length()
     auto result = collision(a, b);
     CHECK(result.has_value());
     check_unit_normal(result->normal);
+}
+
+void epa_aabb_contact_anchors_are_aligned()
+{
+    auto a = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = box(vec3{1.0, 1.0, 1.0} * m).at(vec3{1.5, 0.4, -0.3} * m);
+    auto result = collision(a, b);
+
+    CHECK(result.has_value());
+    check_contact_anchors_aligned(*result);
 }
 
 // ============================================================
@@ -617,6 +637,34 @@ void epa_pyramid_box_mtv()
     CHECK(!collision(a_moved, b).has_value());
 }
 
+void epa_box_pyramid_contact_anchors_are_aligned()
+{
+    auto bx = box(vec3{1.0, 1.0, 1.0} * m);
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto a = bx.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{0.2, 0.5, -0.1} * m);
+    auto result = collision(a, b);
+
+    CHECK(result.has_value());
+    check_contact_anchors_aligned(*result);
+    check_mtv_separates(a, b, *result);
+}
+
+void epa_pyramid_pyramid_rotated_sat_mtv()
+{
+    auto pyr = pyramid(1.0 * m, 2.0 * m);
+    auto rot =
+        quat<one>::from_angle_axis((std::numbers::pi / 4.0) * si::radian, vec3<one>{0.0, 1.0, 0.0});
+    auto a = pyr.at(vec3{0.0, 0.0, 0.0} * m);
+    auto b = pyr.at(vec3{0.3, 0.8, 0.2} * m, rot);
+    auto result = collision(a, b);
+
+    CHECK(result.has_value());
+    check_unit_normal(result->normal);
+    check_contact_anchors_aligned(*result);
+    check_mtv_separates(a, b, *result);
+}
+
 void epa_pyramid_flipped_depth()
 {
     auto pyr = pyramid(1.0 * m, 2.0 * m);
@@ -779,7 +827,8 @@ int main()
         .test("normal along X", epa_aabb_normal_direction_x)
         .test("normal along Y", epa_aabb_normal_direction_y)
         .test("normal along Z", epa_aabb_normal_direction_z)
-        .test("normal is unit length", epa_aabb_normal_is_unit_length);
+        .test("normal is unit length", epa_aabb_normal_is_unit_length)
+        .test("contact anchors are aligned", epa_aabb_contact_anchors_are_aligned);
 
     s.group("EPA MTV Validity")
         .test("MTV separates AABB X", epa_mtv_separates_aabb_x)
@@ -825,6 +874,8 @@ int main()
         .test("overlap depth", epa_pyramid_depth_overlap)
         .test("MTV separates", epa_pyramid_mtv_separates)
         .test("pyramid-box MTV", epa_pyramid_box_mtv)
+        .test("box-pyramid contact anchors", epa_box_pyramid_contact_anchors_are_aligned)
+        .test("pyramid-pyramid rotated MTV", epa_pyramid_pyramid_rotated_sat_mtv)
         .test("flipped depth", epa_pyramid_flipped_depth);
 
     s.group("EPA Invariants").test("depth always positive", epa_depth_always_positive);

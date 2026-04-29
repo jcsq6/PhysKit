@@ -197,11 +197,12 @@ std::optional<simplex> gjk_collision(const SupportShape auto &a, const SupportSh
     direction = -point.p.normalized();
 
     constexpr int max_iterations = 100;
+    constexpr auto progress_tol = 1e-9 * si::metre; // accept boundary contact (within ~nm)
     for (int iter = 0; iter < max_iterations; ++iter)
     {
         auto new_point = minkowski_support(a, b, direction);
         auto progress = new_point.p.dot(direction);
-        if (progress <= 0 * si::metre) return std::nullopt;
+        if (progress < -progress_tol) return std::nullopt;
 
         simplex.push_back(new_point);
         if (handle_simplex(simplex, direction)) return simplex;
@@ -447,7 +448,7 @@ struct epa_solver
         constexpr int max_iterations = 64;
         constexpr auto tolerance = 1e-8 * si::metre;
 
-        auto get_barycentric = [&](const face &f, const support_pt &p)
+        auto get_barycentric = [&](const face &f)
         {
             auto p0 = solver.polytope[f.vertices[0]];
             auto p1 = solver.polytope[f.vertices[1]];
@@ -484,15 +485,16 @@ struct epa_solver
             std::size_t min_face_idx = solver.pop_face();
             if (min_face_idx == null_index) break;
 
-            const auto &min_face = solver.faces[min_face_idx];
+            const auto min_face_snapshot = solver.faces[min_face_idx];
 
-            auto p = minkowski_support(a, b, min_face.normal);
-            auto p_dist = min_face.normal.dot(p.p);
-            if (p_dist - min_face.distance < tolerance) // convergence
-                return get_barycentric(min_face, p);
+            auto p = minkowski_support(a, b, min_face_snapshot.normal);
+            auto p_dist = min_face_snapshot.normal.dot(p.p);
+            if (p_dist - min_face_snapshot.distance < tolerance) // convergence
+                return get_barycentric(min_face_snapshot);
 
             auto horizon = solver.find_silhouette(min_face_idx, p.p);
-            if (horizon.empty()) break;
+            // degenerate.
+            if (horizon.empty()) return get_barycentric(min_face_snapshot);
 
             solver.polytope.push_back(p);
             auto p_idx = static_cast<index_t>(solver.polytope.size() - 1);
@@ -523,10 +525,9 @@ struct epa_solver
             }
         }
 
-        // return best guess if not converged
         std::size_t min_face_idx = solver.pop_face();
         if (min_face_idx == null_index) return std::nullopt;
-        return get_barycentric(solver.faces[min_face_idx], solver.polytope.back());
+        return get_barycentric(solver.faces[min_face_idx]);
     }
 
     absl::InlinedVector<face, buffer_size> faces;
@@ -660,14 +661,448 @@ std::optional<collision_info> box_sphere(const instance &a, const instance &b)
     };
 }
 
+struct sat_face
+{
+    absl::InlinedVector<std::uint8_t, 4> vertices;
+    vec3<one> normal;
+};
+
+struct sat_edge
+{
+    std::uint8_t start{};
+    std::uint8_t end{};
+    vec3<one> direction;
+};
+
+struct sat_polyhedron
+{
+    absl::InlinedVector<vec3<si::metre>, 8> vertices;
+    absl::InlinedVector<sat_face, 6> faces;
+    absl::InlinedVector<sat_edge, 12> edges;
+    absl::InlinedVector<vec3<one>, 8> edge_directions;
+    vec3<si::metre> center;
+};
+
+inline void sat_add_face(sat_polyhedron &poly, std::initializer_list<std::uint8_t> indices)
+{
+    sat_face face;
+    face.vertices.assign(indices);
+
+    auto normal = (poly.vertices[face.vertices[1]] - poly.vertices[face.vertices[0]])
+                      .cross(poly.vertices[face.vertices[2]] - poly.vertices[face.vertices[0]]) /
+                  pow<2>(si::metre);
+    if (normal.squared_norm() < 1e-24) return;
+    normal.normalize();
+
+    if (normal.dot(poly.center - poly.vertices[face.vertices[0]]) > 0.0 * si::metre)
+    {
+        normal = -normal;
+        std::ranges::reverse(face.vertices);
+    }
+
+    face.normal = normal;
+    poly.faces.push_back(face);
+}
+
+inline void sat_add_edge(sat_polyhedron &poly, std::uint8_t start, std::uint8_t end)
+{
+    static constexpr auto parallel_dot = 1.0 - 1e-9;
+
+    auto edge = poly.vertices[end] - poly.vertices[start];
+    if (edge.squared_norm() < 1e-24 * pow<2>(si::metre)) return;
+
+    auto direction = edge.normalized();
+    poly.edges.push_back({.start = start, .end = end, .direction = direction});
+
+    for (const auto &existing : poly.edge_directions)
+        if (abs(existing.dot(direction)) > parallel_dot) return;
+    poly.edge_directions.push_back(direction);
+}
+
+inline sat_polyhedron make_box_polyhedron(const instance &inst)
+{
+    const auto he = inst.geometry().box().half_extents();
+    const auto &q = inst.orientation();
+
+    sat_polyhedron poly{.center = inst.position()};
+    const std::array local_vertices = {
+        vec3<si::metre>{-he.x(), -he.y(), -he.z()}, vec3<si::metre>{he.x(), -he.y(), -he.z()},
+        vec3<si::metre>{he.x(), he.y(), -he.z()},   vec3<si::metre>{-he.x(), he.y(), -he.z()},
+        vec3<si::metre>{-he.x(), -he.y(), he.z()},  vec3<si::metre>{he.x(), -he.y(), he.z()},
+        vec3<si::metre>{he.x(), he.y(), he.z()},    vec3<si::metre>{-he.x(), he.y(), he.z()},
+    };
+
+    for (const auto &v : local_vertices) poly.vertices.push_back(q * v + inst.position());
+
+    sat_add_face(poly, {0, 3, 2, 1});
+    sat_add_face(poly, {4, 5, 6, 7});
+    sat_add_face(poly, {0, 1, 5, 4});
+    sat_add_face(poly, {3, 7, 6, 2});
+    sat_add_face(poly, {0, 4, 7, 3});
+    sat_add_face(poly, {1, 2, 6, 5});
+
+    sat_add_edge(poly, 0, 1);
+    sat_add_edge(poly, 1, 2);
+    sat_add_edge(poly, 2, 3);
+    sat_add_edge(poly, 3, 0);
+    sat_add_edge(poly, 4, 5);
+    sat_add_edge(poly, 5, 6);
+    sat_add_edge(poly, 6, 7);
+    sat_add_edge(poly, 7, 4);
+    sat_add_edge(poly, 0, 4);
+    sat_add_edge(poly, 1, 5);
+    sat_add_edge(poly, 2, 6);
+    sat_add_edge(poly, 3, 7);
+
+    return poly;
+}
+
+inline sat_polyhedron make_pyramid_polyhedron(const instance &inst)
+{
+    using namespace mp_units::si::unit_symbols;
+
+    const auto &p = inst.geometry().pyramid();
+    const auto b = p.base_half();
+    const auto h = p.height();
+    const auto &q = inst.orientation();
+
+    sat_polyhedron poly{.center = q * p.mass_center() + inst.position()};
+    const std::array local_vertices = {
+        vec3{b, 0.0 * m, b},  vec3{-b, 0.0 * m, b},      vec3{-b, 0.0 * m, -b},
+        vec3{b, 0.0 * m, -b}, vec3{0.0 * m, h, 0.0 * m},
+    };
+
+    for (const auto &v : local_vertices) poly.vertices.push_back(q * v + inst.position());
+
+    sat_add_face(poly, {0, 4, 1});
+    sat_add_face(poly, {1, 4, 2});
+    sat_add_face(poly, {2, 4, 3});
+    sat_add_face(poly, {3, 4, 0});
+    sat_add_face(poly, {0, 1, 2, 3});
+
+    sat_add_edge(poly, 0, 1);
+    sat_add_edge(poly, 1, 2);
+    sat_add_edge(poly, 2, 3);
+    sat_add_edge(poly, 3, 0);
+    sat_add_edge(poly, 0, 4);
+    sat_add_edge(poly, 1, 4);
+    sat_add_edge(poly, 2, 4);
+    sat_add_edge(poly, 3, 4);
+
+    return poly;
+}
+
+enum class sat_feature : uint8_t
+{
+    face_a,
+    face_b,
+    edge
+};
+
+struct sat_axis
+{
+    std::size_t a_index = 0;
+    std::size_t b_index = 0;
+    sat_feature feature = sat_feature::face_a;
+};
+
+inline std::pair<quantity<si::metre>, quantity<si::metre>> sat_project(const sat_polyhedron &poly,
+                                                                       const vec3<one> &axis)
+{
+    auto min = poly.vertices[0].dot(axis);
+    auto max = min;
+    for (const auto &v : poly.vertices)
+    {
+        const auto projected = v.dot(axis);
+        min = std::min(min, projected);
+        max = std::max(max, projected);
+    }
+    return {min, max};
+}
+
+inline std::size_t sat_face_supporting(const sat_polyhedron &poly, const vec3<one> &outward)
+{
+    std::size_t best = 0;
+    auto best_dot = poly.faces[0].normal.dot(outward);
+    for (std::size_t i = 1; i < poly.faces.size(); ++i)
+        if (auto dot = poly.faces[i].normal.dot(outward); dot > best_dot)
+        {
+            best_dot = dot;
+            best = i;
+        }
+    return best;
+}
+
+using sat_contact_polygon = absl::InlinedVector<vec3<si::metre>, 8>;
+
+inline sat_contact_polygon sat_face_vertices(const sat_polyhedron &poly, const sat_face &face)
+{
+    sat_contact_polygon polygon;
+    for (auto index : face.vertices) polygon.push_back(poly.vertices[index]);
+    return polygon;
+}
+
+inline sat_contact_polygon sat_clip_polygon(const sat_contact_polygon &polygon,
+                                            const vec3<one> &plane_normal,
+                                            quantity<si::metre> offset)
+{
+    static constexpr auto clip_tol = 1e-9 * si::metre;
+    sat_contact_polygon clipped;
+    if (polygon.empty()) return clipped;
+
+    for (std::size_t i = 0; i < polygon.size(); ++i)
+    {
+        const auto &a_pt = polygon[i];
+        const auto &b_pt = polygon[(i + 1) % polygon.size()];
+        const auto da = plane_normal.dot(a_pt) - offset;
+        const auto db = plane_normal.dot(b_pt) - offset;
+        const auto a_inside = da <= clip_tol;
+        const auto b_inside = db <= clip_tol;
+
+        if (a_inside) clipped.push_back(a_pt);
+        if (a_inside != b_inside)
+        {
+            const auto t = da / (da - db);
+            clipped.push_back(a_pt + (b_pt - a_pt) * t);
+        }
+    }
+    return clipped;
+}
+
+inline collision_info sat_clipped_face_contact(const sat_polyhedron &a, const sat_polyhedron &b,
+                                               const vec3<one> &normal,
+                                               quantity<si::metre> fallback_depth, bool ref_is_a)
+{
+    static constexpr auto contact_tol = 1e-7 * si::metre;
+
+    const auto &ref = ref_is_a ? a : b;
+    const auto &inc = ref_is_a ? b : a;
+    const auto ref_outward = ref_is_a ? -normal : normal;
+    const auto ref_face_idx = sat_face_supporting(ref, ref_outward);
+    const auto inc_face_idx = sat_face_supporting(inc, -ref_outward);
+    const auto &ref_face = ref.faces[ref_face_idx];
+    const auto &inc_face = inc.faces[inc_face_idx];
+
+    auto polygon = sat_face_vertices(inc, inc_face);
+    for (std::size_t i = 0; i < ref_face.vertices.size(); ++i)
+    {
+        const auto p0 = ref.vertices[ref_face.vertices[i]];
+        const auto p1 = ref.vertices[ref_face.vertices[(i + 1) % ref_face.vertices.size()]];
+        auto side_normal = (p1 - p0).cross(ref_outward) / si::metre;
+        if (side_normal.squared_norm() < 1e-24) continue;
+        side_normal.normalize();
+        polygon = sat_clip_polygon(polygon, side_normal, side_normal.dot(p0));
+    }
+
+    const auto ref_offset = ref_outward.dot(ref.vertices[ref_face.vertices[0]]);
+    auto best_depth = -std::numeric_limits<quantity<si::metre>>::infinity();
+    auto sum_a = vec3<si::metre>::zero();
+    auto sum_b = vec3<si::metre>::zero();
+    std::size_t contact_count = 0;
+
+    for (const auto &p : polygon)
+    {
+        const auto depth = ref_offset - ref_outward.dot(p);
+        if (depth < -contact_tol) continue;
+
+        const auto ref_point = p + ref_outward * depth;
+        const auto world_a = ref_is_a ? ref_point : p;
+        const auto world_b = ref_is_a ? p : ref_point;
+
+        if (depth > best_depth + contact_tol)
+        {
+            best_depth = depth;
+            sum_a = vec3<si::metre>::zero();
+            sum_b = vec3<si::metre>::zero();
+            contact_count = 0;
+        }
+        if (mp_units::abs(depth - best_depth) <= contact_tol)
+        {
+            sum_a += world_a;
+            sum_b += world_b;
+            ++contact_count;
+        }
+    }
+
+    if (contact_count == 0)
+    {
+        const auto world_a = a.vertices.front();
+        return collision_info{
+            .normal = normal,
+            .world_a = world_a,
+            .world_b = world_a + normal * fallback_depth,
+            .depth = fallback_depth,
+        };
+    }
+
+    const auto inv_count = 1.0 / static_cast<double>(contact_count);
+    return collision_info{
+        .normal = normal,
+        .world_a = sum_a * inv_count,
+        .world_b = sum_b * inv_count,
+        .depth = best_depth,
+    };
+}
+
+inline sat_edge sat_supporting_edge(const sat_polyhedron &poly, std::size_t direction_idx,
+                                    const vec3<one> &outward)
+{
+    constexpr auto parallel_dot = 1.0 - 1e-8;
+    const auto direction = poly.edge_directions[direction_idx];
+    std::size_t best = 0;
+    auto best_score = -std::numeric_limits<quantity<si::metre>>::infinity();
+
+    for (std::size_t i = 0; i < poly.edges.size(); ++i)
+    {
+        const auto &edge = poly.edges[i];
+        if (abs(edge.direction.dot(direction)) < parallel_dot) continue;
+
+        const auto score = (poly.vertices[edge.start] + poly.vertices[edge.end]).dot(outward);
+        if (score > best_score)
+        {
+            best_score = score;
+            best = i;
+        }
+    }
+
+    return poly.edges[best];
+}
+
+inline std::pair<vec3<si::metre>, vec3<si::metre>>
+sat_closest_segment_points(const vec3<si::metre> &p1, const vec3<si::metre> &q1,
+                           const vec3<si::metre> &p2, const vec3<si::metre> &q2)
+{
+    const auto d1 = q1 - p1;
+    const auto d2 = q2 - p2;
+    const auto r = p1 - p2;
+    const auto a_len = d1.dot(d1);
+    const auto e_len = d2.dot(d2);
+    const auto f = d2.dot(r);
+    static constexpr auto eps = 1e-24 * pow<2>(si::metre);
+
+    double s = 0.0;
+    double t = 0.0;
+    auto clamp01 = [](auto v) { return std::clamp(static_cast<double>(v), 0.0, 1.0); };
+
+    if (a_len <= eps && e_len <= eps) return {p1, p2};
+    if (a_len <= eps)
+        t = clamp01(f / e_len);
+    else
+    {
+        const auto c = d1.dot(r);
+        if (e_len <= eps)
+            s = clamp01(-c / a_len);
+        else
+        {
+            const auto b = (d1.dot(d2));
+            if (auto denom = a_len * e_len - b * b; abs(denom) > eps * pow<2>(si::metre))
+                s = clamp01((b * f - c * e_len) / denom);
+
+            t = static_cast<double>((b * s + f) / e_len);
+            if (t < 0.0)
+            {
+                t = 0.0;
+                s = clamp01(-c / a_len);
+            }
+            else if (t > 1.0)
+            {
+                t = 1.0;
+                s = clamp01((b - c) / a_len);
+            }
+        }
+    }
+
+    return {p1 + d1 * s, p2 + d2 * t};
+}
+
+inline collision_info sat_edge_contact(const sat_polyhedron &a, const sat_polyhedron &b,
+                                       const vec3<one> &normal, quantity<si::metre> fallback_depth,
+                                       std::size_t a_direction, std::size_t b_direction)
+{
+    const auto edge_a = sat_supporting_edge(a, a_direction, -normal);
+    const auto edge_b = sat_supporting_edge(b, b_direction, normal);
+    auto [world_a, world_b] =
+        sat_closest_segment_points(a.vertices[edge_a.start], a.vertices[edge_a.end],
+                                   b.vertices[edge_b.start], b.vertices[edge_b.end]);
+    auto depth = (world_b - world_a).dot(normal);
+
+    if (depth < 0.0 * si::metre)
+    {
+        world_b = world_a + normal * fallback_depth;
+        depth = fallback_depth;
+    }
+
+    return collision_info{
+        .normal = normal,
+        .world_a = world_a,
+        .world_b = world_b,
+        .depth = depth,
+    };
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+inline std::optional<collision_info> sat_polyhedron_collision(const sat_polyhedron &a,
+                                                              const sat_polyhedron &b)
+{
+    constexpr auto eps_axis2 = 1e-12;
+    auto min_overlap = std::numeric_limits<quantity<si::metre>>::infinity();
+    vec3<one> best_axis{1.0, 0.0, 0.0};
+    sat_axis best{};
+    const auto t_world = b.center - a.center;
+
+    auto test_axis = [&](const vec3<one> &axis_world, sat_axis candidate) -> bool
+    {
+        const auto sn = axis_world.squared_norm();
+        if (sn < eps_axis2) return true;
+        const auto n = axis_world / mp_units::sqrt(sn);
+
+        const auto [min_a, max_a] = sat_project(a, n);
+        const auto [min_b, max_b] = sat_project(b, n);
+        const auto overlap = std::min(max_a, max_b) - std::max(min_a, min_b);
+        if (overlap < 0.0 * si::metre) return false;
+
+        if (overlap < min_overlap)
+        {
+            min_overlap = overlap;
+            best_axis = (t_world.dot(n) > 0.0 * si::metre) ? -n : n;
+            best = candidate;
+        }
+        return true;
+    };
+
+    for (std::size_t i = 0; i < a.faces.size(); ++i)
+        if (!test_axis(a.faces[i].normal, {.a_index = i, .feature = sat_feature::face_a}))
+            return std::nullopt;
+    for (std::size_t i = 0; i < b.faces.size(); ++i)
+        if (!test_axis(b.faces[i].normal, {.b_index = i, .feature = sat_feature::face_b}))
+            return std::nullopt;
+    for (std::size_t i = 0; i < a.edge_directions.size(); ++i)
+        for (std::size_t j = 0; j < b.edge_directions.size(); ++j)
+            if (!test_axis(a.edge_directions[i].cross(b.edge_directions[j]),
+                           {.a_index = i, .b_index = j, .feature = sat_feature::edge}))
+                return std::nullopt;
+
+    switch (best.feature)
+    {
+    case sat_feature::face_a:
+        return sat_clipped_face_contact(a, b, best_axis, min_overlap, true);
+    case sat_feature::face_b:
+        return sat_clipped_face_contact(a, b, best_axis, min_overlap, false);
+    case sat_feature::edge:
+        return sat_edge_contact(a, b, best_axis, min_overlap, best.a_index, best.b_index);
+    }
+
+    std::unreachable();
+}
+
 std::optional<collision_info> box_box(const instance &a, const instance &b)
-{ return gjk_epa(a, b); }
+{ return sat_polyhedron_collision(make_box_polyhedron(a), make_box_polyhedron(b)); }
 std::optional<collision_info> box_cylinder(const instance &a, const instance &b)
 { return gjk_epa(a, b); }
 std::optional<collision_info> box_cone(const instance &a, const instance &b)
 { return gjk_epa(a, b); }
 std::optional<collision_info> box_pyramid(const instance &a, const instance &b)
-{ return gjk_epa(a, b); }
+{ return sat_polyhedron_collision(make_box_polyhedron(a), make_pyramid_polyhedron(b)); }
 std::optional<collision_info> box_mesh(const instance &a, const instance &b)
 { return gjk_epa(a, b); }
 
@@ -697,7 +1132,7 @@ std::optional<collision_info> cone_mesh(const instance &a, const instance &b)
 { return gjk_epa(a, b); }
 
 std::optional<collision_info> pyramid_pyramid(const instance &a, const instance &b)
-{ return gjk_epa(a, b); }
+{ return sat_polyhedron_collision(make_pyramid_polyhedron(a), make_pyramid_polyhedron(b)); }
 std::optional<collision_info> pyramid_mesh(const instance &a, const instance &b)
 { return gjk_epa(a, b); }
 
@@ -740,153 +1175,7 @@ static constexpr auto collision_map = std::array{
 
 std::optional<collision_info> collision(const physkit::instance &a, const physkit::instance &b)
 {
-    return collision_map[static_cast<std::size_t>(a.geometry().type())]
-                        [static_cast<std::size_t>(b.geometry().type())](a, b);
+    return collision_map[static_cast<std::size_t>(a.geometry().stored_type())]
+                        [static_cast<std::size_t>(b.geometry().stored_type())](a, b);
 }
-
-// std::optional<collision_info> sat(const mesh::instance &a, const mesh::instance &b)
-// {
-//     // could be made faster if unique edges were stored in mesh.
-//     // SAT must be performed on 2 convex meshes.
-
-//     // need to compare projected intersection across every axis of the follosing types
-//     // 1. The normal of every face from both meshes.
-//     // 2. The cross product of every edge from mesh A with every edge from mesh B
-
-//     // can optimize by removing parallel axes
-
-//     constexpr auto eps = 1e-12;
-
-//     auto a_tris = a.geometry().triangles();
-//     auto b_tris = b.geometry().triangles();
-//     auto sum_triangle_count = a_tris.size() + b_tris.size();
-
-//     // the variables related to edge count assume the following:
-//     //  Polyhedra are convex
-//     //  All faces are triangles
-//     //  Edges are manifold (each edge belongs to exactly 2 faces)
-//     //  all verticies of every triangle are ordered CCW such that the norm generated using vertex
-//     0
-//     //      as the base points away from the center
-
-//     // The edge count for mesh A
-//     auto a_edge_count = (a_tris.size() * 3) / 2;
-//     // The edge count for mesh B
-//     auto b_edge_count = (b_tris.size() * 3) / 2;
-//     // The total number of unique edges in both meshes.
-//     auto sum_edge_count = ((sum_triangle_count * 3) / 2);
-//     auto sum_vertex_count = ((sum_triangle_count * 3) / 2);
-//     // The maximum possible number of separating axes.
-//     auto max_axes = (a_edge_count * b_edge_count) + sum_triangle_count;
-
-//     auto a_vertices = a.geometry().vertices(); // std::span<const vec3<si::metre>>
-//     auto b_vertices = b.geometry().vertices();
-
-//     // extra collision info
-//     auto info = collision_info();
-//     info.depth = quantity<si::metre>::max();
-
-//     // returns a pair of the min and max value of a a set of verticies projected along an axis.
-//     auto project_mesh = [](auto const &axis, auto const &vertices)
-//     {
-//         // the divide by |axis| can be omitted from the difference
-//         // the axis's units are si::metre^2
-//         auto minv = vertices[0];
-//         auto maxv = minv;
-//         auto minc = axis.dot(minv);
-//         auto maxc = minc;
-//         for (size_t i = 1; i < vertices.size(); ++i)
-//         {
-//             auto p = axis.dot(vertices[i]);
-//             if (p < minc)
-//             {
-//                 minv = vertices[i];
-//                 minc = p;
-//             }
-//             else if (p > maxc)
-//             {
-//                 maxv = vertices[i];
-//                 maxc = p;
-//             }
-//         }
-//         return std::tuple{minv, maxv, minc, maxc};
-//     };
-
-//     auto test_axis = [&](const vec3<one> &axis)
-//     {
-//         auto [a_minv, a_maxv, a_minc, a_maxc] = project_mesh(axis, a_vertices);
-//         auto [b_minv, b_maxv, b_minc, b_maxc] = project_mesh(axis, b_vertices);
-
-//         // checks if the axes have collision
-//         auto overlap_unnormal = (std::min(a_maxc, b_maxc) - std::max(a_minc, b_minc));
-
-//         if (overlap_unnormal <= 0 * si::metre) return false; // no collision
-
-//         if (overlap_unnormal < info.depth)
-//         {
-//             // new minimum overlap
-//             info.depth = overlap_unnormal; // this is not the actual depth until it is normalized
-//             at
-//                                            // the end. lazy normalization.
-//             info.normal = axis;            // this is not the actual normal yet either
-//             if (a_maxc > b_maxc)
-//             {
-//                 info.world_a = a_minv;
-//                 info.world_b = b_maxv;
-//             }
-//             else
-//             {
-//                 info.world_a = a_maxv;
-//                 info.world_b = b_minv;
-//             }
-//         };
-//         return true;
-//     };
-
-//     // if unique edges were stored in mesh this would be 4 times more efficient.
-//     for (const auto &a_tri : a_tris)
-//     {
-//         auto a_ver = a_tri.vertices(a);
-//         std::array<vec3<si::metre>, 3> a_edges = {(a_ver[1] - a_ver[0]), (a_ver[2] - a_ver[1]),
-//                                                   (a_ver[0] - a_ver[2])};
-
-//         // Face axis
-//         auto n = (a_edges[0]).cross(a_edges[1]) *
-//                  (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
-//         if (!test_axis(n)) return std::nullopt;
-
-//         for (const auto &b_tri : b_tris)
-//         {
-//             auto b_ver = b_tri.vertices(b);
-//             std::array<vec3<si::metre>, 3> b_edges = {(b_ver[1] - b_ver[0]), (b_ver[2] -
-//             b_ver[1]),
-//                                                       (b_ver[0] - b_ver[2])};
-
-//             // Face axis
-//             if (a_tri == a_tris.front())
-//             { // once per tri
-//                 n = (b_edges[0]).cross(b_edges[1]) *
-//                     (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
-//                 if (!test_axis(n)) return std::nullopt;
-//             }
-
-//             // edge cross axes
-//             for (size_t i = 0; i < 3; i++)
-//             {
-//                 for (size_t j = 0; j < 3; j++)
-//                 {
-//                     n = (a_edges[i]).cross(b_edges[j]) *
-//                         (1 / si::metre / si::metre); // si::metre^2 -> unitless direction
-
-//                     if (n.squared_norm() < eps) continue; // near 0 axis.
-//                     if (!test_axis(n)) return std::nullopt;
-//                 }
-//             }
-//         }
-//     }
-
-//     info.depth /= info.normal.norm();
-//     info.normal = info.normal.normalized();
-//     return info;
-// }
 } // namespace physkit

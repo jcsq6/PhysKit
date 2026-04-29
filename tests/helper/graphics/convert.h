@@ -179,7 +179,7 @@ inline Magnum::GL::Mesh to_magnum_mesh(const physkit::pyramid &phys_pyramid)
 
 inline Magnum::GL::Mesh to_magnum_mesh(const physkit::shape &phys_shape)
 {
-    switch (phys_shape.type())
+    switch (phys_shape.stored_type())
     {
     case physkit::shape::type::mesh:
         return to_magnum_mesh(*phys_shape.mesh());

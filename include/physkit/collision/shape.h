@@ -686,7 +686,7 @@ public:
         }
     }
 
-    [[nodiscard]] type type() const { return M_type; };
+    [[nodiscard]] type stored_type() const { return M_type; };
 
     // mesh only methods for compatibility
     [[nodiscard]] std::span<const vec3<si::metre>> vertices() const
@@ -870,7 +870,7 @@ public:
 
     [[nodiscard]] vec3<si::metre> vertex(unsigned int index) const
     {
-        assert(M_shape.type() == shape::type::mesh);
+        assert(M_shape.stored_type() == shape::type::mesh);
         assert(index < M_shape.vertices().size());
         return M_orientation * M_shape.vertices()[index] + M_position;
     }
