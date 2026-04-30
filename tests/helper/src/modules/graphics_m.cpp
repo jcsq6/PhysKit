@@ -24,6 +24,8 @@ import std;
 #define GRAPHICS_IN_MODULE_IMPL
 
 // clang-format off
+#include "graphics/debug_overlay.h"
 #include "graphics/graphics.h"
+#include "../debug_overlay.cpp" // NOLINT(bugprone-suspicious-include)
 #include "../graphics.cpp" // NOLINT(bugprone-suspicious-include)
 // clang-format on

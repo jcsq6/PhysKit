@@ -293,6 +293,10 @@ g_config::g_config(Magnum::Platform::Application::Arguments args, bool read_conf
         .default_value(std::string{})
         .help("Forwarded to Magnum window creation for DPI scaling control");
     parser.add_argument("--testing").flag().help("Enable testing mode");
+    parser.add_argument("--debug-overlay", "--debug")
+        .default_value(g_config::default_debug_overlay)
+        .implicit_value(true)
+        .help("Show the PhysKit debug overlay at startup");
     if (read_config)
         parser.add_argument("--config", "-c")
             .help("Path to JSON config file for the world (CLI arguments will override JSON "
@@ -360,6 +364,7 @@ g_config::g_config(Magnum::Platform::Application::Arguments args, bool read_conf
         auto time_step_val = parser.get<double>("--time-step") * s;
         auto record_duration_val = parser.get<double>("--record-duration") * s;
         auto record_fps_val = parser.get<int>("--record-fps");
+        auto debug_overlay_val = parser.get<bool>("--debug-overlay");
         M_testing = parser.get<bool>("--testing");
 
         if (parser.is_used("--fov")) fov(fov_val);
@@ -370,6 +375,7 @@ g_config::g_config(Magnum::Platform::Application::Arguments args, bool read_conf
         if (parser.is_used("--drag")) drag(drag_val);
         if (parser.is_used("--vsync")) vsync(vsync_val);
         if (parser.is_used("--time-step")) time_step(time_step_val);
+        if (parser.is_used("--debug-overlay")) debug_overlay(debug_overlay_val);
         if (auto record_path = parser.present("--record-output"))
         {
             this->record_output(*record_path);

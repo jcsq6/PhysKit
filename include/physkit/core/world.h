@@ -223,27 +223,32 @@ public:
         return std::nullopt;
     }
 
-    // *** Just updated and put in here for the Debug Screen
-    
-    [[nodiscard]] size_t object_count() const 
+    [[nodiscard]] std::size_t object_count() const
+    { return M_rigid.slots.size() - M_rigid.free.size(); }
 
-    { 
-        return M_rigid.slots.size() - M_rigid.free.size(); 
-    }
+    // template <typename F> void for_each_object(this auto &&self, F &&callback)
+    // {
+    //     for (std::size_t i = 0; i < self.M_rigid.slots.size(); ++i)
+    //     {
+    //         auto &slot = self.M_rigid.slots[i];
+    //         if (slot.available()) continue;
 
-    template<typename F>
-    void for_each_object(F&& callback) const 
+    //         callback(self.M_rigid.get_slot_handle(static_cast<std::uint32_t>(i)),
+    //                  slot.value->obj);
+    //     }
+    // }
+
+    [[nodiscard]] auto rigids_range() const
     {
-        for (size_t i = 0; i < M_rigid.slots.size(); i++) {
-            const auto& slot = M_rigid.slots[i];
-            if (!slot.available) {
-                handle h = handle::from_id(i);
-                std::forward<F>(callback)(h, slot.value.obj);
-            }
-        }
+        return M_rigid.slots |
+               std::views::filter([](const auto &slot) { return slot.value.has_value(); }) |
+               std::views::transform(
+                   [this](const auto &slot)
+                   {
+                       return std::pair(M_rigid.get_slot_handle(&slot - M_rigid.slots.data()),
+                                        &(slot.value->obj));
+                   });
     }
-
-    // *** End of edits to world.h for the debug screen
 
     [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
 
