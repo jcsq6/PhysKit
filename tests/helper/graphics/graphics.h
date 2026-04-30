@@ -417,6 +417,7 @@ public:
     static constexpr auto default_record_duration = 10.0f * mp_units::si::second;
     static constexpr int default_record_fps = 60;
     static constexpr bool default_debug_overlay = false;
+    static inline const auto default_lights = std::vector<Vector4>{{0.f, 5.f, 0.f, 0.f}};
 
     template <typename Self> Self &&read_file(this Self &&self, std::string_view path);
 
@@ -562,6 +563,26 @@ public:
         if (!self.M_debug_overlay) self.M_debug_overlay = enabled;
         return std::forward<decltype(self)>(self);
     }
+    auto &&lights(this auto &&self, std::initializer_list<Vector4> lights)
+    {
+        self.M_lights = lights;
+        return std::forward<decltype(self)>(self);
+    }
+    auto &&lights_or(this auto &&self, std::initializer_list<Vector4> lights)
+    {
+        if (!self.M_lights) self.M_lights = lights;
+        return std::forward<decltype(self)>(self);
+    }
+    template <std::ranges::range Range> auto &&lights(this auto &&self, const Range &lights)
+    {
+        self.M_lights = lights | std::ranges::to<std::vector>();
+        return std::forward<decltype(self)>(self);
+    }
+    template <std::ranges::range Range> auto &&lights_or(this auto &&self, const Range &lights)
+    {
+        if (!self.M_lights) self.M_lights = lights | std::ranges::to<std::vector>();
+        return std::forward<decltype(self)>(self);
+    }
 
     [[nodiscard]] auto window_size() const { return M_window_size.value_or(default_window_size); }
     [[nodiscard]] auto fov() const { return M_fov.value_or(default_fov); }
@@ -586,6 +607,8 @@ public:
     [[nodiscard]] auto record_fps() const { return M_record_fps.value_or(default_record_fps); }
     [[nodiscard]] auto debug_overlay() const
     { return M_debug_overlay.value_or(default_debug_overlay); }
+    [[nodiscard]] const std::vector<Vector4> &lights() const
+    { return M_lights ? *M_lights : default_lights; }
     [[nodiscard]] bool recording() const { return M_record_output.has_value(); }
     [[nodiscard]] auto &objects() const { return M_objects; }
     [[nodiscard]] auto world_desc() const
@@ -621,6 +644,7 @@ private:
     std::optional<physkit::quantity<mp_units::si::second>> M_record_duration;
     std::optional<int> M_record_fps;
     std::optional<bool> M_debug_overlay;
+    std::optional<std::vector<Vector4>> M_lights;
     bool M_testing{false};
 };
 
@@ -973,8 +997,10 @@ public:
 
         M_world = std::make_unique<physkit::world>(config.world_desc());
 
-        M_shader = Shaders::PhongGL{Shaders::PhongGL::Configuration{}.setFlags(
-            Shaders::PhongGL::Flag::VertexColor | Shaders::PhongGL::Flag::InstancedTransformation)};
+        M_shader = Shaders::PhongGL{Shaders::PhongGL::Configuration{}
+                                        .setFlags(Shaders::PhongGL::Flag::VertexColor |
+                                                  Shaders::PhongGL::Flag::InstancedTransformation)
+                                        .setLightCount(config.lights().size())};
 
         // Ambient/specular alpha must be 0 — PhongGL's fragment shader adds specularColor.a
         // unconditionally on every lit fragment (see Phong.frag, the `fragmentColor += vec4(...,
@@ -983,7 +1009,8 @@ public:
         M_shader
             .setAmbientColor(Color4{0x222222_rgbf, 0.0f}) // a touch brighter so objects are visible
             .setSpecularColor(Color4{0x330000_rgbf, 0.0f})
-            .setLightPositions({{0.f, 5.f, 0.f, 0.f}});
+            .setLightPositions(
+                Containers::arrayView(config.lights().data(), config.lights().size()));
         M_debug_shader = Shaders::VectorGL2D{};
 
         GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
