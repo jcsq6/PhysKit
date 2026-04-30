@@ -42,11 +42,11 @@ class pong_game : public graphics_app {
                             .solver_iterations(30)}
         
         {
-            cam().speed(2.0f * si::metre / si::second);
+            cam().speed(2.0f);
             world().add_task(scene());
         }
 
-        void update(mp_units::qunatity<mp_units::si::second> dt) override {
+        void update(mp_units::quantity<mp_units::si::second> dt) override {
             static auto last_score_update = 0.0 * s;
             last_score_update += dt;
 
@@ -221,7 +221,7 @@ class pong_game : public graphics_app {
                 }
 
                 auto new_y = left_paddle.pos().y() + paddle_vel.y() * dt;
-                new_y = std::clamp(new_y, -player_height / 2 + paddle_height / 2, play_height / 2 - paddle_height / 2);
+                new_y = std::clamp(new_y, -play_height / 2 + paddle_height / 2, play_height / 2 - paddle_height / 2);
                 left_paddle.pos() = vec3{left_paddle.pos().x(), new_y, left_paddle.pos().z()};
 
                 float ai_speed = 5.0f * m / s;
@@ -230,18 +230,18 @@ class pong_game : public graphics_app {
                 float error_margin = 0.03f * m;
                 if (ball.pos().y() > right_paddle.pos().y() + error_margin) {
                     ai_vel.y() = ai_speed;
-                } else if (ball.pos().y() > right_paddle.pos().y() - error_margin) {
+                } else if (ball.pos().y() < right_paddle.pos().y() - error_margin) {
                     ai_vel.y() = -ai_speed;
                 }
 
                 auto ai_new_y = right_paddle.pos().y() + ai_vel.y() * dt;
-                ai_new_y = std::clamp(ai_new_y, -player_height / 2 + paddle_height / 2, play_height / 2 - paddle_height / 2);
+                ai_new_y = std::clamp(ai_new_y, -play_height / 2 + paddle_height / 2, play_height / 2 - paddle_height / 2);
                 right_paddle.pos() = vec3{right_paddle.pos().x(), ai_new_y, right_paddle.pos().z()};
 
                 if (ball.pos().x() < left_score_x) {
-                    ai_score++
+                    ai_score++;
                     co_await reset_ball(true);
-                } else if (ball.pos().x() < right_score_x) {
+                } else if (ball.pos().x() > right_score_x) {
                     player_score++
                     co_await reset_ball(false);
                 }
@@ -264,7 +264,7 @@ class pong_game : public graphics_app {
             float angle = ((rand() % 50) - 25) * 3.14159f / 180.0f;
             float speed = 3.0f * m / s;
 
-            float dir_x = serve_to_player ? -1.0f : 1.0f
+            float dir_x = serve_to_player ? -1.0f : 1.0f;
 
             ball.vel() = vec3{dir_x * speed * cos(angle), speed * sin(angle), 0.0f} * m / s;
             ball.ang_vel() = vec3<one / si::second>::zero();
