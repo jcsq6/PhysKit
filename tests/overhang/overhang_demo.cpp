@@ -104,7 +104,7 @@ private:
                         (2 * n) * -card_hheight + card_hheight, pivot_z * m};
         std::println("New Block {} at: {}", n, pos);
         auto h =
-            (*co_await add_rigid(object_desc::stat() // TODO: not static
+            (*co_await add_rigid(object_desc::dynam() // TODO: not static
                                      .with_shape(box(vec3{card_hwidth, card_hheight, card_hlength}))
                                      .with_pos(pos)
                                      .with_mass(card_mass)
