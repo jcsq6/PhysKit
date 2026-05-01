@@ -6,10 +6,9 @@ TODO:
 Implement hte following
 
 Spawn Box, Sphere, Pyramid
-Click the nearest body under crosshair
+Left click grabs the nearest body under crosshair
 delete - removes the selected body
 R - reset dynamic bodies
-F - apply an impulse on selected body
 G - toggle gravity between world gravity to zero
 
 // - work on framework level debug and fps tracker in tests/helper/graphics

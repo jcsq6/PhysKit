@@ -33,7 +33,16 @@ using namespace graphics;
 // TODO: Maybe swap to header - driver format and split files
 struct sandbox_state
 {
+    struct grab_state
+    {
+        world_base::handle handle;
+        quantity<si::metre> distance{};
+        vec3<si::metre> local_point{};
+        vec3<si::metre> previous_target{};
+    };
+
     std::optional<world_base::handle> selected;
+    std::optional<grab_state> grabbed;
     std::vector<world_base::handle> frozen;
     unsigned spawn_shape_index = 0;
     bool gravity_on = true;
@@ -43,6 +52,8 @@ struct sandbox_state
 class sandbox : public graphics_app
 {
     static inline const auto gravity = vec3{0.0, -9.81, 0.0} * m / s / s;
+    static inline const auto grab_response_time = 0.06 * s;
+    static inline const auto max_grab_speed = 80.0 * m / s;
     using typed_world = physkit::world;
 
     // TODO: test other screen resolutions - perhaps sandbox demo should be fullscreen in the
@@ -144,12 +155,11 @@ private:
                                                  "Space / Left Shift  up / down",
                                                  "Mouse  look",
                                                  "Esc  release or capture mouse",
-                                                 "LMB  select object",
+                                                 "LMB  grab object",
                                                  std::string{"Scroll  spawn shape: "} +
                                                      spawn_shape_name(M_state.spawn_shape_index),
                                                  "RMB  spawn selected shape",
                                                  "Enter  release stasis objects",
-                                                 "F  impulse selected released object",
                                                  "Delete  delete selected object",
                                                  "G  toggle gravity",
                                                  "R  reset velocities",
@@ -285,27 +295,73 @@ private:
         }
     }
 
-    task<> handle_selection_input()
-    {
-        if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
-        {
-            auto ray = physkit::ray{cam().pos(), cam().forward()};
-            auto hits = co_await raycast{.r = ray};
-            M_state.selected.reset();
+    [[nodiscard]] vec3<si::metre> grab_target(const sandbox_state::grab_state &grab)
+    { return cam().pos() + cam().forward() * grab.distance; }
 
-            for (auto hit : hits)
+    task<> begin_grab()
+    {
+        auto ray = physkit::ray{cam().pos(), cam().forward()};
+        auto hits = co_await raycast{.r = ray};
+        M_state.selected.reset();
+        M_state.grabbed.reset();
+
+        for (auto [handle, distance] : hits)
+        {
+            auto obj_opt = co_await get_rigid(handle);
+            if (obj_opt && (*obj_opt)->is_dynamic())
             {
-                auto obj_opt = co_await get_rigid(hit.first);
-                if (obj_opt && (*obj_opt)->is_dynamic())
+                M_state.selected = handle;
+                if (!is_frozen(handle))
                 {
-                    M_state.selected = hit.first;
-                    break;
+                    auto hit_pos = ray.origin() + ray.direction() * distance;
+                    M_state.grabbed = sandbox_state::grab_state{
+                        .handle = handle,
+                        .distance = distance,
+                        .local_point = (*obj_opt)->project_to_local(hit_pos),
+                        .previous_target = hit_pos,
+                    };
                 }
+                break;
             }
         }
     }
 
-    /// @brief handles selection, delete, impulse, and velocity reset
+    task<> handle_grab_input(quantity<si::second> frame_dt)
+    {
+        const auto left_mouse = get_mouse_button(Pointer::MouseLeft);
+        if (left_mouse.is_initial_press()) co_await begin_grab();
+
+        if (!M_state.grabbed) co_return;
+        if (!left_mouse.is_pressed())
+        {
+            M_state.grabbed.reset();
+            co_return;
+        }
+
+        auto &grab = *M_state.grabbed;
+        auto obj_opt = co_await get_rigid(grab.handle);
+        if (!obj_opt || !(*obj_opt)->is_dynamic() || is_frozen(grab.handle))
+        {
+            M_state.grabbed.reset();
+            co_return;
+        }
+
+        auto &obj = **obj_opt;
+        auto target = grab_target(grab);
+        auto target_velocity = vec3<si::metre / si::second>::zero();
+        if (frame_dt > 0.0 * s) target_velocity = (target - grab.previous_target) / frame_dt;
+
+        const auto grabbed_point = obj.project_to_world(grab.local_point);
+        auto desired_velocity = target_velocity + (target - grabbed_point) / grab_response_time;
+        if (auto speed = desired_velocity.norm(); speed > max_grab_speed)
+            desired_velocity = desired_velocity / speed * max_grab_speed;
+
+        obj.vel() = desired_velocity;
+        obj.ang_vel() *= 0.85 * one;
+        grab.previous_target = target;
+    }
+
+    /// @brief handles delete and velocity reset
     task<> handle_actions_input()
     {
         if (get_key(Key::R).is_initial_press()) { co_await reset_all(); }
@@ -339,13 +395,7 @@ private:
             forget_frozen(selected);
             remove_physics_object(selected);
             M_state.selected.reset();
-            co_return;
-        }
-
-        // impulse forward
-        if (get_key(Key::F).is_initial_press() && obj.is_dynamic() && !is_frozen(selected))
-        {
-            obj.apply_impulse(cam().forward() * obj.mass() * 5.0 * m / s);
+            M_state.grabbed.reset();
         }
     }
 
@@ -416,9 +466,9 @@ private:
 
         while (true)
         {
-            co_await next_render_frame();
+            auto frame_dt = *co_await next_render_frame();
             co_await maybe_spawn_objects();
-            co_await handle_selection_input();
+            co_await handle_grab_input(frame_dt);
             co_await handle_actions_input();
         }
     }
