@@ -39,7 +39,7 @@ class overhang_app : public graphics_app
     // static constexpr auto pivot = vec3{0.0,0.0,platform_size-into_dist}
     static constexpr auto pivot_z = platform_size - into_dist;
 
-    static constexpr auto eps = 0.1;
+    static constexpr auto eps = 0.003;
 
     // cards
     static constexpr auto card_hheight =
@@ -104,7 +104,7 @@ private:
                         (2 * n) * -card_hheight + card_hheight, pivot_z * m};
         std::println("New Block {} at: {}", n, pos);
         auto h =
-            (*co_await add_rigid(object_desc::dynam() // TODO: not static
+            (*co_await add_rigid(object_desc::dynam()
                                      .with_shape(box(vec3{card_hwidth, card_hheight, card_hlength}))
                                      .with_pos(pos)
                                      .with_mass(card_mass)
@@ -145,7 +145,7 @@ private:
             cam().move(fvec3{-static_cast<quantity<m, float>>((1.0 / (count + 1)) * card_hwidth),
                              (-2.0f * static_cast<quantity<m, float>>(card_hheight)), 0.0f * m});
 
-            co_await wait_for(3 * s);
+            co_await wait_for(1 * s);
 
             count++;
         }
