@@ -91,7 +91,7 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
         <glaze/glaze.hpp>
       )
     endif()
-    target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit PRIVATE ${TEST_PLUGINS})
+    target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit ${TEST_PLUGINS})
     target_include_directories(phys_graphics PUBLIC graphics dep)
   endif()
 
