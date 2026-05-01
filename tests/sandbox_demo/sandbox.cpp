@@ -56,6 +56,20 @@ public:
     {
         cam().speed(3.0f * si::metre / si::second);
         M_state.saved_gravity = gravity;
+        debug_overlay().controls("Controls", {
+                                                 "WASD  move camera",
+                                                 "Space / Left Shift  up / down",
+                                                 "Mouse  look",
+                                                 "Esc  release or capture mouse",
+                                                 "LMB  select dynamic object",
+                                                 "RMB or 1  spawn box",
+                                                 "2  spawn sphere",
+                                                 "F  impulse selected object",
+                                                 "Delete  delete selected object",
+                                                 "G  toggle gravity",
+                                                 "R  reset velocities",
+                                                 "F9  debug overlay",
+                                             });
         world().add_task(runtime());
         // auto &w = dynamic_cast<physkit::world<physkit::semi_implicit_euler> &>(world());
     }

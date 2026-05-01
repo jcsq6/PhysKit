@@ -1290,13 +1290,13 @@ private:
         M_shader.setProjectionMatrix(M_cam.projection_matrix());
         M_cam.draw(M_shaded, frame_time);
         M_cam.draw(M_transparent, frame_time);
-        if (M_crosshair_overlay || M_debug_overlay->is_visible())
+        if (M_crosshair_overlay || M_debug_overlay->has_visible_content())
         {
             GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
             const auto overlay_size = M_recording ? M_record_size : windowSize();
             const auto overlay_projection = Matrix3::projection(Vector2{overlay_size});
             if (M_crosshair_overlay) draw_crosshair_overlay(overlay_projection);
-            if (M_debug_overlay->is_visible())
+            if (M_debug_overlay->has_visible_content())
                 M_debug_overlay->draw(M_debug_shader, overlay_projection);
             GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
         }
