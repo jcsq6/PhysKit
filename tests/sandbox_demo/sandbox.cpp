@@ -41,6 +41,12 @@ struct sandbox_state
         vec3<si::metre> previous_target{};
     };
 
+    struct stasis_impulse_buffer
+    {
+        vec3<si::kilogram * si::metre / si::second> linear{};
+        vec3<si::kilogram * si::metre * si::metre / si::second> angular{};
+    };
+
     std::optional<world_base::handle> selected;
     std::optional<grab_state> grabbed;
     std::vector<world_base::handle> frozen;
@@ -54,6 +60,7 @@ class sandbox : public graphics_app
     static inline const auto gravity = vec3{0.0, -9.81, 0.0} * m / s / s;
     static inline const auto grab_response_time = 0.06 * s;
     static inline const auto max_grab_speed = 80.0 * m / s;
+    static inline const auto stasis_click_impulse_speed = 10.0 * m / s;
     using typed_world = physkit::world;
 
     // TODO: test other screen resolutions - perhaps sandbox demo should be fullscreen in the
@@ -155,7 +162,7 @@ private:
                                                  "Space / Left Shift  up / down",
                                                  "Mouse  look",
                                                  "Esc  release or capture mouse",
-                                                 "LMB  grab object",
+                                                 "LMB  grab object / charge stasis impulse",
                                                  std::string{"Scroll  spawn shape: "} +
                                                      spawn_shape_name(M_state.spawn_shape_index),
                                                  "RMB  spawn selected shape",
@@ -228,10 +235,104 @@ private:
 
     /// @brief - spawn in different objects
     /// do deliberate pass of vol, density, inertia
-    task<> wait_for_stasis_release(std::shared_ptr<bool> released)
+    enum class stasis_input
     {
-        co_await wait_until_key_press(Key::Enter);
-        *released = true;
+        left_click,
+        release,
+    };
+
+    struct stasis_input_callbacks
+    {
+        callback_id left_click{};
+        callback_id release{};
+    };
+
+    auto wait_until_stasis_input(stasis_input &input)
+    {
+        return physkit::wait_for_event{
+            .setup_fn =
+                [this, &input](auto resume)
+            {
+                const auto click_resume = resume;
+                const auto release_resume = resume;
+                auto did_resume = std::make_shared<bool>(false);
+
+                return stasis_input_callbacks{
+                    .left_click = on_click(
+                        [click_resume, &input, did_resume](PointerEvent &event)
+                        {
+                            if (event.pointer() == Pointer::MouseLeft)
+                            {
+                                if (*did_resume) return true;
+                                *did_resume = true;
+                                input = stasis_input::left_click;
+                                click_resume();
+                                return true;
+                            }
+                            return false;
+                        }),
+                    .release = on_key_press(
+                        [release_resume, &input, did_resume](KeyEvent &event)
+                        {
+                            if (event.key() == Key::Enter)
+                            {
+                                input = stasis_input::release;
+                                if (*did_resume) return true;
+                                *did_resume = true;
+                                release_resume();
+                                return true;
+                            }
+                            return false;
+                        }),
+                };
+            },
+            .destroy_fn =
+                [this](stasis_input_callbacks callbacks)
+            {
+                remove_click(callbacks.left_click);
+                remove_key_press(callbacks.release);
+            }};
+    }
+
+    task<> buffer_stasis_impulse_if_hit(
+        world_base::handle handle,
+        const std::shared_ptr<sandbox_state::stasis_impulse_buffer> &buffer)
+    {
+        auto ray = physkit::ray{cam().pos(), cam().forward()};
+        auto hits = co_await raycast{.r = ray};
+
+        for (auto [hit_handle, distance] : hits)
+        {
+            auto obj_opt = co_await get_rigid(hit_handle);
+            if (!obj_opt || !(*obj_opt)->is_dynamic()) continue;
+            if (hit_handle != handle) co_return;
+
+            auto &obj = **obj_opt;
+            const auto impulse = ray.direction() * (obj.mass() * stasis_click_impulse_speed);
+            const auto hit_pos = ray.origin() + ray.direction() * distance;
+
+            buffer->linear += impulse;
+            buffer->angular += (hit_pos - obj.pos()).cross(impulse);
+            co_return;
+        }
+    }
+
+    task<> watch_stasis_input(world_base::handle handle, std::shared_ptr<bool> released,
+                              std::shared_ptr<sandbox_state::stasis_impulse_buffer> buffer)
+    {
+        while (!*released)
+        {
+            auto input = stasis_input::left_click;
+            co_await wait_until_stasis_input(input);
+
+            if (input == stasis_input::release)
+            {
+                *released = true;
+                co_return;
+            }
+
+            co_await buffer_stasis_impulse_if_hit(handle, buffer);
+        }
     }
 
     task<> spawn_selected_shape(vec3<si::metre> pos, unsigned shape_index)
@@ -247,15 +348,23 @@ private:
 
         auto handle = (*object)->handle();
         auto released = std::make_shared<bool>(false);
+        auto impulse_buffer = std::make_shared<sandbox_state::stasis_impulse_buffer>();
         remember_frozen(handle);
-        co_await add_task<policy::no_wait>(wait_for_stasis_release(released));
+        auto input_task = co_await add_task{watch_stasis_input(handle, released, impulse_buffer)};
+        if (!input_task)
+        {
+            forget_frozen(handle);
+            co_return;
+        }
 
         while (!*released)
         {
             auto obj = co_await get_rigid(handle);
             if (!obj)
             {
+                *released = true;
                 forget_frozen(handle);
+                co_await cancel_task{*input_task};
                 co_return;
             }
 
@@ -269,7 +378,9 @@ private:
             obj = co_await get_rigid(handle);
             if (!obj)
             {
+                *released = true;
                 forget_frozen(handle);
+                co_await cancel_task{*input_task};
                 co_return;
             }
 
@@ -282,6 +393,15 @@ private:
         }
 
         forget_frozen(handle);
+
+        auto obj = co_await get_rigid(handle);
+        if (obj && (*obj)->is_dynamic())
+        {
+            (*obj)->apply_impulse(impulse_buffer->linear);
+            (*obj)->apply_angular_impulse(impulse_buffer->angular);
+        }
+
+        co_await cancel_task{*input_task};
     }
 
     /// @brief keyboard and mouse-bindings for the user to manipulate objects in the arena.
