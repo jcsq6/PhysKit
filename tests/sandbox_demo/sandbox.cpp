@@ -5,6 +5,7 @@
 #endif
 
 #ifndef PHYSKIT_IMPORT_STD
+#include <algorithm>
 #include <coroutine> // IWYU pragma: keep
 #include <memory>
 #include <optional>
@@ -50,8 +51,11 @@ struct sandbox_state
     std::optional<world_base::handle> selected;
     std::optional<grab_state> grabbed;
     std::vector<world_base::handle> frozen;
+    std::vector<world_base::handle> spawned;
     unsigned spawn_shape_index = 0;
+    double spawn_yaw_degrees = 0.0;
     bool gravity_on = true;
+    double gravity_magnitude = 9.81;
     vec3<si::metre / si::second / si::second> saved_gravity{};
 };
 
@@ -165,11 +169,17 @@ private:
                                                  "LMB  grab object / charge stasis impulse",
                                                  std::string{"Scroll  spawn shape: "} +
                                                      spawn_shape_name(M_state.spawn_shape_index),
-                                                 "RMB  spawn selected shape",
+                                                 "RMB  spawn shape at crosshair surface",
+                                                 "Q / E  rotate spawn preview",
+                                                 "C  duplicate selected object",
                                                  "Enter  release stasis objects",
                                                  "Delete  delete selected object",
                                                  "G  toggle gravity",
+                                                 "- / =  decrease / increase gravity",
+                                                 "P  pause / play physics",
+                                                 "N  single physics step while paused",
                                                  "R  reset velocities",
+                                                 "X  clear dynamic scene",
                                                  "F9  debug overlay",
                                              });
     }
@@ -217,6 +227,32 @@ private:
     // to toggle it at runtime.
     auto &mutable_world_gravity()
     { return const_cast<vec3<si::metre / si::second / si::second> &>(world_gravity()); }
+
+    [[nodiscard]] quat<one> spawn_orientation() const
+    {
+        return quat<one>::from_angle_axis(M_state.spawn_yaw_degrees * deg,
+                                          vec3<one>{0.0, 1.0, 0.0});
+    }
+
+    void set_gravity_from_state()
+    {
+        M_state.saved_gravity = vec3{0.0, -M_state.gravity_magnitude, 0.0} * m / s / s;
+        mutable_world_gravity() =
+            M_state.gravity_on ? M_state.saved_gravity : vec3{0.0, 0.0, 0.0} * m / s / s;
+    }
+
+    void change_gravity(double delta)
+    {
+        M_state.gravity_magnitude = std::max(0.0, M_state.gravity_magnitude + delta);
+        set_gravity_from_state();
+        refresh_controls();
+    }
+
+    [[nodiscard]] vec3<si::metre> placement_offset(const shape &shp) const
+    {
+        const auto bounds = shp.at(vec3<si::metre>::zero(), spawn_orientation()).bounds();
+        return vec3{0.0 * m, -bounds.min.y() + 0.03 * m, 0.0 * m};
+    }
 
     void remove_physics_object(world_base::handle handle)
     {
@@ -337,9 +373,11 @@ private:
 
     task<> spawn_selected_shape(vec3<si::metre> pos, unsigned shape_index)
     {
+        const auto orientation = spawn_orientation();
         auto object = co_await add_rigid(object_desc::dynam()
                                              .with_shape(spawn_shape(shape_index))
                                              .with_pos(pos)
+                                             .with_orientation(orientation)
                                              .with_mass(1.0 * kg)
                                              .with_restitution(0.5)
                                              .with_friction(0.5),
@@ -347,6 +385,7 @@ private:
         if (!object) co_return;
 
         auto handle = (*object)->handle();
+        M_state.spawned.push_back(handle);
         auto released = std::make_shared<bool>(false);
         auto impulse_buffer = std::make_shared<sandbox_state::stasis_impulse_buffer>();
         remember_frozen(handle);
@@ -370,7 +409,7 @@ private:
 
             (*obj)->pos() = pos;
             (*obj)->vel() = vec3<si::metre / si::second>::zero();
-            (*obj)->orientation(quat<one>::identity());
+            (*obj)->orientation(orientation);
             (*obj)->ang_vel() = vec3<si::radian / si::second>::zero();
 
             co_await next_physics_tick{};
@@ -386,7 +425,7 @@ private:
 
             (*obj)->pos() = pos;
             (*obj)->vel() = vec3<si::metre / si::second>::zero();
-            (*obj)->orientation(quat<one>::identity());
+            (*obj)->orientation(orientation);
             (*obj)->ang_vel() = vec3<si::radian / si::second>::zero();
 
             co_await next_frame{};
@@ -404,12 +443,51 @@ private:
         co_await cancel_task{*input_task};
     }
 
+    task<vec3<si::metre>> spawn_position_for_crosshair(unsigned shape_index)
+    {
+        const auto shp = spawn_shape(shape_index);
+        auto ray = physkit::ray{cam().pos(), cam().forward()};
+        auto hits = co_await raycast{.r = ray};
+
+        for (auto [handle, distance] : hits)
+        {
+            auto obj_opt = co_await get_rigid(handle);
+            if (!obj_opt || is_frozen(handle)) continue;
+            co_return ray.origin() + ray.direction() * distance + placement_offset(shp);
+        }
+
+        co_return cam().pos() + cam().forward() * 2.0f * m;
+    }
+
+    task<> duplicate_selected()
+    {
+        if (!M_state.selected) co_return;
+
+        auto source = co_await get_rigid(*M_state.selected);
+        if (!source || !(*source)->is_dynamic()) co_return;
+
+        auto &obj = **source;
+        auto pos = obj.pos() + cam().right() * 0.75f * m;
+        auto object = co_await add_rigid(object_desc::dynam()
+                                             .with_shape(obj.shape())
+                                             .with_pos(pos)
+                                             .with_orientation(obj.orientation())
+                                             .with_mass(obj.mass())
+                                             .with_restitution(obj.restitution())
+                                             .with_friction(obj.friction()),
+                                         Color3{0.85f, 0.85f, 0.95f});
+        if (!object) co_return;
+
+        M_state.spawned.push_back((*object)->handle());
+        M_state.selected = (*object)->handle();
+    }
+
     /// @brief keyboard and mouse-bindings for the user to manipulate objects in the arena.
     task<> maybe_spawn_objects()
     {
         if (get_mouse_button(Pointer::MouseRight).is_initial_press())
         {
-            auto spawn_pos = cam().pos() + cam().forward() * 2.0f * m;
+            auto spawn_pos = *co_await spawn_position_for_crosshair(M_state.spawn_shape_index);
             co_await add_task<policy::no_wait>(
                 spawn_selected_shape(spawn_pos, M_state.spawn_shape_index));
         }
@@ -496,6 +574,34 @@ private:
             M_state.gravity_on = !M_state.gravity_on;
         }
 
+        if (get_key(Key::Equal).is_initial_press()) change_gravity(1.0);
+        if (get_key(Key::Minus).is_initial_press()) change_gravity(-1.0);
+
+        if (get_key(Key::P).is_initial_press()) physics_paused(!physics_paused());
+        if (get_key(Key::N).is_initial_press())
+        {
+            physics_paused(true);
+            step_physics_once();
+        }
+
+        if (get_key(Key::Q).is_initial_press())
+        {
+            M_state.spawn_yaw_degrees -= 15.0;
+            refresh_controls();
+        }
+        if (get_key(Key::E).is_initial_press())
+        {
+            M_state.spawn_yaw_degrees += 15.0;
+            refresh_controls();
+        }
+
+        if (get_key(Key::C).is_initial_press()) co_await duplicate_selected();
+        if (get_key(Key::X).is_initial_press())
+        {
+            co_await clear_dynamic_scene();
+            co_return;
+        }
+
         if (!M_state.selected) { co_return; }
 
         auto selected = *M_state.selected;
@@ -531,6 +637,28 @@ private:
                 (*obj)->ang_vel() = vec3<one / si::second>::zero();
             }
         }
+    }
+
+    task<> clear_dynamic_scene()
+    {
+        std::vector<world_base::handle> to_remove;
+        for (auto *phys_obj : physics_objects())
+        {
+            auto obj = co_await get_rigid(phys_obj->handle());
+            if (obj && (*obj)->is_dynamic()) to_remove.push_back(phys_obj->handle());
+        }
+
+        for (auto handle : to_remove)
+        {
+            co_await destroy_rigid{handle};
+            forget_frozen(handle);
+            remove_physics_object(handle);
+        }
+
+        M_state.selected.reset();
+        M_state.grabbed.reset();
+        M_state.frozen.clear();
+        M_state.spawned.clear();
     }
 
     task<> build_area()

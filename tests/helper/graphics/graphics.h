@@ -1128,6 +1128,10 @@ protected:
     physkit::quantity<mp_units::si::second> current_time() const
     { return M_timeline.previousFrameTime() * mp_units::si::second; }
 
+    bool physics_paused() const { return M_physics_paused; }
+    void physics_paused(bool paused) { M_physics_paused = paused; }
+    void step_physics_once() { M_step_physics_once = true; }
+
     key_state get_mouse_button(Pointer button) const
     {
         auto it = M_mouse.find(button);
@@ -1282,7 +1286,13 @@ private:
         M_on_next_frame.fire(frame_dt);
 
         update(frame_dt);
-        M_stepper.update(frame_dt);
+        if (!M_physics_paused)
+            M_stepper.update(frame_dt);
+        else if (M_step_physics_once)
+        {
+            M_stepper.update(M_stepper.step_size());
+            M_step_physics_once = false;
+        }
 
         for (auto *obj : M_physics_objs) obj->sync();
         M_debug_overlay->update(frame_dt, M_world->time());
@@ -1424,6 +1434,8 @@ private:
     bool M_drag = false;
     bool M_grab_focus = false;
     bool M_testing = false;
+    bool M_physics_paused = false;
+    bool M_step_physics_once = false;
 };
 
 inline physkit::object &physics_obj::obj() { return **M_app->world().get_rigid(M_handle); }
