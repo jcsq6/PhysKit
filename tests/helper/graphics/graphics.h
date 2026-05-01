@@ -418,7 +418,7 @@ public:
     static constexpr int default_record_fps = 60;
     static constexpr bool default_debug_overlay = false;
     static constexpr bool default_crosshair_overlay = false;
-    static inline const auto default_lights = std::vector<Vector4>{{0.f, 5.f, 0.f, 0.f}};
+    static inline const auto default_lights = std::vector<Vector4>{{-10.f, 50.f, 30.f, 0.f}};
 
     template <typename Self> Self &&read_file(this Self &&self, std::string_view path);
 
