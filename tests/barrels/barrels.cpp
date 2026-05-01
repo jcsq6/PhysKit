@@ -41,8 +41,8 @@ public:
                            .look_at(fvec3{0.0f, 2.0f, 1.5f} * si::metre)
                            .drag(false)
                            .gravity(gravity)
-                           .time_step(1.0 / 120.0 * si::second)
-                           .solver_iterations(300)}
+                           .time_step(1.0 / 360.0 * si::second)
+                           .solver_iterations(400)}
     {
         cam().speed(1.0f * si::metre / si::second);
         world().add_task(scene());
@@ -66,7 +66,7 @@ private:
                                     .with_pos(pos)
                                     .with_orientation(rot)
                                     .with_restitution(0.3)
-                                    .with_friction(0.15),
+                                    .with_friction(0.3),
                                     color);
     }
     task <world_base::handle> make_barrel(vec3<si::metre> pos,
@@ -83,7 +83,7 @@ private:
                                .with_mass(100*kg)
                                .with_orientation(rot)
                                .with_restitution(0.3)
-                               .with_friction(0.15),
+                               .with_friction(0.3),
                            color))->handle();
         co_return h;
     }
@@ -94,12 +94,12 @@ private:
         Color3 rust{183.0/255,65.0/255,14.0/255};
 
         auto start_h = 2.0;
-        auto spacing = 1.0;
+        auto spacing = 1;
         auto len = 0.6*m;
         auto xdist = 1.0;
         auto wid = 0.75*m;
 		  auto thicc = 0.01*m;
-        auto angle = 5.5;
+        auto angle = 10;
         for (int i = 0; i < 3; i++)
         {
             auto pos1 = vec3{xdist, start_h-spacing*i, 0}*m;
