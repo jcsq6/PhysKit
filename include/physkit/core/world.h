@@ -223,6 +223,33 @@ public:
         return std::nullopt;
     }
 
+    [[nodiscard]] std::size_t object_count() const
+    { return M_rigid.slots.size() - M_rigid.free.size(); }
+
+    // template <typename F> void for_each_object(this auto &&self, F &&callback)
+    // {
+    //     for (std::size_t i = 0; i < self.M_rigid.slots.size(); ++i)
+    //     {
+    //         auto &slot = self.M_rigid.slots[i];
+    //         if (slot.available()) continue;
+
+    //         callback(self.M_rigid.get_slot_handle(static_cast<std::uint32_t>(i)),
+    //                  slot.value->obj);
+    //     }
+    // }
+
+    [[nodiscard]] auto rigids_range() const
+    {
+        return M_rigid.slots |
+               std::views::filter([](const auto &slot) { return slot.value.has_value(); }) |
+               std::views::transform(
+                   [this](const auto &slot)
+                   {
+                       return std::pair(M_rigid.get_slot_handle(&slot - M_rigid.slots.data()),
+                                        &(slot.value->obj));
+                   });
+    }
+
     [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
 
     task_handle add_task(task<> t) { return M_task_handler.add_task(std::move(t), {}); }
