@@ -40,9 +40,7 @@ public:
 
     [[nodiscard]] const vec3<si::metre> &half_extents() const { return M_half_extents; }
     [[nodiscard]] aabb bounds() const
-    {
-        return aabb::from_points({M_half_extents, -M_half_extents});
-    }
+    { return aabb::from_points({M_half_extents, -M_half_extents}); }
     [[nodiscard]] bounding_sphere bsphere() const
     {
         return bounding_sphere({0.0 * si::metre, 0.0 * si::metre, 0.0 * si::metre},
@@ -50,9 +48,7 @@ public:
     }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
-    {
-        return 8 * M_half_extents.x() * M_half_extents.y() * M_half_extents.z();
-    }
+    { return 8 * M_half_extents.x() * M_half_extents.y() * M_half_extents.z(); }
 
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] vec3<si::metre> mass_center() const
@@ -132,14 +128,10 @@ public:
                                   vec3<si::metre>{-M_radius, -M_radius, -M_radius}});
     }
     [[nodiscard]] bounding_sphere bsphere() const
-    {
-        return bounding_sphere(vec3<si::metre>::zero(), M_radius);
-    }
+    { return bounding_sphere(vec3<si::metre>::zero(), M_radius); }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
-    {
-        return (4.0 / 3.0) * std::numbers::pi * mp_units::pow<3>(M_radius);
-    }
+    { return (4.0 / 3.0) * std::numbers::pi * mp_units::pow<3>(M_radius); }
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] vec3<si::metre> mass_center() const
     {
@@ -189,9 +181,7 @@ public:
     }
     /// @brief Closest point on the sphere surface in local space. O(1) time.
     [[nodiscard]] vec3<si::metre> closest_point(const vec3<si::metre> &point) const
-    {
-        return point.normalized() * M_radius;
-    }
+    { return point.normalized() * M_radius; }
     /// @brief Point containment test in local space. O(1) time.
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const
     {
@@ -201,9 +191,7 @@ public:
 
     /// @brief GJK support function in local space.
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
-    {
-        return direction.normalized() * M_radius;
-    }
+    { return direction.normalized() * M_radius; }
 
     [[nodiscard]] instance at(const vec3<si::metre> &pos,
                               const quat<one> &orientation = quat<one>::identity()) const;
@@ -248,9 +236,7 @@ public:
     }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
-    {
-        return (M_height * pow<2>(M_radius)) * std::numbers::pi;
-    } // pi*r^2*h
+    { return (M_height * pow<2>(M_radius)) * std::numbers::pi; } // pi*r^2*h
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] vec3<si::metre> mass_center() const { return vec3<si::metre>::zero(); }
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
@@ -308,9 +294,7 @@ public:
     /// TODO: Add in support to return obb objects -> much more tedious, more research later.
 
     bool operator==(const cylinder &other) const
-    {
-        return M_radius == other.M_radius && M_height == other.M_height;
-    }
+    { return M_radius == other.M_radius && M_height == other.M_height; }
 
 private:
     quantity<si::metre> M_radius;
@@ -349,14 +333,10 @@ public:
     }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
-    {
-        return M_height * pow<2>(M_radius) * std::numbers::pi / 3;
-    }
+    { return M_height * pow<2>(M_radius) * std::numbers::pi / 3; }
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] vec3<si::metre> mass_center() const
-    {
-        return vec3<si::metre>{0 * si::metre, M_height / 4, 0 * si::metre};
-    }
+    { return vec3<si::metre>{0 * si::metre, M_height / 4, 0 * si::metre}; }
     [[nodiscard]] mat3<si::kilogram * pow<2>(si::metre)>
     inertia_tensor(quantity<si::kilogram / pow<3>(si::metre)> density) const
     {
@@ -408,9 +388,7 @@ public:
     /// TODO: Add in support to return obb objects -> much more tedious, more research later.
 
     bool operator==(const cone &other) const
-    {
-        return M_radius == other.M_radius && M_height == other.M_height;
-    }
+    { return M_radius == other.M_radius && M_height == other.M_height; }
 
 private:
     quantity<si::metre> M_radius;
@@ -447,9 +425,7 @@ public:
     }
 
     [[nodiscard]] quantity<pow<3>(si::metre)> volume() const
-    {
-        return (1.0 / 3.0) * pow<2>(M_base_half * 2.0) * M_height;
-    }
+    { return (1.0 / 3.0) * pow<2>(M_base_half * 2.0) * M_height; }
 
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] vec3<si::metre> mass_center() const
@@ -508,9 +484,7 @@ public:
     /// @brief - Add in support to return obb objects -> much more tedious, more research later.
 
     bool operator==(const pyramid &other) const
-    {
-        return M_base_half == other.M_base_half && M_height == other.M_height;
-    }
+    { return M_base_half == other.M_base_half && M_height == other.M_height; }
 
 private:
     quantity<si::metre> M_base_half;
@@ -561,9 +535,7 @@ public:
     shape() : M_type(type::box) { construct_box(vec3{0.5f, 0.5f, 0.5f} * si::metre); }
 
     shape(std::shared_ptr<const physkit::mesh> m) : M_type(type::mesh)
-    {
-        construct_mesh(std::move(m));
-    }
+    { construct_mesh(std::move(m)); }
 
     shape(const physkit::sphere &s) : M_type(type::sphere) { construct_sphere(s); }
 
@@ -714,7 +686,7 @@ public:
         }
     }
 
-    [[nodiscard]] type type() const { return M_type; };
+    [[nodiscard]] type stored_type() const { return M_type; };
 
     // mesh only methods for compatibility
     [[nodiscard]] std::span<const vec3<si::metre>> vertices() const
@@ -806,34 +778,22 @@ private:
     }
 
     template <typename... Args> void construct_mesh(Args &&...args)
-    {
-        std::construct_at(&M_storage.msh, std::forward<Args>(args)...);
-    }
+    { std::construct_at(&M_storage.msh, std::forward<Args>(args)...); }
 
     template <typename... Args> void construct_sphere(Args &&...args)
-    {
-        std::construct_at(&M_storage.sph, std::forward<Args>(args)...);
-    }
+    { std::construct_at(&M_storage.sph, std::forward<Args>(args)...); }
 
     template <typename... Args> void construct_box(Args &&...args)
-    {
-        std::construct_at(&M_storage.bx, std::forward<Args>(args)...);
-    }
+    { std::construct_at(&M_storage.bx, std::forward<Args>(args)...); }
 
     template <typename... Args> void construct_cylinder(Args &&...args)
-    {
-        std::construct_at(&M_storage.cyl, std::forward<Args>(args)...);
-    }
+    { std::construct_at(&M_storage.cyl, std::forward<Args>(args)...); }
 
     template <typename... Args> void construct_cone(Args &&...args)
-    {
-        std::construct_at(&M_storage.cn, std::forward<Args>(args)...);
-    }
+    { std::construct_at(&M_storage.cn, std::forward<Args>(args)...); }
 
     template <typename... Args> void construct_pyramid(Args &&...args)
-    {
-        std::construct_at(&M_storage.pyr, std::forward<Args>(args)...);
-    }
+    { std::construct_at(&M_storage.pyr, std::forward<Args>(args)...); }
 
     void copy_from(const shape &other)
     {
@@ -910,7 +870,7 @@ public:
 
     [[nodiscard]] vec3<si::metre> vertex(unsigned int index) const
     {
-        assert(M_shape.type() == shape::type::mesh);
+        assert(M_shape.stored_type() == shape::type::mesh);
         assert(index < M_shape.vertices().size());
         return M_orientation * M_shape.vertices()[index] + M_position;
     }
@@ -995,34 +955,20 @@ private:
 
 /// @brief Create an instance view of this mesh at the given position and orientation.
 inline instance mesh::at(const vec3<si::metre> &position, const quat<one> &orientation) const
-{
-    return {ptr(), position, orientation};
-}
+{ return {ptr(), position, orientation}; }
 
 inline instance box::at(const vec3<si::metre> &position, const quat<one> &orientation) const
-{
-    return {*this, position, orientation};
-}
+{ return {*this, position, orientation}; }
 inline instance sphere::at(const vec3<si::metre> &position, const quat<one> &orientation) const
-{
-    return {*this, position, orientation};
-}
+{ return {*this, position, orientation}; }
 inline instance cylinder::at(const vec3<si::metre> &position, const quat<one> &orientation) const
-{
-    return {*this, position, orientation};
-}
+{ return {*this, position, orientation}; }
 inline instance cone::at(const vec3<si::metre> &position, const quat<one> &orientation) const
-{
-    return {*this, position, orientation};
-}
+{ return {*this, position, orientation}; }
 inline instance pyramid::at(const vec3<si::metre> &position, const quat<one> &orientation) const
-{
-    return {*this, position, orientation};
-}
+{ return {*this, position, orientation}; }
 
 inline instance shape::at(const vec3<si::metre> &pos, const quat<one> &orientation) const
-{
-    return {*this, pos, orientation};
-}
+{ return {*this, pos, orientation}; }
 
 } // namespace physkit

@@ -21,6 +21,12 @@ using Corrade::Containers::ArrayView;
 using Corrade::Containers::StringView;
 } // namespace Corrade::Containers
 
+GRAPHICS_EXPORT
+namespace Corrade::PluginManager
+{
+using Corrade::PluginManager::Manager;
+} // namespace Corrade::PluginManager
+
 // ═════════════════════════════════════════════════════════════════════════════
 //  Magnum (root namespace — typedefs, tags, classes)
 // ═════════════════════════════════════════════════════════════════════════════
@@ -243,6 +249,9 @@ GRAPHICS_EXPORT
 namespace Magnum::Shaders
 {
 using Magnum::Shaders::PhongGL;
+using Magnum::Shaders::VectorGL;
+using Magnum::Shaders::VectorGL2D;
+using Magnum::Shaders::VectorGL3D;
 using Magnum::Shaders::VertexColorGL;
 // Enum-set operators
 using Magnum::Shaders::operator|;
@@ -251,6 +260,19 @@ using Magnum::Shaders::operator^;
 using Magnum::Shaders::operator~;
 
 } // namespace Magnum::Shaders
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Magnum::Text
+// ═════════════════════════════════════════════════════════════════════════════
+
+GRAPHICS_EXPORT
+namespace Magnum::Text
+{
+using Magnum::Text::AbstractFont;
+using Magnum::Text::AbstractShaper;
+using Magnum::Text::GlyphCacheGL;
+using Magnum::Text::RendererGL;
+} // namespace Magnum::Text
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  Magnum::Trade

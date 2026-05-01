@@ -38,9 +38,7 @@ public:
 
     template <typename... _Args>
     _T &construct(_Args &&...__args) noexcept(std::is_nothrow_constructible_v<_T, _Args...>)
-    {
-        return *::new (static_cast<void *>(std::addressof(__value_))) _T((_Args &&) __args...);
-    }
+    { return *::new (static_cast<void *>(std::addressof(__value_))) _T((_Args &&) __args...); }
 
     void destruct() noexcept(std::is_nothrow_destructible_v<_T>) { __value_.~_T(); }
 
@@ -115,14 +113,10 @@ class generator;
 template <typename _Alloc> class __promise_base_alloc
 {
     static constexpr std::size_t __offset_of_allocator(std::size_t __frameSize) noexcept
-    {
-        return __aligned_allocation_size(__frameSize, alignof(_Alloc));
-    }
+    { return __aligned_allocation_size(__frameSize, alignof(_Alloc)); }
 
     static constexpr std::size_t __padded_frame_size(std::size_t __frameSize) noexcept
-    {
-        return __offset_of_allocator(__frameSize) + sizeof(_Alloc);
-    }
+    { return __offset_of_allocator(__frameSize) + sizeof(_Alloc); }
 
     static _Alloc &__get_allocator(void *__frame, std::size_t __frameSize) noexcept
     {
@@ -309,9 +303,7 @@ template <typename _Ref> struct __generator_promise_base
     template <typename _OValue, typename _OAlloc>
     __yield_sequence_awaiter<generator<_Ref, _OValue, _OAlloc>>
     yield_value(std::ranges::elements_of<generator<_Ref, _OValue, _OAlloc>> __g) noexcept
-    {
-        return std::move(__g).range;
-    }
+    { return std::move(__g).range; }
 
     template <std::ranges::range _Rng, typename _Allocator>
     __yield_sequence_awaiter<generator<_Ref, std::remove_cvref_t<_Ref>, _Allocator>>
@@ -508,9 +500,7 @@ public:
         void operator++(int) { (void) operator++(); }
 
         reference operator*() const noexcept
-        {
-            return static_cast<reference>(__coro_.promise().__value_.get());
-        }
+        { return static_cast<reference>(__coro_.promise().__value_.get()); }
 
     private:
         friend generator;
@@ -623,9 +613,7 @@ public:
         void operator++(int) { (void) operator++(); }
 
         reference operator*() const noexcept
-        {
-            return static_cast<reference>(__promise_->__value_.get());
-        }
+        { return static_cast<reference>(__promise_->__value_.get()); }
 
     private:
         friend generator;

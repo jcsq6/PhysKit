@@ -36,15 +36,11 @@ struct triangle_t : std::array<unsigned int, 3>
 {
     [[nodiscard]] std::array<vec3<si::metre>, 3>
     vertices(std::span<const vec3<si::metre>> verts) const
-    {
-        return {verts[(*this)[0]], verts[(*this)[1]], verts[(*this)[2]]};
-    }
+    { return {verts[(*this)[0]], verts[(*this)[1]], verts[(*this)[2]]}; }
 
     [[nodiscard]] std::array<vec3<si::metre>, 3> vertices(const auto &mesh) const
         requires(requires { mesh.vertex(0U); })
-    {
-        return {mesh.vertex((*this)[0]), mesh.vertex((*this)[1]), mesh.vertex((*this)[2])};
-    }
+    { return {mesh.vertex((*this)[0]), mesh.vertex((*this)[1]), mesh.vertex((*this)[2])}; }
 
     [[nodiscard]] auto normal(const auto &ctx) const
     {

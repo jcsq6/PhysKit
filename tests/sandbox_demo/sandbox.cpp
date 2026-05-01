@@ -3,13 +3,19 @@
 #ifdef PHYSKIT_GRAPHICS_MODULES
 #include <Magnum/Platform/GlfwApplication.h>
 #endif
-#ifdef PHYSKIT_MODULES
 
+#ifndef PHYSKIT_IMPORT_STD
+#include <coroutine> // IWYU pragma: keep
+#include <optional>
+#endif
+
+#ifdef PHYSKIT_MODULES
 import physkit;
 import mp_units;
 #else
 #include <physkit/physkit.h>
 #endif
+
 #ifdef PHYSKIT_GRAPHICS_MODULES
 import graphics;
 #else
@@ -67,9 +73,7 @@ private:
     // graphics_app only exposes a const gravity accessor, but the sandbox needs
     // to toggle it at runtime.
     auto &mutable_world_gravity()
-    {
-        return const_cast<vec3<si::metre / si::second / si::second> &>(world_gravity());
-    }
+    { return const_cast<vec3<si::metre / si::second / si::second> &>(world_gravity()); }
 
     void remove_physics_object(world_base::handle handle)
     {

@@ -223,15 +223,40 @@ public:
         return std::nullopt;
     }
 
+    [[nodiscard]] std::size_t object_count() const
+    { return M_rigid.slots.size() - M_rigid.free.size(); }
+
+    // template <typename F> void for_each_object(this auto &&self, F &&callback)
+    // {
+    //     for (std::size_t i = 0; i < self.M_rigid.slots.size(); ++i)
+    //     {
+    //         auto &slot = self.M_rigid.slots[i];
+    //         if (slot.available()) continue;
+
+    //         callback(self.M_rigid.get_slot_handle(static_cast<std::uint32_t>(i)),
+    //                  slot.value->obj);
+    //     }
+    // }
+
+    [[nodiscard]] auto rigids_range() const
+    {
+        return M_rigid.slots |
+               std::views::filter([](const auto &slot) { return slot.value.has_value(); }) |
+               std::views::transform(
+                   [this](const auto &slot)
+                   {
+                       return std::pair(M_rigid.get_slot_handle(&slot - M_rigid.slots.data()),
+                                        &(slot.value->obj));
+                   });
+    }
+
     [[nodiscard]] quantity<si::second> time() const { return M_task_handler.time(); }
 
     task_handle add_task(task<> t) { return M_task_handler.add_task(std::move(t), {}); }
     bool cancel_task(task_handle handle) { return M_task_handler.cancel_task(handle.id(), {}); }
 
     [[nodiscard]] bool task_active(task_handle handle) const
-    {
-        return M_task_handler.task_active(handle.id());
-    }
+    { return M_task_handler.task_active(handle.id()); }
 
     void step(quantity<si::second> dt)
     {
@@ -244,9 +269,7 @@ public:
     }
 
     detail::task_handler &handler(detail::passkey<detail::awaiter> /*key*/)
-    {
-        return M_task_handler;
-    }
+    { return M_task_handler; }
 
     // No check for object validity
     detail::has_waiter_field *get_waiter_fields(detail::handle_id_t object_id,
@@ -352,13 +375,9 @@ private:
     vec3<si::metre / si::second / si::second> M_gravity;
 
     auto execute_command(detail::add_task_command &cmd)
-    {
-        return M_task_handler.add_task(std::move(cmd.t), {});
-    }
+    { return M_task_handler.add_task(std::move(cmd.t), {}); }
     bool execute_command(detail::cancel_task_command &cmd)
-    {
-        return M_task_handler.cancel_task(cmd.handle.id(), {});
-    }
+    { return M_task_handler.cancel_task(cmd.handle.id(), {}); }
     auto execute_command(detail::add_rigid_command &cmd) { return create_rigid(cmd.desc); }
 
     auto execute_command(detail::destroy_rigid_command &cmd) { return remove_rigid(cmd.h); }
@@ -369,14 +388,10 @@ private:
     execute_remove_command(const detail::constraint_handle_variant &h) = 0;
 
     auto execute_command(detail::add_constraint_command &cmd)
-    {
-        return execute_add_constraint(cmd.desc);
-    }
+    { return execute_add_constraint(cmd.desc); }
 
     auto execute_command(detail::remove_constraint_command &cmd)
-    {
-        return execute_remove_command(cmd.h);
-    }
+    { return execute_remove_command(cmd.h); }
 
     bool flush_commands()
     {
@@ -407,9 +422,7 @@ public:
     }
 
     template <typename Handle> auto remove_constraint(Handle h)
-    {
-        return M_constraints.remove_constraint(h);
-    }
+    { return M_constraints.remove_constraint(h); }
 
 private:
     impulse::constraint_solver M_constraints;

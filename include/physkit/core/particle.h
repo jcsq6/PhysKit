@@ -57,14 +57,10 @@ public:
 
     [[nodiscard]] const auto &local_inertia_tensor() const { return M_inertia_tensor_local; }
     [[nodiscard]] const auto &local_inv_inertia_tensor() const
-    {
-        return M_inv_inertia_tensor_local;
-    }
+    { return M_inv_inertia_tensor_local; }
     [[nodiscard]] const auto &world_inertia_tensor() const { return M_inertia_tensor_world; }
     [[nodiscard]] const auto &world_inv_inertia_tensor() const
-    {
-        return M_inv_inertia_tensor_world;
-    }
+    { return M_inv_inertia_tensor_world; }
 
     void inertia_tensor(const mat3<si::kilogram * si::metre * si::metre> &tensor)
     {
@@ -80,9 +76,7 @@ public:
     }
 
     void apply_force(const vec3<si::kilogram * si::metre / si::second / si::second> &force)
-    {
-        M_acc += force * M_inv_mass;
-    }
+    { M_acc += force * M_inv_mass; }
 
     void apply_force(const vec3<si::kilogram * si::metre / si::second / si::second> &force,
                      const vec3<si::metre> &application_point)
@@ -92,23 +86,17 @@ public:
     }
 
     void apply_impulse(const vec3<si::kilogram * si::metre / si::second> &impulse)
-    {
-        M_vel += impulse * M_inv_mass;
-    }
+    { M_vel += impulse * M_inv_mass; }
 
     void
     apply_angular_impulse(const vec3<si::kilogram * si::metre * si::metre / si::second> &impulse)
-    {
-        M_ang_vel += M_inv_inertia_tensor_world * impulse;
-    }
+    { M_ang_vel += M_inv_inertia_tensor_world * impulse; }
 
     void apply_acceleration(const vec3<si::metre / si::second / si::second> &a) { M_acc += a; }
 
     void
     apply_torque(const vec3<si::kilogram * si::metre * si::metre / si::second / si::second> &torque)
-    {
-        M_torque_acc += torque;
-    }
+    { M_torque_acc += torque; }
 
     void clear_forces()
     {
@@ -117,14 +105,10 @@ public:
     }
 
     [[nodiscard]] auto project_to_local(const vec3<si::metre> &world_point) const
-    {
-        return M_orientation.conjugate() * (world_point - M_pos);
-    }
+    { return M_orientation.conjugate() * (world_point - M_pos); }
 
     [[nodiscard]] auto project_to_world(const vec3<si::metre> &local_point) const
-    {
-        return M_orientation * local_point + M_pos;
-    }
+    { return M_orientation * local_point + M_pos; }
 
 private:
     // Core State

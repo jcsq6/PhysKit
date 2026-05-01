@@ -110,14 +110,10 @@ public:
     }
 
     [[nodiscard]] constexpr aabb operator+(const vec3<si::metre> &offset) const
-    {
-        return {.min = min + offset, .max = max + offset};
-    }
+    { return {.min = min + offset, .max = max + offset}; }
 
     [[nodiscard]] constexpr aabb operator-(const vec3<si::metre> &offset) const
-    {
-        return {.min = min - offset, .max = max - offset};
-    }
+    { return {.min = min - offset, .max = max - offset}; }
 
     [[nodiscard]] constexpr aabb operator*(quantity<one> scale) const
     {
@@ -162,9 +158,7 @@ public:
     }
 
     [[nodiscard]] constexpr aabb operator/(quantity<one> scale) const
-    {
-        return {.min = min / scale, .max = max / scale};
-    }
+    { return {.min = min / scale, .max = max / scale}; }
 
     /// @brief adding in support for furthest point in the shape in direction d.
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
@@ -299,19 +293,13 @@ public:
     }
 
     [[nodiscard]] constexpr auto surface_area() const
-    {
-        return 4.0 * std::numbers::pi * radius * radius;
-    }
+    { return 4.0 * std::numbers::pi * radius * radius; }
 
     [[nodiscard]] constexpr auto volume() const
-    {
-        return (4.0 / 3.0) * std::numbers::pi * radius * radius * radius;
-    }
+    { return (4.0 / 3.0) * std::numbers::pi * radius * radius * radius; }
 
     [[nodiscard]] bool contains(const vec3<si::metre> &point) const
-    {
-        return (point - center).squared_norm() <= radius * radius;
-    }
+    { return (point - center).squared_norm() <= radius * radius; }
 
     [[nodiscard]] bool intersects(const bounding_sphere &other) const
     {
@@ -326,14 +314,10 @@ public:
     }
 
     [[nodiscard]] constexpr bounding_sphere operator+(const vec3<si::metre> &offset) const
-    {
-        return {.center = center + offset, .radius = radius};
-    }
+    { return {.center = center + offset, .radius = radius}; }
 
     [[nodiscard]] constexpr bounding_sphere operator-(const vec3<si::metre> &offset) const
-    {
-        return {.center = center - offset, .radius = radius};
-    }
+    { return {.center = center - offset, .radius = radius}; }
 
     [[nodiscard]] constexpr bounding_sphere operator*(quantity<one> scale) const
     {
@@ -342,9 +326,7 @@ public:
     }
 
     [[nodiscard]] vec3<si::metre> support(const vec3<one> &direction) const
-    {
-        return center + radius * direction.normalized();
-    }
+    { return center + radius * direction.normalized(); }
 
     constexpr auto &operator+=(const vec3<si::metre> &offset)
     {

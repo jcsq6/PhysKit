@@ -109,13 +109,9 @@ public:
     [[nodiscard]] double friction() const { return M_friction; }
 
     [[nodiscard]] auto &&mesh(this auto &&self)
-    {
-        return std::forward_like<decltype(self)>(self.M_shape.mesh());
-    }
+    { return std::forward_like<decltype(self)>(self.M_shape.mesh()); }
     [[nodiscard]] auto &&shape(this auto &&self)
-    {
-        return std::forward_like<decltype(self)>(self.M_shape);
-    }
+    { return std::forward_like<decltype(self)>(self.M_shape); }
     [[nodiscard]] body_type type() const { return M_type; }
 
 private:

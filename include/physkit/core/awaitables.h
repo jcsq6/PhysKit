@@ -25,18 +25,12 @@ struct wait_for
         mp_units::quantity<mp_units::si::second> start_time;
 
         [[nodiscard]] bool await_ready() const noexcept
-        {
-            return duration <= 0.0 * mp_units::si::second;
-        }
+        { return duration <= 0.0 * mp_units::si::second; }
         void await_suspend(std::coroutine_handle<> handle)
-        {
-            handler().schedule_task_after(promise().id, duration);
-        }
+        { handler().schedule_task_after(promise().id, duration); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
         mp_units::quantity<mp_units::si::second> on_resume() const noexcept
-        {
-            return handler().time() - start_time;
-        }
+        { return handler().time() - start_time; }
     };
 
     mp_units::quantity<mp_units::si::second> duration;
@@ -55,14 +49,10 @@ struct wait_until_time
 
         [[nodiscard]] bool await_ready() const noexcept { return time <= start_time; }
         void await_suspend(std::coroutine_handle<> handle)
-        {
-            handler().schedule_task_at(promise().id, time);
-        }
+        { handler().schedule_task_at(promise().id, time); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
         mp_units::quantity<mp_units::si::second> on_resume() const noexcept
-        {
-            return handler().time() - start_time;
-        }
+        { return handler().time() - start_time; }
     };
 
     mp_units::quantity<mp_units::si::second> time;
@@ -84,9 +74,7 @@ struct next_frame
         void await_suspend(std::coroutine_handle<> /**/) { handler().queue_pre_task(promise().id); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
         mp_units::quantity<mp_units::si::second> on_resume() const noexcept
-        {
-            return handler().time() - start_time;
-        }
+        { return handler().time() - start_time; }
     };
 };
 
@@ -104,14 +92,10 @@ struct next_physics_tick
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
         [[nodiscard]] bool await_ready() noexcept { return false; }
         void await_suspend(std::coroutine_handle<> /**/)
-        {
-            handler().queue_post_physics_tick(promise().id);
-        }
+        { handler().queue_post_physics_tick(promise().id); }
         // NOLINTNEXTLINE(modernize-use-nodiscard)
         mp_units::quantity<mp_units::si::second> on_resume() const noexcept
-        {
-            return handler().time() - start_time;
-        }
+        { return handler().time() - start_time; }
     };
 };
 
@@ -141,9 +125,7 @@ public:
     }
 
     [[nodiscard]] auto contacts(this auto &&self)
-    {
-        return std::span{self.M_contact_buffer.data(), self.M_contacts};
-    }
+    { return std::span{self.M_contact_buffer.data(), self.M_contacts}; }
 
 private:
     std::array<contact_pt, detail::manifold::max_contact_points> M_contact_buffer{};
@@ -427,9 +409,7 @@ struct wait_for_all
 
         awaiter_type(detail::task_promise_base &promise, wait_for_all aw)
             : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
-        {
-            std::ranges::fill(child_ids, detail::arena<task<>>::handle::null);
-        }
+        { std::ranges::fill(child_ids, detail::arena<task<>>::handle::null); }
 
         awaiter_type(const awaiter_type &) = delete;
         awaiter_type &operator=(const awaiter_type &) = delete;
@@ -519,9 +499,7 @@ struct wait_for_any
     {
         awaiter_type(detail::task_promise_base &promise, wait_for_any aw)
             : detail::awaiter(promise), awaitables(std::move(aw.awaitables))
-        {
-            std::ranges::fill(child_ids, detail::arena<task<>>::handle::null);
-        }
+        { std::ranges::fill(child_ids, detail::arena<task<>>::handle::null); }
 
         awaiter_type(const awaiter_type &) = delete;
         awaiter_type &operator=(const awaiter_type &) = delete;
@@ -703,9 +681,7 @@ template <typename SetupFn> struct wait_for_event<SetupFn, void>
 
         [[nodiscard]] bool await_ready() const noexcept { return false; }
         void await_suspend(std::coroutine_handle<> /*handle*/)
-        {
-            std::invoke(std::move(setup_fn), physkit_bind_front(&awaiter_type::queue_resume, this));
-        }
+        { std::invoke(std::move(setup_fn), physkit_bind_front(&awaiter_type::queue_resume, this)); }
 
         void on_resume() {}
     };
@@ -949,9 +925,7 @@ struct raycast
         bool await_suspend(std::coroutine_handle<> /*handle*/) { return false; }
 
         generator<std::pair<world_base::handle, quantity<si::metre>>> on_resume()
-        {
-            return world().raycast(r, max_dist);
-        }
+        { return world().raycast(r, max_dist); }
     };
 
     ray r;

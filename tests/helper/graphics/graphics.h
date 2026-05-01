@@ -25,6 +25,7 @@
 
 #include "camera.h"
 #include "convert.h"
+#include "debug_overlay.h"
 
 #endif
 
@@ -48,9 +49,7 @@ template <auto unit> struct hash<physkit::vec3<unit>>
 template <> struct hash<physkit::box>
 {
     std::size_t operator()(const physkit::box &b) const
-    {
-        return std::hash<physkit::vec3<physkit::si::metre>>{}(b.half_extents());
-    }
+    { return std::hash<physkit::vec3<physkit::si::metre>>{}(b.half_extents()); }
 };
 template <> struct hash<physkit::sphere>
 {
@@ -102,7 +101,7 @@ template <> struct hash<physkit::shape>
 {
     std::size_t operator()(const physkit::shape &s) const
     {
-        switch (s.type())
+        switch (s.stored_type())
         {
         case physkit::shape::type::sphere:
             return std::hash<physkit::sphere>{}(s.sphere());
@@ -289,9 +288,7 @@ public:
     explicit instanced_drawable(std::derived_from<gfx_obj_base> auto &parent,
                                 instanced_drawables &group)
         : gfx_obj{&parent}, SceneGraph::Drawable3D{parent}, M_group{&group}
-    {
-        group.add_object(*this);
-    }
+    { group.add_object(*this); }
 
     instanced_drawable(const instanced_drawable &) = delete;
     instanced_drawable &operator=(const instanced_drawable &) = delete;
@@ -419,6 +416,8 @@ public:
     static constexpr auto default_time_step = 1.0f / 60.0f * mp_units::si::second;
     static constexpr auto default_record_duration = 10.0f * mp_units::si::second;
     static constexpr int default_record_fps = 60;
+    static constexpr bool default_debug_overlay = false;
+    static inline const auto default_lights = std::vector<Vector4>{{0.f, 5.f, 0.f, 0.f}};
 
     template <typename Self> Self &&read_file(this Self &&self, std::string_view path);
 
@@ -554,6 +553,36 @@ public:
         self.M_record_fps = fps;
         return std::forward<decltype(self)>(self);
     }
+    auto &&debug_overlay(this auto &&self, bool enabled = true)
+    {
+        self.M_debug_overlay = enabled;
+        return std::forward<decltype(self)>(self);
+    }
+    auto &&debug_overlay_or(this auto &&self, bool enabled = true)
+    {
+        if (!self.M_debug_overlay) self.M_debug_overlay = enabled;
+        return std::forward<decltype(self)>(self);
+    }
+    auto &&lights(this auto &&self, std::initializer_list<Vector4> lights)
+    {
+        self.M_lights = lights;
+        return std::forward<decltype(self)>(self);
+    }
+    auto &&lights_or(this auto &&self, std::initializer_list<Vector4> lights)
+    {
+        if (!self.M_lights) self.M_lights = lights;
+        return std::forward<decltype(self)>(self);
+    }
+    template <std::ranges::range Range> auto &&lights(this auto &&self, const Range &lights)
+    {
+        self.M_lights = lights | std::ranges::to<std::vector>();
+        return std::forward<decltype(self)>(self);
+    }
+    template <std::ranges::range Range> auto &&lights_or(this auto &&self, const Range &lights)
+    {
+        if (!self.M_lights) self.M_lights = lights | std::ranges::to<std::vector>();
+        return std::forward<decltype(self)>(self);
+    }
 
     [[nodiscard]] auto window_size() const { return M_window_size.value_or(default_window_size); }
     [[nodiscard]] auto fov() const { return M_fov.value_or(default_fov); }
@@ -574,10 +603,12 @@ public:
     [[nodiscard]] auto time_step() const { return M_time_step.value_or(default_time_step); }
     [[nodiscard]] auto &record_output() const { return M_record_output; }
     [[nodiscard]] auto record_duration() const
-    {
-        return M_record_duration.value_or(default_record_duration);
-    }
+    { return M_record_duration.value_or(default_record_duration); }
     [[nodiscard]] auto record_fps() const { return M_record_fps.value_or(default_record_fps); }
+    [[nodiscard]] auto debug_overlay() const
+    { return M_debug_overlay.value_or(default_debug_overlay); }
+    [[nodiscard]] const std::vector<Vector4> &lights() const
+    { return M_lights ? *M_lights : default_lights; }
     [[nodiscard]] bool recording() const { return M_record_output.has_value(); }
     [[nodiscard]] auto &objects() const { return M_objects; }
     [[nodiscard]] auto world_desc() const
@@ -612,6 +643,8 @@ private:
     std::optional<std::string> M_record_output;
     std::optional<physkit::quantity<mp_units::si::second>> M_record_duration;
     std::optional<int> M_record_fps;
+    std::optional<bool> M_debug_overlay;
+    std::optional<std::vector<Vector4>> M_lights;
     bool M_testing{false};
 };
 
@@ -939,23 +972,23 @@ public:
     }
 
     graphics_app(const g_config &config)
-        : Magnum::Platform::
-              Application{config.args(),
-                          [&config]
-                          {
-                              Configuration configuration;
-                              configuration.setTitle(Containers::StringView{config.title().data(),
-                                                                            config.title().size()});
-                              if (config.recording())
-                                  configuration.setSize(config.window_size(), Vector2{1.0f});
-                              else
-                                  configuration.setSize(config.window_size());
-                              configuration.setWindowFlags(
-                                  config.recording()
-                                      ? Platform::Application::Configuration::WindowFlag::Hidden
-                                      : Platform::Application::Configuration::WindowFlag::Focused);
-                              return configuration;
-                          }()},
+        : Magnum::Platform::Application{
+              config.args(),
+              [&config]
+              {
+                  Configuration configuration;
+                  configuration.setTitle(
+                      Containers::StringView{config.title().data(), config.title().size()});
+                  if (config.recording())
+                      configuration.setSize(config.window_size(), Vector2{1.0f});
+                  else
+                      configuration.setSize(config.window_size());
+                  configuration.setWindowFlags(
+                      config.recording()
+                          ? Platform::Application::Configuration::WindowFlag::Hidden
+                          : Platform::Application::Configuration::WindowFlag::Focused);
+                  return configuration;
+              }()},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
           M_drag(true), M_grab_focus(!config.drag()), M_testing(config.testing())
@@ -964,8 +997,10 @@ public:
 
         M_world = std::make_unique<physkit::world>(config.world_desc());
 
-        M_shader = Shaders::PhongGL{Shaders::PhongGL::Configuration{}.setFlags(
-            Shaders::PhongGL::Flag::VertexColor | Shaders::PhongGL::Flag::InstancedTransformation)};
+        M_shader = Shaders::PhongGL{Shaders::PhongGL::Configuration{}
+                                        .setFlags(Shaders::PhongGL::Flag::VertexColor |
+                                                  Shaders::PhongGL::Flag::InstancedTransformation)
+                                        .setLightCount(config.lights().size())};
 
         // Ambient/specular alpha must be 0 — PhongGL's fragment shader adds specularColor.a
         // unconditionally on every lit fragment (see Phong.frag, the `fragmentColor += vec4(...,
@@ -974,7 +1009,9 @@ public:
         M_shader
             .setAmbientColor(Color4{0x222222_rgbf, 0.0f}) // a touch brighter so objects are visible
             .setSpecularColor(Color4{0x330000_rgbf, 0.0f})
-            .setLightPositions({{0.f, 5.f, 0.f, 0.f}});
+            .setLightPositions(
+                Containers::arrayView(config.lights().data(), config.lights().size()));
+        M_debug_shader = Shaders::VectorGL2D{};
 
         GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
         GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
@@ -996,6 +1033,8 @@ public:
             add_object(M_world->create_rigid(obj_desc), color);
 
         M_stepper = physkit::stepper(*M_world, config.time_step());
+        M_debug_overlay = std::make_unique<debug::overlay>(*M_world, M_cam);
+        M_debug_overlay->visible(config.debug_overlay());
     }
 
     virtual ~graphics_app()
@@ -1013,6 +1052,7 @@ protected:
     virtual void pointer_press(PointerEvent &event, bool pressed) {}
 
     auto &cam() { return M_cam; }
+    auto &debug_overlay() { return *M_debug_overlay; }
     auto &keys() const { return M_keys; }
     auto &mouse() const { return M_mouse; } // map to pointer states
     auto &mouse_pos() const { return M_mouse_pos; }
@@ -1063,14 +1103,10 @@ protected:
     }
 
     physkit::quantity<mp_units::si::second> dt() const
-    {
-        return M_timeline.previousFrameDuration() * mp_units::si::second;
-    }
+    { return M_timeline.previousFrameDuration() * mp_units::si::second; }
 
     physkit::quantity<mp_units::si::second> current_time() const
-    {
-        return M_timeline.previousFrameTime() * mp_units::si::second;
-    }
+    { return M_timeline.previousFrameTime() * mp_units::si::second; }
 
     key_state get_mouse_button(Pointer button) const
     {
@@ -1193,10 +1229,18 @@ private:
         M_stepper.update(frame_dt);
 
         for (auto *obj : M_physics_objs) obj->sync();
+        M_debug_overlay->update(frame_dt, M_world->time());
 
         M_shader.setProjectionMatrix(M_cam.projection_matrix());
         M_cam.draw(M_shaded, frame_time);
         M_cam.draw(M_transparent, frame_time);
+        if (M_debug_overlay->is_visible())
+        {
+            GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
+            const auto overlay_size = M_recording ? M_record_size : windowSize();
+            M_debug_overlay->draw(M_debug_shader, Matrix3::projection(Vector2{overlay_size}));
+            GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+        }
 
         if (M_recording && capture_record_frame())
         {
@@ -1220,6 +1264,9 @@ private:
     void keyPressEvent(KeyEvent &event) final
     {
         M_keys[event.key()].press();
+        M_debug_overlay->handle_key(static_cast<int>(event.key()),
+                                    static_cast<int>(event.scanCode()),
+                                    event.isRepeated() ? GLFW_REPEAT : GLFW_PRESS, 0);
         key_press(event, true);
         M_on_key_press.fire(event);
         if (event.key() == Key::Esc) drag(!M_drag);
@@ -1281,11 +1328,13 @@ private:
 
     SceneGraph::Scene<SceneGraph::MatrixTransformation3D> M_scene;
     Shaders::PhongGL M_shader{NoCreate};
+    Shaders::VectorGL2D M_debug_shader{NoCreate};
     SceneGraph::DrawableGroup3D M_shaded;      // opaque pass
     SceneGraph::DrawableGroup3D M_transparent; // α<1 pass, drawn after M_shaded
     std::unique_ptr<physkit::world_base> M_world;
     physkit::stepper M_stepper;
     camera M_cam;
+    std::unique_ptr<debug::overlay> M_debug_overlay;
     std::unordered_map<physkit::shape, std::shared_ptr<GL::Mesh>> M_phys_shape_map;
     std::unordered_map<std::shared_ptr<GL::Mesh>, instanced_drawables *> M_mesh_drawables;
     std::vector<physics_obj *> M_physics_objs;
@@ -1309,7 +1358,6 @@ private:
     std::size_t M_record_frame_count{};
     int M_record_fps{};
     bool M_recording = false;
-    bool M_debug = false;
     bool M_drag = false;
     bool M_grab_focus = false;
     bool M_testing = false;
@@ -1317,9 +1365,7 @@ private:
 
 inline physkit::object &physics_obj::obj() { return **M_app->world().get_rigid(M_handle); }
 inline const physkit::object &physics_obj::obj() const
-{
-    return **std::as_const(*M_app).world().get_rigid(M_handle);
-}
+{ return **std::as_const(*M_app).world().get_rigid(M_handle); }
 
 inline void physics_obj::sync()
 {
@@ -1335,15 +1381,11 @@ namespace mesh_objs
 {
 // radius 1
 inline auto cube()
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid()));
-}
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::cubeSolid())); }
 
 // radius 1
 inline auto sphere(unsigned int subdivisions = 3)
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions)));
-}
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::icosphereSolid(subdivisions))); }
 
 inline auto cylinder(unsigned int rings, unsigned int segments, float half_length,
                      bool include_caps = true)
@@ -1360,8 +1402,6 @@ inline auto cone(unsigned int rings, unsigned int segments, float half_length)
 }
 
 inline auto plane()
-{
-    return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid()));
-}
+{ return std::make_shared<GL::Mesh>(MeshTools::compile(Primitives::planeSolid())); }
 }; // namespace mesh_objs
 } // namespace graphics
