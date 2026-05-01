@@ -67,7 +67,7 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
         helper/src/modules/convert_m.cpp
     )
 
-    target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit PRIVATE ${TEST_PLUGINS})
+    target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit ${TEST_PLUGINS})
     target_compile_definitions(phys_graphics PUBLIC PHYSKIT_GRAPHICS_MODULES)
     target_include_directories(phys_graphics PRIVATE graphics dep)
   else()
