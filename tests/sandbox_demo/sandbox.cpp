@@ -6,7 +6,10 @@
 
 #ifndef PHYSKIT_IMPORT_STD
 #include <coroutine> // IWYU pragma: keep
+#include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 #endif
 
 #ifdef PHYSKIT_MODULES
@@ -31,6 +34,8 @@ using namespace graphics;
 struct sandbox_state
 {
     std::optional<world_base::handle> selected;
+    std::vector<world_base::handle> frozen;
+    unsigned spawn_shape_index = 0;
     bool gravity_on = true;
     vec3<si::metre / si::second / si::second> saved_gravity{};
 };
@@ -56,20 +61,7 @@ public:
     {
         cam().speed(10.0f * si::metre / si::second);
         M_state.saved_gravity = gravity;
-        debug_overlay().controls("Controls", {
-                                                 "WASD  move camera",
-                                                 "Space / Left Shift  up / down",
-                                                 "Mouse  look",
-                                                 "Esc  release or capture mouse",
-                                                 "LMB  select dynamic object",
-                                                 "RMB or 1  spawn box",
-                                                 "2  spawn sphere",
-                                                 "F  impulse selected object",
-                                                 "Delete  delete selected object",
-                                                 "G  toggle gravity",
-                                                 "R  reset velocities",
-                                                 "F9  debug overlay",
-                                             });
+        refresh_controls();
         world().add_task(runtime());
         // auto &w = dynamic_cast<physkit::world<physkit::semi_implicit_euler> &>(world());
     }
@@ -77,7 +69,126 @@ public:
     void update(mp_units::quantity<mp_units::si::second> /*dt*/) override {}
 
 private:
+    static constexpr unsigned spawn_shape_count = 5;
     sandbox_state M_state;
+
+    void scrollEvent(Platform::Application::ScrollEvent &event) override
+    {
+        if (event.offset().y() > 0.0f)
+            select_spawn_shape(1);
+        else if (event.offset().y() < 0.0f)
+            select_spawn_shape(-1);
+    }
+
+    static const char *spawn_shape_name(unsigned index)
+    {
+        switch (index % spawn_shape_count)
+        {
+        case 0:
+            return "box";
+        case 1:
+            return "sphere";
+        case 2:
+            return "cylinder";
+        case 3:
+            return "cone";
+        case 4:
+            return "pyramid";
+        default:
+            return "box";
+        }
+    }
+
+    static shape spawn_shape(unsigned index)
+    {
+        switch (index % spawn_shape_count)
+        {
+        case 0:
+            return box(vec3{0.2, 0.2, 0.2} * m);
+        case 1:
+            return sphere(0.18 * m);
+        case 2:
+            return cylinder(0.18 * m, 0.4 * m);
+        case 3:
+            return cone(0.2 * m, 0.4 * m);
+        case 4:
+            return pyramid(0.2 * m, 0.4 * m);
+        default:
+            return box(vec3{0.2, 0.2, 0.2} * m);
+        }
+    }
+
+    static Color3 spawn_shape_color(unsigned index)
+    {
+        switch (index % spawn_shape_count)
+        {
+        case 0:
+            return Color3{0.7f, 0.7f, 0.7f};
+        case 1:
+            return Color3{0.8f, 0.8f, 0.8f};
+        case 2:
+            return Color3{0.45f, 0.7f, 0.95f};
+        case 3:
+            return Color3{0.95f, 0.75f, 0.35f};
+        case 4:
+            return Color3{0.55f, 0.9f, 0.55f};
+        default:
+            return Color3{0.7f, 0.7f, 0.7f};
+        }
+    }
+
+    void refresh_controls()
+    {
+        debug_overlay().controls("Controls", std::vector<std::string>{
+                                                 "WASD  move camera",
+                                                 "Space / Left Shift  up / down",
+                                                 "Mouse  look",
+                                                 "Esc  release or capture mouse",
+                                                 "LMB  select object",
+                                                 std::string{"Scroll  spawn shape: "} +
+                                                     spawn_shape_name(M_state.spawn_shape_index),
+                                                 "RMB  spawn selected shape",
+                                                 "Enter  release stasis objects",
+                                                 "F  impulse selected released object",
+                                                 "Delete  delete selected object",
+                                                 "G  toggle gravity",
+                                                 "R  reset velocities",
+                                                 "F9  debug overlay",
+                                             });
+    }
+
+    void select_spawn_shape(int direction)
+    {
+        auto next = static_cast<int>(M_state.spawn_shape_index) + direction;
+        if (next < 0)
+            next = static_cast<int>(spawn_shape_count) - 1;
+        else if (next >= static_cast<int>(spawn_shape_count))
+            next = 0;
+
+        M_state.spawn_shape_index = static_cast<unsigned>(next);
+        refresh_controls();
+    }
+
+    [[nodiscard]] bool is_frozen(world_base::handle handle) const
+    {
+        for (const auto frozen : M_state.frozen)
+            if (frozen == handle) return true;
+        return false;
+    }
+
+    void remember_frozen(world_base::handle handle) { M_state.frozen.push_back(handle); }
+
+    void forget_frozen(world_base::handle handle)
+    {
+        for (auto it = M_state.frozen.begin(); it != M_state.frozen.end(); ++it)
+        {
+            if (*it == handle)
+            {
+                M_state.frozen.erase(it);
+                return;
+            }
+        }
+    }
 
     [[nodiscard]] const auto &world_gravity() const
     {
@@ -107,31 +218,61 @@ private:
 
     /// @brief - spawn in different objects
     /// do deliberate pass of vol, density, inertia
-    task<> spawn_box(vec3<si::metre> pos)
+    task<> wait_for_stasis_release(std::shared_ptr<bool> released)
     {
-        co_await add_rigid(object_desc::dynam()
-                               .with_shape(box(vec3{0.2, 0.2, 0.2} * m))
-                               .with_pos(pos)
-                               .with_mass(1.0 * kg)
-                               .with_ang_vel(vec3{4.0, 8.0, 2.0} * rad / s)
-                               .with_restitution(0.4)
-                               .with_friction(0.5),
-                           Color3{0.7f, 0.7f, 0.7f});
+        co_await wait_until_key_press(Key::Enter);
+        *released = true;
     }
 
-    task<> spawn_sphere(vec3<si::metre> pos)
+    task<> spawn_selected_shape(vec3<si::metre> pos, unsigned shape_index)
     {
-        co_await add_rigid(object_desc::dynam()
-                               .with_shape(sphere(0.1 * m))
-                               .with_pos(pos)
-                               .with_mass(1.0 * kg)
-                               .with_ang_vel(vec3{20, 0, 0} * rad / s)
-                               .with_restitution(0.6)
-                               .with_friction(0.3),
-                           Color3{0.8f, 0.8f, 0.8f});
-    }
+        auto object = co_await add_rigid(object_desc::dynam()
+                                             .with_shape(spawn_shape(shape_index))
+                                             .with_pos(pos)
+                                             .with_mass(1.0 * kg)
+                                             .with_restitution(0.5)
+                                             .with_friction(0.5),
+                                         spawn_shape_color(shape_index));
+        if (!object) co_return;
 
-    /// TODO: add in different shapes when branches merge - pyramid, cone, etc
+        auto handle = (*object)->handle();
+        auto released = std::make_shared<bool>(false);
+        remember_frozen(handle);
+        co_await add_task<policy::no_wait>(wait_for_stasis_release(released));
+
+        while (!*released)
+        {
+            auto obj = co_await get_rigid(handle);
+            if (!obj)
+            {
+                forget_frozen(handle);
+                co_return;
+            }
+
+            (*obj)->pos() = pos;
+            (*obj)->vel() = vec3<si::metre / si::second>::zero();
+            (*obj)->orientation(quat<one>::identity());
+            (*obj)->ang_vel() = vec3<si::radian / si::second>::zero();
+
+            co_await next_physics_tick{};
+
+            obj = co_await get_rigid(handle);
+            if (!obj)
+            {
+                forget_frozen(handle);
+                co_return;
+            }
+
+            (*obj)->pos() = pos;
+            (*obj)->vel() = vec3<si::metre / si::second>::zero();
+            (*obj)->orientation(quat<one>::identity());
+            (*obj)->ang_vel() = vec3<si::radian / si::second>::zero();
+
+            co_await next_frame{};
+        }
+
+        forget_frozen(handle);
+    }
 
     /// @brief keyboard and mouse-bindings for the user to manipulate objects in the arena.
     task<> maybe_spawn_objects()
@@ -139,7 +280,8 @@ private:
         if (get_mouse_button(Pointer::MouseRight).is_initial_press())
         {
             auto spawn_pos = cam().pos() + cam().forward() * 2.0f * m;
-            co_await spawn_box(spawn_pos);
+            co_await add_task<policy::no_wait>(
+                spawn_selected_shape(spawn_pos, M_state.spawn_shape_index));
         }
     }
 
@@ -194,13 +336,14 @@ private:
         if (get_key(Key::Delete).is_initial_press())
         {
             co_await destroy_rigid{selected};
+            forget_frozen(selected);
             remove_physics_object(selected);
             M_state.selected.reset();
             co_return;
         }
 
         // impulse forward
-        if (get_key(Key::F).is_initial_press())
+        if (get_key(Key::F).is_initial_press() && obj.is_dynamic() && !is_frozen(selected))
         {
             obj.apply_impulse(cam().forward() * obj.mass() * 5.0 * m / s);
         }
@@ -218,14 +361,6 @@ private:
                 (*obj)->ang_vel() = vec3<one / si::second>::zero();
             }
         }
-    }
-
-    /// @brief keyboard functions for user to select and manipulate objects
-    task<> poll_keys(vec3<si::metre> spawn_pos)
-    {
-        if (get_key(Key::One).is_initial_press()) { co_await spawn_box(spawn_pos); }
-
-        if (get_key(Key::Two).is_initial_press()) { co_await spawn_sphere(spawn_pos); }
     }
 
     task<> build_area()
@@ -285,9 +420,6 @@ private:
             co_await maybe_spawn_objects();
             co_await handle_selection_input();
             co_await handle_actions_input();
-
-            auto spawn_pos = cam().pos() + cam().forward() * 2.0f * m;
-            co_await poll_keys(spawn_pos);
         }
     }
 };
