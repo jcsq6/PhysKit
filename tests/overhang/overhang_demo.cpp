@@ -39,6 +39,8 @@ class overhang_app : public graphics_app
     // static constexpr auto pivot = vec3{0.0,0.0,platform_size-into_dist}
     static constexpr auto pivot_z = platform_size - into_dist;
 
+    static constexpr auto eps = 0.1;
+
     // cards
     static constexpr auto card_hheight =
         0.1 * m; // Only really increases weight. may increase instability?
@@ -52,7 +54,7 @@ class overhang_app : public graphics_app
         Color3{0.25f, 0.65f, 0.25f}, // Green
         Color3{0.25f, 0.65f, 0.65f}, // Cyan
         Color3{0.25f, 0.25f, 0.75f}, // Blue
-        Color3{0.45f, 0.25f, 0.65f}, // Purple (less magenta-heavy)
+        Color3{0.45f, 0.25f, 0.65f}, // Purple
         Color3{0.75f, 0.25f, 0.65f}  // Magenta
     };
 
@@ -98,13 +100,11 @@ private:
 
     task<world_base::handle> make_card(std::size_t n)
     {
-        auto eps = 0.001 * m; // less than 0.007 lags out.
-
-        auto pos = vec3{eps - (harmonic_number(n)) * card_hwidth,
+        auto pos = vec3{-(1.0 - eps) * (harmonic_number(n)) * card_hwidth,
                         (2 * n) * -card_hheight + card_hheight, pivot_z * m};
         std::println("New Block {} at: {}", n, pos);
         auto h =
-            (*co_await add_rigid(object_desc::dynam() // TODO: not static
+            (*co_await add_rigid(object_desc::stat() // TODO: not static
                                      .with_shape(box(vec3{card_hwidth, card_hheight, card_hlength}))
                                      .with_pos(pos)
                                      .with_mass(card_mass)
@@ -117,8 +117,7 @@ private:
 
     task<> scene()
     {
-        auto eps = 0.01;
-        auto initial_pos = vec3{card_hwidth + (eps - platform_size) * m,
+        auto initial_pos = vec3{card_hwidth + (-platform_size) * m,
                                 (2.0) * card_hheight - platform_size * m, 0.0 * m};
         auto platform =
             (*co_await add_rigid(
@@ -140,20 +139,13 @@ private:
         {
             auto frame_time = *co_await next_render_frame();
             auto h = *co_await make_card(count);
-            auto offset = harmonic_number(count + 1) * card_hwidth;
+            auto offset = (1.0 - eps) * harmonic_number(count + 1) * card_hwidth;
             plat_pos =
                 vec3{initial_pos.x() - offset, plat_pos.y() - 2.0 * card_hheight, plat_pos.z()};
             cam().move(fvec3{-static_cast<quantity<m, float>>((1.0 / (count + 1)) * card_hwidth),
                              (-2.0f * static_cast<quantity<m, float>>(card_hheight)), 0.0f * m});
 
             co_await wait_for(3 * s);
-
-            // if ((!shooting_task || !(co_await get_world()).task_active(*shooting_task)) &&
-            //     //get_mouse_button(Pointer::MouseLeft).is_initial_press())
-            //     if (auto exp = co_await add_task(
-            //             charge_and_shoot(stick_handle, anchor_handle, shoot_offset)))
-            //         shooting_task = *exp;
-            // update_anchor(frame_time, shoot_offset, stick_obj, anchor_obj);
 
             count++;
         }
