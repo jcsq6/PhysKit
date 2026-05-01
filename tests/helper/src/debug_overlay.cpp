@@ -82,6 +82,9 @@ void overlay::initialize_font()
 
 bool overlay::text_ready() const { return M_font && M_shaper && M_cache && M_text_renderer; }
 
+bool overlay::has_visible_content() const
+{ return M_visible || (M_controls_visible && !M_controls.empty()); }
+
 void overlay::update(physkit::quantity<physkit::si::second> dt,
                      physkit::quantity<physkit::si::second> total_time)
 {
@@ -130,9 +133,20 @@ void overlay::update(physkit::quantity<physkit::si::second> dt,
 
 void overlay::draw(Magnum::Shaders::VectorGL2D &shader, const Matrix3 &projection)
 {
-    if (!M_visible) return;
+    if (!has_visible_content()) return;
 
     M_window_size = projected_window_size(projection, M_window_size);
+
+    if (!M_visible && M_controls_visible && !M_controls.empty())
+    {
+        const auto block_height =
+            line_height * static_cast<float>(M_controls.size() + 1) + title_gap;
+        auto y_controls = std::max(margin_y, M_window_size.y() - margin_y - block_height);
+        draw_section(shader, M_controls_title, margin_x, y_controls, M_controls,
+                     Alignment::TopLeft);
+    }
+
+    if (!M_visible) return;
 
     draw_text(shader, "PhysKit Debug Overlay", M_window_size.x() * 0.5f, margin_y, header_color,
               Alignment::TopCenter);

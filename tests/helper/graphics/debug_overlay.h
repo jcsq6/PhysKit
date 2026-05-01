@@ -53,6 +53,20 @@ public:
     void draw(Magnum::Shaders::VectorGL2D &shader, const Magnum::Matrix3 &projection);
     void handle_key(int key, int scan_code, int action, int mods);
 
+    void controls(std::string_view title, std::initializer_list<std::string_view> lines)
+    {
+        controls(title,
+                 lines | std::views::transform([](std::string_view s) { return std::string(s); }));
+    }
+    template <std::ranges::range R> void controls(std::string_view title, R &&lines)
+    {
+        M_controls.assign_range(std::forward<R>(lines));
+        M_controls_title = title;
+        M_controls_visible = !M_controls.empty();
+    }
+    void controls_visible(bool visible) { M_controls_visible = visible; }
+    [[nodiscard]] bool has_visible_content() const;
+
     void toggle() { M_visible = !M_visible; }
     void visible(bool visible) { M_visible = visible; }
     [[nodiscard]] bool is_visible() const { return M_visible; }
@@ -92,6 +106,10 @@ private:
     bool M_show_collision = true;
     bool M_show_objects = true;
     bool M_show_detail_objects = true;
+    bool M_controls_visible = false;
+
+    std::string M_controls_title = "Controls";
+    std::vector<std::string> M_controls;
 
     std::deque<FrameData> M_frame_history;
     physkit::quantity<physkit::si::hertz> M_fps = 0.0 * physkit::si::hertz;

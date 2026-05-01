@@ -76,6 +76,7 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         std::optional<std::array<int, 2>> window_size;
         std::optional<bool> drag;
         std::optional<bool> vsync;
+        std::optional<bool> crosshair_overlay;
     };
 
     world_config config;
@@ -196,6 +197,11 @@ template <typename Self> Self &&g_config::read_file(this Self &&self, std::strin
         self.M_vsync = config.vsync;
         std::println("  VSync: {}", *self.M_vsync);
     }
+    if (config.crosshair_overlay)
+    {
+        self.M_crosshair_overlay = config.crosshair_overlay;
+        std::println("  Crosshair overlay: {}", *self.M_crosshair_overlay ? "true" : "false");
+    }
 
     std::println("  Gravity: {}", *self.M_gravity);
     std::println("  Solver iterations: {}", config.solver_iterations);
@@ -297,6 +303,10 @@ g_config::g_config(Magnum::Platform::Application::Arguments args, bool read_conf
         .default_value(g_config::default_debug_overlay)
         .implicit_value(true)
         .help("Show the PhysKit debug overlay at startup");
+    parser.add_argument("--crosshair-overlay", "--crosshair")
+        .default_value(g_config::default_crosshair_overlay)
+        .implicit_value(true)
+        .help("Show a fixed crosshair in the center of the overlay");
     if (read_config)
         parser.add_argument("--config", "-c")
             .help("Path to JSON config file for the world (CLI arguments will override JSON "
@@ -365,6 +375,7 @@ g_config::g_config(Magnum::Platform::Application::Arguments args, bool read_conf
         auto record_duration_val = parser.get<double>("--record-duration") * s;
         auto record_fps_val = parser.get<int>("--record-fps");
         auto debug_overlay_val = parser.get<bool>("--debug-overlay");
+        auto crosshair_overlay_val = parser.get<bool>("--crosshair-overlay");
         M_testing = parser.get<bool>("--testing");
 
         if (parser.is_used("--fov")) fov(fov_val);
@@ -376,6 +387,7 @@ g_config::g_config(Magnum::Platform::Application::Arguments args, bool read_conf
         if (parser.is_used("--vsync")) vsync(vsync_val);
         if (parser.is_used("--time-step")) time_step(time_step_val);
         if (parser.is_used("--debug-overlay")) debug_overlay(debug_overlay_val);
+        if (parser.is_used("--crosshair-overlay")) crosshair_overlay(crosshair_overlay_val);
         if (auto record_path = parser.present("--record-output"))
         {
             this->record_output(*record_path);
