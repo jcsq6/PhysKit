@@ -1,4 +1,4 @@
-add_executable(pool
+add_executable(pong
     pong_demo.cpp
 )
-target_link_libraries(pool PRIVATE ${PHYSKIT_LIBRARIES} phys_graphics)
+target_link_libraries(pong PRIVATE ${PHYSKIT_LIBRARIES} phys_graphics)
