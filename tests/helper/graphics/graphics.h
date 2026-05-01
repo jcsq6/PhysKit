@@ -417,6 +417,7 @@ public:
     static constexpr auto default_record_duration = 10.0f * mp_units::si::second;
     static constexpr int default_record_fps = 60;
     static constexpr bool default_debug_overlay = false;
+    static constexpr bool default_crosshair_overlay = false;
     static inline const auto default_lights = std::vector<Vector4>{{0.f, 5.f, 0.f, 0.f}};
 
     template <typename Self> Self &&read_file(this Self &&self, std::string_view path);
@@ -563,6 +564,16 @@ public:
         if (!self.M_debug_overlay) self.M_debug_overlay = enabled;
         return std::forward<decltype(self)>(self);
     }
+    auto &&crosshair_overlay(this auto &&self, bool enabled = true)
+    {
+        self.M_crosshair_overlay = enabled;
+        return std::forward<decltype(self)>(self);
+    }
+    auto &&crosshair_overlay_or(this auto &&self, bool enabled = true)
+    {
+        if (!self.M_crosshair_overlay) self.M_crosshair_overlay = enabled;
+        return std::forward<decltype(self)>(self);
+    }
     auto &&lights(this auto &&self, std::initializer_list<Vector4> lights)
     {
         self.M_lights = lights;
@@ -607,6 +618,8 @@ public:
     [[nodiscard]] auto record_fps() const { return M_record_fps.value_or(default_record_fps); }
     [[nodiscard]] auto debug_overlay() const
     { return M_debug_overlay.value_or(default_debug_overlay); }
+    [[nodiscard]] auto crosshair_overlay() const
+    { return M_crosshair_overlay.value_or(default_crosshair_overlay); }
     [[nodiscard]] const std::vector<Vector4> &lights() const
     { return M_lights ? *M_lights : default_lights; }
     [[nodiscard]] bool recording() const { return M_record_output.has_value(); }
@@ -644,6 +657,7 @@ private:
     std::optional<physkit::quantity<mp_units::si::second>> M_record_duration;
     std::optional<int> M_record_fps;
     std::optional<bool> M_debug_overlay;
+    std::optional<bool> M_crosshair_overlay;
     std::optional<std::vector<Vector4>> M_lights;
     bool M_testing{false};
 };
@@ -991,7 +1005,8 @@ public:
               }()},
           M_cam(M_scene, config.fov(), config.cam_pos(), config.cam_dir(), config.window_size(),
                 config.window_size()),
-          M_drag(true), M_grab_focus(!config.drag()), M_testing(config.testing())
+          M_crosshair_overlay(config.crosshair_overlay()), M_drag(true),
+          M_grab_focus(!config.drag()), M_testing(config.testing())
     {
         using namespace Math::Literals::ColorLiterals;
 
@@ -1012,6 +1027,8 @@ public:
             .setLightPositions(
                 Containers::arrayView(config.lights().data(), config.lights().size()));
         M_debug_shader = Shaders::VectorGL2D{};
+        M_overlay_shader = Shaders::FlatGL2D{};
+        initialize_crosshair_overlay();
 
         GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
         GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
@@ -1056,6 +1073,9 @@ protected:
     auto &keys() const { return M_keys; }
     auto &mouse() const { return M_mouse; } // map to pointer states
     auto &mouse_pos() const { return M_mouse_pos; }
+
+    bool crosshair_overlay() const { return M_crosshair_overlay; }
+    void crosshair_overlay(bool enabled) { M_crosshair_overlay = enabled; }
 
     bool drag() const { return M_drag; }
     void drag(bool d)
@@ -1190,6 +1210,42 @@ private:
         return M_record_frame >= M_record_frame_count;
     }
 
+    void initialize_crosshair_overlay()
+    {
+        constexpr Float gap = 4.0f;
+        constexpr Float length = 10.0f;
+        constexpr Float half_width = 1.0f;
+        constexpr Vector2 vertices[]{
+            {gap, -half_width},           {gap + length, -half_width},
+            {gap + length, half_width},   {gap, -half_width},
+            {gap + length, half_width},   {gap, half_width},
+
+            {-gap, -half_width},          {-gap - length, half_width},
+            {-gap - length, -half_width}, {-gap, -half_width},
+            {-gap, half_width},           {-gap - length, half_width},
+
+            {-half_width, gap},           {half_width, gap},
+            {half_width, gap + length},   {-half_width, gap},
+            {half_width, gap + length},   {-half_width, gap + length},
+
+            {-half_width, -gap},          {half_width, -gap - length},
+            {half_width, -gap},           {-half_width, -gap},
+            {-half_width, -gap - length}, {half_width, -gap - length},
+        };
+
+        M_crosshair_buffer.setData(vertices, GL::BufferUsage::StaticDraw);
+        M_crosshair_mesh.setPrimitive(GL::MeshPrimitive::Triangles)
+            .setCount(static_cast<Int>(sizeof(vertices) / sizeof(vertices[0])))
+            .addVertexBuffer(M_crosshair_buffer, 0, Shaders::FlatGL2D::Position{});
+    }
+
+    void draw_crosshair_overlay(const Matrix3 &projection)
+    {
+        M_overlay_shader.setTransformationProjectionMatrix(projection)
+            .setColor(Color4{0.95f, 0.95f, 0.95f, 0.9f})
+            .draw(M_crosshair_mesh);
+    }
+
     void internal_add_obj(gfx_obj *obj, std::shared_ptr<GL::Mesh> mesh, Color4 color)
     {
         instanced_drawables *instances{};
@@ -1234,11 +1290,14 @@ private:
         M_shader.setProjectionMatrix(M_cam.projection_matrix());
         M_cam.draw(M_shaded, frame_time);
         M_cam.draw(M_transparent, frame_time);
-        if (M_debug_overlay->is_visible())
+        if (M_crosshair_overlay || M_debug_overlay->is_visible())
         {
             GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
             const auto overlay_size = M_recording ? M_record_size : windowSize();
-            M_debug_overlay->draw(M_debug_shader, Matrix3::projection(Vector2{overlay_size}));
+            const auto overlay_projection = Matrix3::projection(Vector2{overlay_size});
+            if (M_crosshair_overlay) draw_crosshair_overlay(overlay_projection);
+            if (M_debug_overlay->is_visible())
+                M_debug_overlay->draw(M_debug_shader, overlay_projection);
             GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
         }
 
@@ -1329,6 +1388,7 @@ private:
     SceneGraph::Scene<SceneGraph::MatrixTransformation3D> M_scene;
     Shaders::PhongGL M_shader{NoCreate};
     Shaders::VectorGL2D M_debug_shader{NoCreate};
+    Shaders::FlatGL2D M_overlay_shader{NoCreate};
     SceneGraph::DrawableGroup3D M_shaded;      // opaque pass
     SceneGraph::DrawableGroup3D M_transparent; // α<1 pass, drawn after M_shaded
     std::unique_ptr<physkit::world_base> M_world;
@@ -1338,6 +1398,8 @@ private:
     std::unordered_map<physkit::shape, std::shared_ptr<GL::Mesh>> M_phys_shape_map;
     std::unordered_map<std::shared_ptr<GL::Mesh>, instanced_drawables *> M_mesh_drawables;
     std::vector<physics_obj *> M_physics_objs;
+    GL::Buffer M_crosshair_buffer;
+    GL::Mesh M_crosshair_mesh;
     std::unordered_map<Key, key_state> M_keys;
     std::unordered_map<Pointer, key_state> M_mouse;
     Vector2 M_mouse_pos;
@@ -1358,6 +1420,7 @@ private:
     std::size_t M_record_frame_count{};
     int M_record_fps{};
     bool M_recording = false;
+    bool M_crosshair_overlay = false;
     bool M_drag = false;
     bool M_grab_focus = false;
     bool M_testing = false;

@@ -248,6 +248,9 @@ using Magnum::SceneGraph::CachedTransformation;
 GRAPHICS_EXPORT
 namespace Magnum::Shaders
 {
+using Magnum::Shaders::FlatGL;
+using Magnum::Shaders::FlatGL2D;
+using Magnum::Shaders::FlatGL3D;
 using Magnum::Shaders::PhongGL;
 using Magnum::Shaders::VectorGL;
 using Magnum::Shaders::VectorGL2D;

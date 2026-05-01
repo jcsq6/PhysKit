@@ -49,6 +49,7 @@ public:
                            .cam_pos(fvec3{22.0f, 16.0f, -28.0f} * si::metre)
                            .look_at(fvec3{-2.0f, 3.0f, 0.0f} * si::metre)
                            .drag(false)
+                           .crosshair_overlay()
                            .gravity(gravity)
                            .time_step(1.0 / 1200.0 * si::second)
                            .solver_iterations(32)}
@@ -168,7 +169,7 @@ private:
         if (get_mouse_button(Pointer::MouseLeft).is_initial_press())
         {
             auto ray = physkit::ray{cam().pos(), cam().forward()};
-            auto hits = co_await raycast{ray};
+            auto hits = co_await raycast{.r = ray};
             M_state.selected.reset();
 
             for (auto hit : hits)
