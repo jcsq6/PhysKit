@@ -1,0 +1,47 @@
+{
+    "title": "Overhang Problem Demo",
+    "cam_pos": [
+        0.0,
+        60.0,
+        -0.1
+    ],
+    "look_at": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "drag": false,
+    "gravity": [
+        0.0,
+        -9.81,
+        0.0
+    ],
+    "solver_iterations": 20,
+    "objects": [
+        {
+            "shape": {
+                "name": "box",
+                "half_extents": [
+                    20.0,
+                    10.0,
+                    20.0
+                ]
+            },
+            "pos": [
+                0.0,
+                -10.0,
+                0.0
+            ],
+            "type": "stat",
+            "mass": 0.0,
+            "restitution": 0.2,
+            "friction": 0.8,
+            "color": [
+                0.12,
+                0.12,
+                0.12,
+                1.0
+            ]
+        }
+    ]
+}
