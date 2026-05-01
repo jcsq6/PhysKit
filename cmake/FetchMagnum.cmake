@@ -55,6 +55,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(ui_font)
 
+set(MAGNUM_WITH_STBTRUETYPEFONT ON CACHE BOOL "" FORCE)
+set(MAGNUM_BUILD_PLUGINS_STATIC ON CACHE BOOL "" FORCE)
+
 set(GENERATED_CONF_PATH "${CMAKE_CURRENT_BINARY_DIR}/physkit_resources.conf")
 
 file(WRITE "${GENERATED_CONF_PATH}"
