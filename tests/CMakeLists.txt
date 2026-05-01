@@ -36,7 +36,13 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
     helper/graphics/detail/gmf.h
     helper/graphics/convert.h
     helper/graphics/camera.h
+    helper/graphics/debug_overlay.h
     helper/graphics/graphics.h
+  )
+
+  set(PHYS_GRAPHICS_SOURCES
+    helper/src/debug_overlay.cpp
+    helper/src/graphics.cpp
   )
 
   if (PHYSKIT_GRAPHICS_MODULES)
@@ -61,16 +67,12 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
         helper/src/modules/convert_m.cpp
     )
 
-    target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit)
+    target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit ${TEST_PLUGINS})
     target_compile_definitions(phys_graphics PUBLIC PHYSKIT_GRAPHICS_MODULES)
     target_include_directories(phys_graphics PRIVATE graphics dep)
   else()
     set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
     add_library(phys_graphics SHARED)
-
-    set(PHYS_GRAPHICS_SOURCES
-      helper/src/graphics.cpp
-    )
 
     target_sources(phys_graphics
       PUBLIC
@@ -89,9 +91,13 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
         <glaze/glaze.hpp>
       )
     endif()
-    target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit)
+    target_link_libraries(phys_graphics PUBLIC ${TEST_LIBRARIES} physkit ${TEST_PLUGINS})
     target_include_directories(phys_graphics PUBLIC graphics dep)
   endif()
+
+
+  corrade_add_resource(physkit_RESOURCES "${GENERATED_CONF_PATH}")
+  target_sources(phys_graphics PUBLIC "${physkit_RESOURCES}")
 endif()
 
 add_subdirectory(mesh)
@@ -106,5 +112,7 @@ if (PHYSKIT_BUILD_GRAPHICS_TESTS)
   add_subdirectory(demo)
   add_subdirectory(graphics_demo)
   add_subdirectory(pool)
+  add_subdirectory(sandbox_demo)
   add_subdirectory(barrels)
+  add_subdirectory(overhang)
 endif()

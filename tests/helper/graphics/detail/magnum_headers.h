@@ -4,6 +4,8 @@
 #include <Corrade/Containers/ArrayViewStl.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StringView.h>
+#include <Corrade/PluginManager/Manager.h>
+#include <Corrade/Utility/Resource.h>
 #include <Magnum/Animation/Track.h>
 #include <Magnum/GL/AbstractShaderProgram.h>
 #include <Magnum/GL/Buffer.h>
@@ -39,8 +41,14 @@
 #include <Magnum/SceneGraph/Object.h>
 #include <Magnum/SceneGraph/Scene.h>
 #include <Magnum/SceneGraph/SceneGraph.h>
+#include <Magnum/Shaders/FlatGL.h>
 #include <Magnum/Shaders/PhongGL.h>
+#include <Magnum/Shaders/VectorGL.h>
 #include <Magnum/Shaders/VertexColorGL.h>
 #include <Magnum/Tags.h>
+#include <Magnum/Text/AbstractFont.h>
+#include <Magnum/Text/AbstractShaper.h>
+#include <Magnum/Text/GlyphCacheGL.h>
+#include <Magnum/Text/RendererGL.h>
 #include <Magnum/Timeline.h>
 #include <Magnum/Trade/MeshData.h>
