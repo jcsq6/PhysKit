@@ -41,8 +41,8 @@ public:
                            .look_at(fvec3{0.0f, 2.0f, 1.5f} * si::metre)
                            .drag(false)
                            .gravity(gravity)
-                           .time_step(1.0 / 120.0 * si::second)
-                           .solver_iterations(300)}
+                           .time_step(1.0 / 360.0 * si::second)
+                           .solver_iterations(400)}
     {
         cam().speed(1.0f * si::metre / si::second);
         world().add_task(scene());
