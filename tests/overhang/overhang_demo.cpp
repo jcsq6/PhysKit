@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <coroutine> // IWYU pragma: keep
 #include <optional>
+#include <print>
 #endif
 
 #ifdef PHYSKIT_MODULES
@@ -68,27 +69,33 @@ public:
     void update(mp_units::quantity<mp_units::si::second> dt) override {}
 
 private:
-    std::vector<quantity<one>> H_;
+    static std::vector<quantity<one>> harmonic_numbers;
     // Get nth Harmonic Number
-    quantity<one> H(std::size_t n)
+    static quantity<one> harmonic_number(std::size_t n)
     {
-        if (H_.empty())
+        if (harmonic_numbers.empty())
         {
-            H_.reserve(30);
-            H_.emplace_back(0.0L); // H0
+            harmonic_numbers.reserve(30);
+            harmonic_numbers.emplace_back(0.0L); // H0
         }
 
-        auto i = H_.size();
-        for (; i < n + 1; i++) { H_.push_back(H_[i - 1] + (1.0 * one) / (i * one)); }
-        return H_[n];
+        auto i = harmonic_numbers.size();
+        for (; i < n + 1; i++)
+        {
+            harmonic_numbers.push_back(harmonic_numbers[i - 1] + (1.0 * one) / (i * one));
+        }
+        return harmonic_numbers[n];
     }
 
     task<world_base::handle> make_card(std::size_t n)
     {
         auto eps = 0.000 * m; // less than 0.007 lags out.
-        auto pos = vec3{0.0 * m, (2 * n + 1) * card_hheight, pivot_z * m};
+
+        auto pos = vec3{eps - harmonic_number(n) * card_hwidth,
+                        (2 * n) * -card_hheight + card_hheight, pivot_z * m};
+        std::println("New Block {} at: {}", n, pos);
         auto h = (*co_await add_rigid(
-                      object_desc::dynam()
+                      object_desc::stat() // TODO: not static
                           .with_shape(box(vec3{card_hwidth, card_hheight + eps, card_hlength}))
                           .with_pos(pos)
                           .with_mass(card_mass)
@@ -118,33 +125,44 @@ private:
 
     task<> scene()
     {
-        auto initial_pos = vec3{0.0, 5.0, 0.0} * m;
-        auto eps = -0.001;
+        auto eps = 0.001;
+        auto initial_pos = vec3{(eps - platform_size) * m, -platform_size * m, 0.0 * m};
         auto platform =
             (*co_await add_rigid(
                  object_desc::stat()
                      .with_shape(box(vec3{platform_size, platform_size, platform_size} * m))
-                     .with_pos(
-                         vec3{card_hwidth + (eps - platform_size) * m, -platform_size * m, 0.0 * m})
+                     .with_pos(initial_pos)
                      .with_restitution(0.0)
                      .with_friction(1),
                  Color3{0.1f, 0.45f, 0.15f}))
                 ->handle();
         auto &plat_pos = (*co_await get_rigid(platform))->pos();
-        auto card_handle = *co_await make_card(0);
+        // auto h = *co_await make_card(0);
 
+        auto cam_pos = cam().pos();
+        auto &track = cam().move_track();
+
+        auto count = 0;
         while (true)
         {
             auto frame_time = *co_await next_render_frame();
-            // plat_pos = vec3{plat_pos.x(), plat_pos.y() - 2.0 * card_hheight, plat_pos.z()};
+            auto h = *co_await make_card(count);
 
-            co_await wait_for(1.5 * s);
+            co_await wait_for(4 * s);
+            auto offset = harmonic_number(count) * card_hwidth;
+            plat_pos =
+                vec3{plat_pos.x() /*- offset*/, plat_pos.y() - 2.0 * card_hheight, plat_pos.z()};
+            cam().move(fvec3{0.0f * m, //-static_cast<quantity<m, float>>(offset),
+                             (-2.0f * static_cast<quantity<m, float>>(card_hheight)), 0.0f * m});
+
             // if ((!shooting_task || !(co_await get_world()).task_active(*shooting_task)) &&
             //     //get_mouse_button(Pointer::MouseLeft).is_initial_press())
             //     if (auto exp = co_await add_task(
             //             charge_and_shoot(stick_handle, anchor_handle, shoot_offset)))
             //         shooting_task = *exp;
             // update_anchor(frame_time, shoot_offset, stick_obj, anchor_obj);
+
+            count++;
         }
     }
     // // --- Anchor (invisible static body that drives the stick via weld constraint) ---
@@ -269,5 +287,6 @@ private:
     //     update_anchor(frame_time, shoot_offset, stick_obj, anchor_obj);
     // }
 };
+std::vector<quantity<one>> overhang_app::harmonic_numbers;
 
 MAGNUM_APPLICATION_MAIN(overhang_app) // NOLINT
