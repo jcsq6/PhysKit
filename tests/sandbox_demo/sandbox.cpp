@@ -54,7 +54,7 @@ public:
                            .time_step(1.0 / 1200.0 * si::second)
                            .solver_iterations(32)}
     {
-        cam().speed(3.0f * si::metre / si::second);
+        cam().speed(10.0f * si::metre / si::second);
         M_state.saved_gravity = gravity;
         debug_overlay().controls("Controls", {
                                                  "WASD  move camera",
@@ -109,24 +109,7 @@ private:
     /// do deliberate pass of vol, density, inertia
     task<> spawn_box(vec3<si::metre> pos)
     {
-        auto shp = physkit::shape{box(vec3{0.2, 0.2, 0.2} * m)};
-        auto mass = 1.0 * kg;
-        auto density = mass / shp.volume();
-        auto inertia = shp.inertia_tensor(density);
-
         co_await add_rigid(object_desc::dynam()
-                               .with_shape(shp)
-                               .with_pos(pos)
-                               .with_mass(mass)
-                               .with_inertia_tensor(inertia)
-                               .with_ang_vel(vec3{4.0, 8.0, 2.0} * rad / s)
-                               .with_restitution(0.4)
-                               .with_friction(0.5),
-                           Color3{0.7f, 0.7f, 0.7f});
-        co_return;
-
-        // you could optionally do it this way
-        /*co_await add_rigid(object_desc::dynam()
                                .with_shape(box(vec3{0.2, 0.2, 0.2} * m))
                                .with_pos(pos)
                                .with_mass(1.0 * kg)
@@ -134,36 +117,18 @@ private:
                                .with_restitution(0.4)
                                .with_friction(0.5),
                            Color3{0.7f, 0.7f, 0.7f});
-        co_return;*/
     }
 
     task<> spawn_sphere(vec3<si::metre> pos)
     {
-        auto shp = physkit::shape{sphere(0.1 * m)};
-        auto mass = 1.0 * kg;
-        auto density = mass / shp.volume();
-        auto inertia = shp.inertia_tensor(density);
-
         co_await add_rigid(object_desc::dynam()
-                               .with_shape(shp)
+                               .with_shape(sphere(0.1 * m))
                                .with_pos(pos)
-                               .with_mass(mass)
-                               .with_inertia_tensor(inertia)
+                               .with_mass(1.0 * kg)
                                .with_ang_vel(vec3{20, 0, 0} * rad / s)
                                .with_restitution(0.6)
                                .with_friction(0.3),
                            Color3{0.8f, 0.8f, 0.8f});
-        co_return;
-
-        // see above
-        /*co_await add_rigid(object_desc::dynam()
-                               .with_shape(sphere(0.1 * m))
-                               .with_pos(pos)
-                               .with_mass(1.0 * kg)
-                               .with_restitution(0.6)
-                               .with_friction(0.3),
-                           Color3{0.8f, 0.8f, 0.8f});
-        co_return;*/
     }
 
     /// TODO: add in different shapes when branches merge - pyramid, cone, etc
